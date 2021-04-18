@@ -5,9 +5,9 @@ using Verse;
 
 namespace SmashTools
 {
-    public static class Scribe_ObjectValue
-    {
-        public static void Look(ref object obj, string label, bool forceSave = false)
+	public static class Scribe_ObjectValue
+	{
+		public static void Look(ref object obj, string label, bool forceSave = false)
 		{
 			if (Scribe.mode == LoadSaveMode.Saving)
 			{
@@ -50,22 +50,22 @@ namespace SmashTools
 							Scribe.ExitNode();
 						}
 					}
-                    if (Scribe.EnterNode(label))
-                    {
+					if (Scribe.EnterNode(label))
+					{
 						try
-                        {
+						{
 							List<Pair<string, string>> attributes = new List<Pair<string, string>>()
 							{
 								InnerTypeAttributePair(obj),
 								SavingTypeAttributePair(obj)
 							};
-                            Scribe.saver.WriteElementWithAttributes(obj.ToString(), attributes);
-                        }
-                        finally
-                        {
-                            Scribe.ExitNode();
-                        }
-                    }
+							Scribe.saver.WriteElementWithAttributes(obj.ToString(), attributes);
+						}
+						finally
+						{
+							Scribe.ExitNode();
+						}
+					}
 					return;
 				}
 			}
@@ -76,22 +76,22 @@ namespace SmashTools
 		}
 
 		public static Type RetrieveObjectType(object obj)
-        {
+		{
 			if (obj is INestedType nestedType)
-            {
+			{
 				return nestedType.InnerType;
-            }
+			}
 			return obj.GetType();
-        }
+		}
 
 		public static Pair<string, string> InnerTypeAttributePair(object obj)
-        {
+		{
 			return new Pair<string, string>("Type", RetrieveObjectType(obj).ToString());
-        }
+		}
 
 		public static Pair<string, string> SavingTypeAttributePair(object obj)
-        {
+		{
 			return new Pair<string, string>("SavedType", (obj.GetType() == typeof(SavedField<object>)).ToString());
-        }
-    }
+		}
+	}
 }

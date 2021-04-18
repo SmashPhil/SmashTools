@@ -5,9 +5,9 @@ using Verse;
 
 namespace SmashTools
 {
-    public static class ObjectValueExtractor
-    {
-        public static object ValueFromNode(XmlNode subNode)
+	public static class ObjectValueExtractor
+	{
+		public static object ValueFromNode(XmlNode subNode)
 		{
 			if (subNode is null)
 			{
@@ -16,10 +16,10 @@ namespace SmashTools
 			XmlAttribute xmlType = subNode.Attributes["Type"];
 			XmlAttribute xmlSavedType = subNode.Attributes["SavedType"];
 			if (xmlType is null)
-            {
+			{
 				Log.Error($"Failed to retrieve Type attribute from ObjectValue saved XmlNode. Cannot parse into game. Node: {subNode}");
 				return null;
-            }
+			}
 			Type objectType = AccessTools.TypeByName(xmlType.Value);
 			XmlAttribute xmlAttribute = subNode.Attributes["IsNull"];
 			if (xmlAttribute != null && xmlAttribute.Value.ToLower() == "true")
@@ -31,9 +31,9 @@ namespace SmashTools
 				try
 				{
 					if (xmlSavedType != null)
-                    {
+					{
 						return SavedField<object>.FromTypedString(subNode.InnerText, objectType);
-                    }
+					}
 					return AccessTools.Method(typeof(ParseHelper), nameof(ParseHelper.FromString), new Type[] { typeof(string), typeof(Type) }).Invoke(null, new object[] { subNode.InnerText, objectType });
 				}
 				catch (Exception ex)
@@ -56,5 +56,5 @@ namespace SmashTools
 			}
 			return objectType.GetDefaultValue();
 		}
-    }
+	}
 }

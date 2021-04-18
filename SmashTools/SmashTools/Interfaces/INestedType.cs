@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace SmashTools
 {
-    public interface INestedType
-    {
-        Type InnerType { get; }
-    }
+	public interface INestedType
+	{
+		Type InnerType { get; }
+	}
 }

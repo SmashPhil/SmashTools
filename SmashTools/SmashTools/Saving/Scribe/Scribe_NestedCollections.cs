@@ -6,15 +6,15 @@ using RimWorld.Planet;
 
 namespace SmashTools
 {
-    public class Scribe_NestedCollections
-    {
+	public class Scribe_NestedCollections
+	{
 		public static void Look<K, K2, V>(ref Dictionary<K, Dictionary<K2, V>> dict, string label, LookMode keyLookMode, LookMode innerKeyLookMode, LookMode innerValueLookMode, bool forceSave = false)
 		{
 			if (keyLookMode == LookMode.Reference || innerKeyLookMode == LookMode.Reference || innerValueLookMode == LookMode.Reference)
-            {
+			{
 				Log.Warning($"Scribe_NestedCollections LookMode.Reference not yet supported.");
 				return;
-            }
+			}
 			K key;
 			List<K2> innerKeys = new List<K2>();
 			List<V> innerValues = new List<V>();
@@ -42,37 +42,37 @@ namespace SmashTools
 					if (Scribe.mode == LoadSaveMode.Saving && dict != null)
 					{
 						foreach (var outerPair in dict)
-                        {
+						{
 							if (Scribe.EnterNode("li"))
-                            {
-                                try
-                                {
+							{
+								try
+								{
 									key = outerPair.Key;
 									switch (keyLookMode)
-                                    {
+									{
 										case LookMode.Value:
 											Scribe_Values.Look(ref key, "key");
 											break;
 										case LookMode.Def:
 											if (key is Def def)
-                                            {
+											{
 												Scribe_Defs.Look(ref def, "def");
-                                            }
+											}
 											break;
 										case LookMode.Deep:
 											Scribe_Deep.Look(ref key, "key");
 											break;
 										case LookMode.Reference:
 											if (key is ILoadReferenceable referenceable)
-                                            {
+											{
 												Scribe_References.Look(ref referenceable, "referenceable");
-                                            }
-                                            else
-                                            {
+											}
+											else
+											{
 												Log.Error("Cannot use LookMode.Reference with non ILoadReferenceable object");
-                                            }
+											}
 											break;
-                                    }
+									}
 									innerKeys.Clear();
 									innerValues.Clear();
 									innerKeys.AddRange(outerPair.Value.Keys);
@@ -86,20 +86,20 @@ namespace SmashTools
 									{
 										Scribe_Collections.Look(ref innerValues, "innerValues", innerValueLookMode);
 									}
-                                }
-                                finally
-                                {
+								}
+								finally
+								{
 									Scribe.ExitNode();
-                                }
-                            }
+								}
+							}
 								
-                        }
+						}
 						key = default;
 						innerKeys = null;
 						innerValues = null;
 					}
 					else if (Scribe.mode == LoadSaveMode.LoadingVars)
-                    {
+					{
 						XmlNode curXmlParent = Scribe.loader.curXmlParent;
 						XmlAttribute xmlAttribute = curXmlParent.Attributes["IsNull"];
 						if (xmlAttribute != null && xmlAttribute.Value.ToLower() == "true")
@@ -113,7 +113,7 @@ namespace SmashTools
 						}
 						dict = new Dictionary<K, Dictionary<K2, V>>();
 						foreach (XmlNode fieldSettingsItem in curXmlParent.ChildNodes)
-                        {
+						{
 							key = default;
 							switch (keyLookMode)
 							{
@@ -145,12 +145,12 @@ namespace SmashTools
 							}
 							ExtractToLists(fieldSettingsItem, ref innerKeys, ref innerValues, innerKeyLookMode, innerValueLookMode);
 							dict.Add(key, innerKeys.Zip(innerValues, (k, v) => new { k, v }).ToDictionary(d => d.k, d => d.v));
-                        }
-                    }
+						}
+					}
 					if (Scribe.mode == LoadSaveMode.ResolvingCrossRefs && (keyLookMode == LookMode.Reference || innerKeyLookMode == LookMode.Reference || innerValueLookMode == LookMode.Reference))
 					{
 						
-                    }
+					}
 					return;
 				}
 				finally
@@ -165,7 +165,7 @@ namespace SmashTools
 		}
 
 		public static void Look<K, V>(ref Dictionary<K, List<V>> dict, string label, LookMode keyLookMode, LookMode valueLookMode, bool forceSave = false)
-        {
+		{
 			K key;
 			List<K> keys = new List<K>();
 			List<V> values = new List<V>();
@@ -193,52 +193,52 @@ namespace SmashTools
 					if (Scribe.mode == LoadSaveMode.Saving && dict != null)
 					{
 						foreach (var pair in dict)
-                        {
+						{
 							if (Scribe.EnterNode("li"))
-                            {
-                                try
-                                {
+							{
+								try
+								{
 									key = pair.Key;
 									switch (keyLookMode)
-                                    {
+									{
 										case LookMode.Value:
 											Scribe_Values.Look(ref key, "key");
 											break;
 										case LookMode.Def:
 											if (key is Def def)
-                                            {
+											{
 												Scribe_Defs.Look(ref def, "key");
-                                            }
+											}
 											break;
 										case LookMode.Deep:
 											Scribe_Deep.Look(ref key, "key");
 											break;
 										case LookMode.Reference:
 											if (key is ILoadReferenceable referenceable)
-                                            {
+											{
 												Scribe_References.Look(ref referenceable, "referenceable");
-                                            }
-                                            else
-                                            {
+											}
+											else
+											{
 												Log.Error("Cannot use LookMode.Reference with non ILoadReferenceable object");
-                                            }
+											}
 											break;
-                                    }
+									}
 									values.Clear();
 									values.AddRange(pair.Value);
 									Scribe_Collections.Look(ref values, "values", valueLookMode);
-                                }
-                                finally
-                                {
+								}
+								finally
+								{
 									Scribe.ExitNode();
-                                }
-                            }
-                        }
+								}
+							}
+						}
 						key = default;
 						values = null;
 					}
 					else if (Scribe.mode == LoadSaveMode.LoadingVars)
-                    {
+					{
 						XmlNode curXmlParent = Scribe.loader.curXmlParent;
 						XmlAttribute xmlAttribute = curXmlParent.Attributes["IsNull"];
 						if (xmlAttribute != null && xmlAttribute.Value.ToLower() == "true")
@@ -252,7 +252,7 @@ namespace SmashTools
 						}
 						dict = new Dictionary<K, List<V>>();
 						foreach (XmlNode xmlNode in curXmlParent.ChildNodes)
-                        {
+						{
 							key = default;
 							switch (keyLookMode)
 							{
@@ -285,12 +285,12 @@ namespace SmashTools
 							ExtractList(xmlNode.ChildNodes[1].ChildNodes, ref values, valueLookMode);
 							Scribe_Collections.Look(ref values, "values", valueLookMode);
 							dict.Add(key, values);
-                        }
-                    }
+						}
+					}
 					if (Scribe.mode == LoadSaveMode.ResolvingCrossRefs && (keyLookMode == LookMode.Reference || valueLookMode == LookMode.Reference))
 					{
 						
-                    }
+					}
 					return;
 				}
 				finally
@@ -302,68 +302,68 @@ namespace SmashTools
 			{
 				dict = null;
 			}
-        }
+		}
 
 		public static void Look<K, V>(ref Dictionary<K, HashSet<V>> dict, string label, LookMode keyLookMode, LookMode valueLookMode, bool forceSave = false)
-        {
+		{
 			var listDict = new Dictionary<K, List<V>>();
 			if (Scribe.mode == LoadSaveMode.Saving)
-            {
+			{
 				foreach (var pair in dict)
 				{
 					listDict.Add(pair.Key, pair.Value.ToList());
 				}
-            }
+			}
 			Look(ref listDict, label, keyLookMode, valueLookMode, forceSave);
 			if (Scribe.mode == LoadSaveMode.LoadingVars)
-            {
+			{
 				dict = new Dictionary<K, HashSet<V>>();
 				foreach (var pair in listDict)
 				{
 					dict.Add(pair.Key, pair.Value.ToHashSet());
 				}
-            }
-        }
+			}
+		}
 
 		private static void ExtractToLists<K, V>(XmlNode parentNode, ref List<K> keys, ref List<V> values, LookMode keyLookMode, LookMode valueLookMode)
-        {
+		{
 			ExtractList(parentNode.ChildNodes[1].ChildNodes, ref keys, keyLookMode);
 			ExtractList(parentNode.ChildNodes[2].ChildNodes, ref values, valueLookMode);
-        }
+		}
 
 		private static void ExtractList<T>(XmlNodeList nodeList, ref List<T> list, LookMode lookMode)
-        {
+		{
 			list.Clear();
 			foreach (XmlNode node in nodeList)
-            {
+			{
 				switch (lookMode)
-                { 
+				{ 
 					case LookMode.Value:
-                        {
+						{
 							T obj = ScribeExtractor.ValueFromNode<T>(node, default);
 							list.Add(obj);
-                        }
+						}
 						break;
 					case LookMode.Def:
-                        {
+						{
 							T obj = ScribeExtractor.DefFromNodeUnsafe<T>(node);
 							list.Add(obj);
-                        }
+						}
 						break;
 					case LookMode.Deep:
-                        {
+						{
 							T obj = ScribeExtractor.SaveableFromNode<T>(node, new object[] { });
 							list.Add(obj);
-                        }
+						}
 						break;
 					default:
-                        {
+						{
 							T obj = (T)ObjectValueExtractor.ValueFromNode(node);
 							list.Add(obj);
-                        }
+						}
 						break;
 				}
-            }
-        }
-    }
+			}
+		}
+	}
 }

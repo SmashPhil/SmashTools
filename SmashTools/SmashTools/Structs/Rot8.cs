@@ -8,8 +8,8 @@ namespace SmashTools
 	/// <summary>
 	/// 8 direction Rot struct for proper diagonal capturing
 	/// </summary>
-    public struct Rot8 : IEquatable<Rot8>
-    {
+	public struct Rot8 : IEquatable<Rot8>
+	{
 		private byte rotInt;
 
 		public Rot8(byte newRot)
@@ -23,12 +23,12 @@ namespace SmashTools
 		}
 
 		public Rot8 (Rot4 rot)
-        {
+		{
 			rotInt = rot.AsByte;
-        }
+		}
 
 		public Rot8(Rot4 rot, float angle)
-        {
+		{
 			int rotAsInt = rot.AsInt;
 			if (rot.IsHorizontal)
 			{
@@ -57,7 +57,7 @@ namespace SmashTools
 				}
 			}
 			rotInt = (byte)(rotAsInt % 8);
-        }
+		}
 
 		public bool IsVertical => rotInt == 2 || rotInt == 4;
 		public bool IsHorizontal => rotInt == 1 || rotInt == 3;
@@ -102,38 +102,38 @@ namespace SmashTools
 		{
 			get
 			{
-                return AsInt switch
-                {
-                    0 => new IntVec3(0, 0, 1),
-                    1 => new IntVec3(1, 0, 0),
-                    2 => new IntVec3(0, 0, -1),
-                    3 => new IntVec3(-1, 0, 0),
+				return AsInt switch
+				{
+					0 => new IntVec3(0, 0, 1),
+					1 => new IntVec3(1, 0, 0),
+					2 => new IntVec3(0, 0, -1),
+					3 => new IntVec3(-1, 0, 0),
 					4 => new IntVec3(1, 0, 1),
 					5 => new IntVec3(1, 0, -1),
 					6 => new IntVec3(-1, 0, -1),
 					7 => new IntVec3(-1, 0, 1),
-                    _ => default
-                };
-            }
+					_ => default
+				};
+			}
 		}
 
 		public Rot8 Opposite
 		{
 			get
 			{
-                return AsInt switch
-                {
-                    0 => new Rot8(2),
-                    1 => new Rot8(3),
-                    2 => new Rot8(0),
-                    3 => new Rot8(1),
+				return AsInt switch
+				{
+					0 => new Rot8(2),
+					1 => new Rot8(3),
+					2 => new Rot8(0),
+					3 => new Rot8(1),
 					4 => new Rot8(6),
 					5 => new Rot8(7),
 					6 => new Rot8(4),
 					7 => new Rot8(5),
-                    _ => default
-                };
-            }
+					_ => default
+				};
+			}
 		}
 
 		public byte AsByte
@@ -184,9 +184,9 @@ namespace SmashTools
 		}
 
 		public float AsRotationAngle
-        {
-            get
-            {
+		{
+			get
+			{
 				return AsInt switch
 				{
 					4 => -45,
@@ -195,22 +195,22 @@ namespace SmashTools
 					7 => 45,
 					_ => 0
 				};
-            }
-        }
+			}
+		}
 
 		public SpectateRectSide AsSpectateSide
 		{
 			get
 			{
-                return AsInt switch
-                {
-                    0 => SpectateRectSide.Up,
-                    1 => SpectateRectSide.Right,
-                    2 => SpectateRectSide.Down,
-                    3 => SpectateRectSide.Left,
-                    _ => SpectateRectSide.None,
-                };
-            }
+				return AsInt switch
+				{
+					0 => SpectateRectSide.Up,
+					1 => SpectateRectSide.Right,
+					2 => SpectateRectSide.Down,
+					3 => SpectateRectSide.Left,
+					_ => SpectateRectSide.None,
+				};
+			}
 		}
 
 		public Quaternion AsQuat
@@ -254,46 +254,46 @@ namespace SmashTools
 		}
 
 		public static Rot8 At(int i)
-        {
+		{
 			return new Rot8(i);
-        }
+		}
 
 		public static Rot8 FromDirection(IntVec2 dir)
-        {
+		{
 			if (dir == new IntVec2(0, 1))
-            {
+			{
 				return North;
-            }
+			}
 			else if (dir == new IntVec2(1, 1))
-            {
+			{
 				return NorthEast;
-            }
+			}
 			else if (dir == new IntVec2(1, 0))
-            {
+			{
 				return East;
-            }
+			}
 			else if (dir == new IntVec2(1, -1))
-            {
+			{
 				return SouthEast;
-            }
+			}
 			else if (dir == new IntVec2(0, -1))
-            {
+			{
 				return South;
-            }
+			}
 			else if (dir == new IntVec2(-1, -1))
-            {
+			{
 				return SouthWest;
-            }
+			}
 			else if (dir == new IntVec2(-1, 0))
-            {
+			{
 				return West;
-            }
+			}
 			else if (dir == new IntVec2(-1, 1))
-            {
+			{
 				return NorthWest;
-            }
+			}
 			return Invalid;
-        }
+		}
 
 		public void Rotate(RotationDirection RotDir)
 		{
@@ -317,10 +317,10 @@ namespace SmashTools
 		}
 
 		public static Rot8 DirectionFromCells(IntVec3 from, IntVec3 to)
-        {
+		{
 			IntVec3 result = from - to;
 			return FromDirection(new IntVec2(result.x, result.z));
-        }
+		}
 
 		public static bool operator ==(Rot8 a, Rot8 b)
 		{
@@ -333,7 +333,7 @@ namespace SmashTools
 		}
 
 		public static implicit operator Rot4(Rot8 rot)
-        {
+		{
 			return rot.AsInt switch
 			{
 				0 => Rot4.North,
@@ -346,17 +346,17 @@ namespace SmashTools
 				7 => Rot4.West,
 				_ => throw new Exception("Rot8 must be between (0, 7) int value")
 			};
-        }
+		}
 
 		public static implicit operator Rot8(Rot4 rot)
-        {
+		{
 			return new Rot8(rot.AsInt);
-        }
+		}
 
 		public override int GetHashCode()
 		{
 			return rotInt;
-        }
+		}
 
 		public override string ToString()
 		{
@@ -382,5 +382,5 @@ namespace SmashTools
 		{
 			return rotInt == other.rotInt;
 		}
-    }
+	}
 }

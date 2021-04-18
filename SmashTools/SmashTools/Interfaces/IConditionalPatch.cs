@@ -2,10 +2,10 @@
 
 namespace SmashTools
 {
-    public interface IConditionalPatch
-    {
-        void PatchAll(ModPatchable mod, Harmony instance);
+	public interface IConditionalPatch
+	{
+		void PatchAll(ModPatchable mod, Harmony instance);
 
-        string PackageId { get; }
-    }
+		string PackageId { get; }
+	}
 }

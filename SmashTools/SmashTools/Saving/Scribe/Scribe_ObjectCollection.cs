@@ -5,16 +5,16 @@ using Verse;
 
 namespace SmashTools
 {
-    public static class Scribe_ObjectCollection
-    {
+	public static class Scribe_ObjectCollection
+	{
 		public static void Look<T>(ref List<T> list, string label, bool forceSave = true)
-        {
+		{
 			var objectList = list.Cast<object>().ToList();
 			Look(ref objectList, label, forceSave);
 			list = objectList.Cast<T>().ToList();
-        }
+		}
 
-        public static void Look(ref List<object> list, string label, bool forceSave = true)
+		public static void Look(ref List<object> list, string label, bool forceSave = true)
 		{
 			if (Scribe.EnterNode(label))
 			{
@@ -60,5 +60,5 @@ namespace SmashTools
 				list = null;
 			}
 		}
-    }
+	}
 }
