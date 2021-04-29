@@ -20,6 +20,7 @@ namespace SmashTools
 
 		static SmashLog()
 		{
+			RegisterRichTextBracket("text", new Color(1, 1, 1, 1));
 			RegisterRichTextBracket("field", new Color(0.5f, 0.35f, 0.95f));
 			RegisterRichTextBracket("property", new Color(0.05f, 0.5f, 1));
 			RegisterRichTextBracket("method", new Color(1, 0.65f, 0));
@@ -31,6 +32,14 @@ namespace SmashTools
 			RegisterRichTextBracket("warning", new Color(1, 1, 0));
 			RegisterRichTextBracket("mod", new Color(0, 0.5f, 0.5f));
 		}
+
+		[Obsolete("Do not use this method outside of development.")]
+		public static void QuickMessage(string text)
+		{
+			Log.Clear();
+			Log.Message(text);
+		}
+
 
 		public static void Message(string text)
 		{
@@ -110,7 +119,7 @@ namespace SmashTools
 
 		private static string LogTextWithoutRichText(string text)
 		{
-			return Regex.Replace(text, RichTextRegex, "", RegexOptions.Singleline, TimeSpan.FromMilliseconds(5));
+			return Regex.Replace(text, RichTextRegex, "", RegexOptions.Singleline);
 		}
 	}
 }

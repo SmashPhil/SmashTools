@@ -71,7 +71,7 @@ namespace SmashTools.Xml
 					return;
 				}
 				Type typeInAnyAssembly = GenTypes.GetTypeInAnyAssembly(node.Name, null);
-				if (typeInAnyAssembly == null)
+				if (typeInAnyAssembly is null)
 				{
 					return;
 				}

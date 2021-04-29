@@ -78,7 +78,7 @@ namespace SmashTools
 									innerKeys.AddRange(outerPair.Value.Keys);
 									innerValues.AddRange(outerPair.Value.Values);
 									Scribe_Collections.Look(ref innerKeys, "innerKeys", innerKeyLookMode);
-									if (typeof(V) is object || typeof(V) == typeof(SavedField<object>))
+									if (typeof(V) == typeof(object) || typeof(V) == typeof(SavedField<object>))
 									{
 										Scribe_ObjectCollection.Look(ref innerValues, "innerValues", forceSave);
 									}

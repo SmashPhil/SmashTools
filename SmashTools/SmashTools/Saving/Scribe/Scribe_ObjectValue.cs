@@ -16,17 +16,17 @@ namespace SmashTools
 					Log.Error("Saving a TargetInfo " + label + " with Scribe_Values. TargetInfos must be saved with Scribe_TargetInfo.");
 					return;
 				}
-				if (typeof(Thing).IsAssignableFrom(obj.GetType()))
+				if (obj is Thing)
 				{
 					Log.Error("Using Scribe_Values with a Thing reference " + label + ". Use Scribe_References or Scribe_Deep instead.");
 					return;
 				}
-				if (typeof(IExposable).IsAssignableFrom(obj.GetType()))
+				if (obj is IExposable)
 				{
 					Log.Error("Using Scribe_Values with a IExposable reference " + label + ". Use Scribe_References or Scribe_Deep instead.");
 					return;
 				}
-				if (typeof(Def).IsAssignableFrom(obj.GetType()))
+				if (obj is Def)
 				{
 					Log.Error("Using Scribe_Values with a Def " + label + ". Use Scribe_Defs instead.");
 					return;

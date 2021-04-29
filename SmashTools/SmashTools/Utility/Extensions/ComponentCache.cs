@@ -23,7 +23,6 @@ namespace SmashTools
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="map"></param>
-		/// <returns></returns>
 		public static T GetCachedMapComponent<T>(this Map map) where T : MapComponent
 		{
 			if(mapDict.TryGetValue(map, out var mapComps))
@@ -53,8 +52,7 @@ namespace SmashTools
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="world"></param>
-		/// <returns></returns>
-		public static T GetCachedWorldComponent<T>(this World _) where T : WorldComponent
+		public static T GetCachedWorldComponent<T>(this World world) where T : WorldComponent
 		{
 			for (int i = 0; i < worldComps.Count; i++)
 			{
@@ -72,8 +70,7 @@ namespace SmashTools
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="game"></param>
-		/// <returns></returns>
-		public static T GetCachedGameComponent<T>(this Game _) where T : GameComponent
+		public static T GetCachedGameComponent<T>(this Game game) where T : GameComponent
 		{
 			for (int i = 0; i < gameComps.Count; i++)
 			{

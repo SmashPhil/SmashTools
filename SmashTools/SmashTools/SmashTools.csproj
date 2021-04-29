@@ -301,6 +301,7 @@
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
     <Compile Include="Logging\SmashLog.cs" />
+    <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />
     <Compile Include="Structs\Rot8.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
@@ -310,6 +311,7 @@
     <Compile Include="Utility\Extensions\Ext_IDictionary.cs" />
     <Compile Include="Utility\Extensions\Ext_IEnumerable.cs" />
     <Compile Include="Utility\Extensions\Ext_IList.cs" />
+    <Compile Include="Utility\Extensions\Ext_Mods.cs" />
     <Compile Include="Utility\Extensions\Ext_Numeric.cs" />
     <Compile Include="Utility\Extensions\Ext_Map.cs" />
     <Compile Include="Utility\Extensions\Ext_Pawn.cs" />

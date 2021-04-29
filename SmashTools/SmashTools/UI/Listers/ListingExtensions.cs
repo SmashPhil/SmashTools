@@ -31,7 +31,6 @@ namespace SmashTools
 
 		public static void IntegerBox(this Listing lister, string text, string tooltip, ref int value, float labelLength, float padding, int min = int.MinValue, int max = int.MaxValue)
 		{
-			lister.Gap(12f);
 			Rect rect = lister.GetRect(Text.LineHeight);
 
 			Rect rectLeft = new Rect(rect.x, rect.y, labelLength, rect.height);
@@ -49,7 +48,6 @@ namespace SmashTools
 			{
 				UIElements.DoTooltipRegion(rect, tooltip, true);
 			}
-
 			Text.CurTextFieldStyle.alignment = align;
 			GUI.color = color;
 		}

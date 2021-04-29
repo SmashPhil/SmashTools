@@ -25,7 +25,7 @@ namespace SmashTools
 			harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
-
+			
 			harmony.Patch(original: AccessTools.Method(typeof(World), "FillComponents"),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ConstructWorldComponents)));

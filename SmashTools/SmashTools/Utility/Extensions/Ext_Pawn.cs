@@ -109,20 +109,20 @@ namespace SmashTools
 			switch (direction.AsInt)
 			{
 				case 0:
-					sizeX = pawn.def.size.x;
-					sizeZ = pawn.def.size.z;
+					sizeX = pawn.def.Size.x;
+					sizeZ = pawn.def.Size.z;
 					break;
 				case 1:
-					sizeX = pawn.def.size.z;
-					sizeZ = pawn.def.size.x;
+					sizeX = pawn.def.Size.z;
+					sizeZ = pawn.def.Size.x;
 					break;
 				case 2:
-					sizeX = pawn.def.size.x;
-					sizeZ = pawn.def.size.z;
+					sizeX = pawn.def.Size.x;
+					sizeZ = pawn.def.Size.z;
 					break;
 				case 3:
-					sizeX = pawn.def.size.z;
-					sizeZ = pawn.def.size.x;
+					sizeX = pawn.def.Size.z;
+					sizeZ = pawn.def.Size.x;
 					break;
 				default:
 					throw new NotImplementedException("MoreThan4Rotations");
