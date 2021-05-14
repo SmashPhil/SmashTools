@@ -18,6 +18,8 @@ namespace SmashTools
 
 		internal static Dictionary<string, Color> bracketColor = new Dictionary<string, Color>();
 
+		private static HashSet<int> usedKeys = new HashSet<int>();
+
 		static SmashLog()
 		{
 			RegisterRichTextBracket("text", new Color(1, 1, 1, 1));
@@ -40,7 +42,6 @@ namespace SmashTools
 			Log.Message(text);
 		}
 
-
 		public static void Message(string text)
 		{
 			Log.Message(ColorizeBrackets(text));
@@ -49,6 +50,16 @@ namespace SmashTools
 		public static void Warning(string text)
 		{
 			Log.Warning(ColorizeBrackets(text));
+		}
+
+		public static void WarningOnce(string text, int key)
+		{
+			if (usedKeys.Contains(key))
+			{
+				return;
+			}
+			usedKeys.Add(key);
+			Warning(text);
 		}
 
 		public static void Error(string text)
@@ -119,7 +130,15 @@ namespace SmashTools
 
 		private static string LogTextWithoutRichText(string text)
 		{
-			return Regex.Replace(text, RichTextRegex, "", RegexOptions.Singleline);
+			try
+			{
+				string textNoBrackets = Regex.Replace(text, RichTextRegex, "", RegexOptions.Singleline, TimeSpan.FromMilliseconds(5));
+				return textNoBrackets;
+			}
+			catch (Exception)
+			{
+			}
+			return text;
 		}
 	}
 }

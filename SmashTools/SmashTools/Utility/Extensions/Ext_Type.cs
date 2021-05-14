@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using Verse;
 
 namespace SmashTools
@@ -53,6 +54,15 @@ namespace SmashTools
 			{
 				return null;
 			}
+		}
+
+		/// <summary>
+		/// Determine if method is overridden in any child class
+		/// </summary>
+		/// <param name="method"></param>
+		public static bool MethodImplemented(this MethodInfo method)
+		{
+			return method != null && method.GetBaseDefinition().DeclaringType != method.DeclaringType && !method.IsAbstract;
 		}
 	}
 }

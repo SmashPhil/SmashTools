@@ -3,6 +3,7 @@ using HarmonyLib;
 using Verse;
 using RimWorld.Planet;
 using SmashTools.Xml;
+using SmashTools.Debugging;
 
 namespace SmashTools
 {
@@ -32,6 +33,13 @@ namespace SmashTools
 			harmony.Patch(original: AccessTools.Method(typeof(Game), "FillComponents"),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ConstructGameComponents)));
+
+			if (Prefs.DevMode)
+			{
+				harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.LoadGame)),
+					postfix: new HarmonyMethod(typeof(UnitTesting),
+					nameof(UnitTesting.ExecutePostLoadTesting)));
+			}
 		}
 
 		private static void RegisterParseableStructs()

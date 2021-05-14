@@ -6,6 +6,23 @@ namespace SmashTools
 	{
 		private int currentIndex;
 
+		public RotatingList() : base()
+		{
+			currentIndex = 0;
+		}
+
+		public RotatingList(int capacity) : base(capacity)
+		{
+			currentIndex = 0;
+		}
+
+		public RotatingList(IEnumerable<T> enumerable) : base(enumerable)
+		{
+			currentIndex = 0;
+		}
+
+		public int Index => currentIndex;
+
 		public T Next
 		{
 			get

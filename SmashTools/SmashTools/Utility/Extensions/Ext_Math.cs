@@ -189,12 +189,21 @@ namespace SmashTools
 		}
 
 		/// <summary>
+		/// Angle between 2 cells in the in-game map. 0 is North, 270 is West
+		/// </summary>
+		/// <param name="pos"></param>
+		/// <param name="point"></param>
+		public static float AngleToPoint(this IntVec3 start, IntVec3 end)
+		{
+			return AngleToPoint(start.ToVector3Shifted(), end.ToVector3Shifted());
+		}
+
+		/// <summary>
 		/// Returns point from origin given radius and angle
 		/// </summary>
 		/// <param name="pos"></param>
 		/// <param name="distance"></param>
 		/// <param name="angle"></param>
-		/// <returns></returns>
 		public static Vector3 PointFromAngle(this Vector3 pos, float distance, float angle)
 		{
 			float x = (float)(pos.x + distance * Mathf.Sin(angle * Mathf.Deg2Rad));
@@ -202,12 +211,85 @@ namespace SmashTools
 			return new Vector3(x, pos.y, z);
 		}
 
+		public static Vector3 PointToEdge(this Vector3 origin, Map map, float angle)
+		{
+			float clampedAngle = angle.ClampAndWrap(0, 360).RoundTo(0.01f);
+			float maxX = map.Size.x;
+			float maxZ = map.Size.z;
+			Vector3 edgePoint = Vector3.zero;
+
+			if (clampedAngle == 0)
+			{
+				edgePoint = new Vector3(origin.x, origin.y, maxZ);
+			}
+			else if(clampedAngle == 90)
+			{
+				edgePoint = new Vector3(maxX, origin.y, origin.z);
+			}
+			else if(clampedAngle == 180)
+			{
+				edgePoint = new Vector3(origin.x, origin.y, 0);
+			}
+			else if(clampedAngle == 270)
+			{
+				edgePoint = new Vector3(0, origin.y, origin.z);
+			}
+			else if (clampedAngle >= 0 && clampedAngle <= 45) //1
+			{
+				float relativeAngle = clampedAngle;
+				float x = origin.x + ((maxZ - origin.z) * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(x, origin.y, maxZ);
+			}
+			else if (clampedAngle >= 45 && clampedAngle <= 90) //2
+			{
+				float relativeAngle = 90 - clampedAngle;
+				float z = origin.z + ((maxX - origin.x) * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(maxX, origin.y, z);
+			}
+			else if (clampedAngle >= 90 && clampedAngle <= 135) //3
+			{
+				float relativeAngle = clampedAngle - 90;
+				float z = origin.z - ((maxX - origin.x) * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(maxX, origin.y, z);
+			}
+			else if (clampedAngle >= 135 && clampedAngle <= 180) //4
+			{
+				float relativeAngle = 180 - clampedAngle;
+				float x = origin.x + (origin.z * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(x, origin.y, 0);
+			}
+			else if (clampedAngle >= 180 && clampedAngle <= 225) //5
+			{
+				float relativeAngle = clampedAngle - 180;
+				float x = origin.x - (origin.z * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(x, origin.y, 0);
+			}
+			else if (clampedAngle >= 225 && clampedAngle <= 270) //6
+			{
+				float relativeAngle = 270 - clampedAngle;
+				float z = origin.z - (origin.x * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(0, origin.y, z);
+			}
+			else if (clampedAngle >= 270 && clampedAngle <= 315) //7
+			{
+				float relativeAngle = clampedAngle - 270;
+				float z = origin.z + (origin.x * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(0, origin.y, z);
+			}
+			else if (clampedAngle >= 315 && clampedAngle <= 360) //8
+			{
+				float relativeAngle = 360 - clampedAngle;
+				float x = origin.x - ((maxZ - origin.z) * Mathf.Tan(relativeAngle * Mathf.Deg2Rad));
+				edgePoint = new Vector3(x, origin.y, maxZ);
+			}
+			return edgePoint;
+		}
+
 		/// <summary>
 		/// Get point on edge of square map given angle (0 to 360) relative to x axis from origin
 		/// </summary>
 		/// <param name="angle"></param>
 		/// <param name="map"></param>
-		/// <returns></returns>
 		public static IntVec3 PointFromOrigin(float angle, Map map)
 		{
 			int a = map.Size.x;
@@ -255,6 +337,11 @@ namespace SmashTools
 			};
 		}
 
+		/// <summary>
+		/// Spherical distance from <paramref name="source"/> to <paramref name="target"/> on the World Map approximated by tiles
+		/// </summary>
+		/// <param name="source"></param>
+		/// <param name="target"></param>
 		public static float SphericalDistance(Vector3 source, Vector3 target)
 		{
 			float sphericalDistance = GenMath.SphericalDistance(source.normalized, target.normalized);

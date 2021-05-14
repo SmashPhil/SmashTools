@@ -298,9 +298,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attributes\MustImplementAttribute.cs" />
+    <Compile Include="Attributes\UnitTestAttribute.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
+    <Compile Include="Debugging\UnitTesting.cs" />
     <Compile Include="Logging\SmashLog.cs" />
+    <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />
     <Compile Include="Structs\Rot8.cs" />
@@ -317,6 +321,7 @@
     <Compile Include="Utility\Extensions\Ext_Pawn.cs" />
     <Compile Include="Utility\Extensions\Ext_Math.cs" />
     <Compile Include="Utility\Extensions\Ext_String.cs" />
+    <Compile Include="Utility\Extensions\Ext_Texture.cs" />
     <Compile Include="Utility\Extensions\Ext_Type.cs" />
     <Compile Include="Interfaces\IConditionalPatch.cs" />
     <Compile Include="Interfaces\INestedType.cs" />
@@ -335,6 +340,7 @@
     <Compile Include="Saving\Scribe\Scribe_ObjectValue.cs" />
     <Compile Include="UI\UIData.cs" />
     <Compile Include="UI\UIElements.cs" />
+    <Compile Include="Utility\Extensions\Ext_World.cs" />
     <Compile Include="Utility\Utilities.cs" />
     <Compile Include="Xml\XmlParseHelper.cs" />
   </ItemGroup>

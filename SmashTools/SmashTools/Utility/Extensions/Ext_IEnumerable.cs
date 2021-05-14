@@ -37,15 +37,25 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Check if one List is entirely contained within another List
+		/// Check if <paramref name="source"/> is entirely contained within <paramref name="target"/>
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
-		/// <param name="sourceList"></param>
-		/// <param name="searchingList"></param>
-		public static bool ContainsAllOfList<T>(this IEnumerable<T> sourceList, IEnumerable<T> searchingList)
+		/// <param name="source"></param>
+		/// <param name="target"></param>
+		public static bool ContainsAllOfList<T>(this IEnumerable<T> source, IEnumerable<T> target)
 		{
-			if (sourceList is null || searchingList is null) return false;
-			return sourceList.Intersect(searchingList).NotNullAndAny();
+			if (source is null || target is null) return false;
+			return source.Intersect(target).NotNullAndAny();
+		}
+
+		/// <summary>
+		/// Creates a RotatingList&lt;<typeparamref name="T"/>&gt; from an IEnumerable&lt;<typeparamref name="T"/>&gt;
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="sourceCollection"></param>
+		public static RotatingList<T> ToRotatingList<T>(this IEnumerable<T> sourceCollection)
+		{
+			return new RotatingList<T>(sourceCollection);
 		}
 	}
 }

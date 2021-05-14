@@ -61,12 +61,12 @@ namespace SmashTools
 
 		public bool IsVertical => rotInt == 2 || rotInt == 4;
 		public bool IsHorizontal => rotInt == 1 || rotInt == 3;
-		public bool IsAngled => rotInt == 4 || rotInt == 5 || rotInt == 6 || rotInt == 7;
+		public bool IsDiagonal => rotInt == 4 || rotInt == 5 || rotInt == 6 || rotInt == 7;
 
-		public static Rot4 North => new Rot4(0);
-		public static Rot4 East => new Rot4(1);
-		public static Rot4 South => new Rot4(2);
-		public static Rot4 West => new Rot4(3);
+		public static Rot8 North => new Rot8(0);
+		public static Rot8 East => new Rot8(1);
+		public static Rot8 South => new Rot8(2);
+		public static Rot8 West => new Rot8(3);
 		public static Rot8 NorthEast => new Rot8(4);
 		public static Rot8 SouthEast => new Rot8(5);
 		public static Rot8 SouthWest => new Rot8(6);

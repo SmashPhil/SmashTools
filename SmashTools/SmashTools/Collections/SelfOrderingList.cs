@@ -33,6 +33,7 @@ namespace SmashTools
 		{
 			contents = emptyContents;
 			counters = emptyCounters;
+			size = 0;
 		}
 
 		public SelfOrderingList(int capacity)
@@ -44,11 +45,13 @@ namespace SmashTools
 			{
 				contents = emptyContents;
 				counters = emptyCounters;
+				size = 0;
 			}
 			else
 			{
 				contents = new T[capacity];
 				counters = new uint[capacity];
+				size = capacity;
 			}
 		}
 
@@ -78,10 +81,9 @@ namespace SmashTools
 				size = 0;
 				contents = emptyContents;
 				counters = emptyCounters;
-				using IEnumerator<T> en = enumerable.GetEnumerator();
-				while (en.MoveNext())
+				foreach (T item in enumerable)
 				{
-					Add(en.Current);
+					Add(item);
 				}
 			}
 		}
@@ -177,7 +179,7 @@ namespace SmashTools
 		{
 			Contract.Ensures(Count >= Contract.OldValue(Count));
 
-			//InsertRange(size, enumerable);
+			InsertRange(size, enumerable);
 		}
 
 		public void InsertRange(int index, IEnumerable<T> enumerable) 
@@ -192,8 +194,7 @@ namespace SmashTools
 				throw new ArgumentOutOfRangeException();
 			}
 			Contract.EndContractBlock();
- 
-			if(enumerable is ICollection<T> collection) 
+			if (enumerable is ICollection<T> collection) 
 			{
 				int count = collection.Count;
 				if (count > 0) 
@@ -203,29 +204,26 @@ namespace SmashTools
 					{
 						Array.Copy(contents, index, contents, index + count, size - index);
 					}
-					
 					if (this == collection) 
 					{
 						Array.Copy(contents, 0, contents, index, index);
-						Array.Copy(contents, index+count, contents, index*2, size-index);
+						Array.Copy(contents, index + count, contents, index * 2, size - index);
 					}
-					else {
+					else 
+					{
 						T[] itemsToInsert = new T[count];
-						uint[] newCounters = new uint[count];
 						collection.CopyTo(itemsToInsert, 0);
-						itemsToInsert.CopyTo(contents, index);		   
-						counters.CopyTo(newCounters, 0);
+						itemsToInsert.CopyTo(contents, index);
 						counters = new uint[count];
-						newCounters.CopyTo(counters, 0);
 					}
 					size += count;
 				}				
 			}
-			else {
-				using IEnumerator<T> en = enumerable.GetEnumerator();
-				while (en.MoveNext())
+			else 
+			{
+				foreach (T item in enumerable)
 				{
-					Insert(index++, en.Current);
+					Insert(index++, item);
 				}
 			}
 			version++;			

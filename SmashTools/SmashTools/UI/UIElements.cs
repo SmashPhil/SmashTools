@@ -125,6 +125,15 @@ namespace SmashTools
 			GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.GreyTex);
 		}
 
+		//public static void DrawLineTo(Vector3 origin, float angle, float distance)
+		//{
+		//	Quaternion quat = Quaternion.LookRotation(Vector3.Ang);
+		//	Vector3 s = new Vector3(0.2f, 1f, z);
+		//	Matrix4x4 matrix = default(Matrix4x4);
+		//	matrix.SetTRS(pos, q, s);
+		//	Graphics.DrawMesh(MeshPool.plane10, matrix, mat, 0);
+		//}
+
 		public static void LabelStyled(Rect rect, string label, GUIStyle style)
 		{
 			Rect position = rect;
