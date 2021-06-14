@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 using Verse;
+using RimWorld.Planet;
 
 namespace SmashTools
 {
@@ -17,7 +19,7 @@ namespace SmashTools
 		/// <param name="values"></param>
 		/// <param name="tile"></param>
 		/// <param name="outList"></param>
-		public static List<int> GetTileNeighbors(int tile, int radius = 1)
+		public static List<int> GetTileNeighbors(int tile, int radius = 1, Vector3? nearestTo = null)
 		{
 			if (radius == 1)
 			{
@@ -29,31 +31,43 @@ namespace SmashTools
 			//{
 			//	return;
 			//}
-			List<int> neighbors = new List<int>();
-			Stack<int> stack = new Stack<int>();
-			stack.Push(tile);
-			List<int> newTilesSearch = new List<int>();
-			HashSet<int> allSearchedTiles = new HashSet<int>() { tile };
+			List<int> ringTiles = new List<int>();
 
-			for (int i = 0; i < radius; i++)
+			Find.WorldFloodFiller.FloodFill(tile, (int tile) => true, delegate (int tile, int dist)
 			{
-				newTilesSearch.Clear();
-				int stackSize = stack.Count;
-				for (int j = 0; j < stackSize; j++)
+				if (dist > radius + 1)
 				{
-					int searchTile = stack.Pop();
-					Find.WorldGrid.GetTileNeighbors(searchTile, neighbors);
-					foreach (int nTile in neighbors)
-					{
-						if (allSearchedTiles.Add(nTile))
-						{
-							newTilesSearch.Add(nTile);
-						}
-					}
+					return true;
 				}
-				stack = new Stack<int>(newTilesSearch);
+				if (dist == radius + 1)
+				{
+					ringTiles.Add(tile);
+				}
+				return false;
+			}, int.MaxValue, null);
+
+			WorldGrid worldGrid = Find.WorldGrid;
+			Vector3 c = worldGrid.GetTileCenter(tile);
+			Vector3 n = c.normalized;
+			ringTiles.Sort(delegate (int a, int b)
+			{
+				float num = Vector3.Dot(n, Vector3.Cross(worldGrid.GetTileCenter(a) - c, worldGrid.GetTileCenter(b) - c));
+				if (Mathf.Abs(num) < 0.0001f)
+				{
+					return 0;
+				}
+				if (num < 0f)
+				{
+					return -1;
+				}
+				return 1;
+			});
+			if (nearestTo.HasValue)
+			{
+				int closestTile = ringTiles.MinBy(t => Vector3.Dot(n, Vector3.Cross(worldGrid.GetTileCenter(t) - c, nearestTo.Value - c)));
+				return ringTiles.ReorderOn(closestTile);
 			}
-			return newTilesSearch;
+			return ringTiles;	
 		}
 	}
 }

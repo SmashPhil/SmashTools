@@ -18,7 +18,7 @@ namespace SmashTools
 		/// </summary>
 		/// <param name="harmony"></param>
 		/// <param name="sourcePackageID"></param>
-		public static (ModMetaData metaData, ModContentPack modContent) PatchAllActiveMods(Harmony harmony, string sourcePackageID)
+		public static void PatchAllActiveMods(Harmony harmony, string sourcePackageID)
 		{
 			IEnumerable<ModMetaData> mods = ModLister.AllInstalledMods.Where(m => m.Active);
 			IEnumerable<Type> interfaceImplementations = GenTypes.AllTypes.Where(t => t.GetInterfaces().Contains(typeof(IConditionalPatch)));
@@ -35,7 +35,7 @@ namespace SmashTools
 						try
 						{
 							IConditionalPatch patch = (IConditionalPatch)Activator.CreateInstance(type, null);
-							if(Utilities.MatchingPackage(mod.PackageId, patch.PackageId))
+							if (mod.SamePackageId(patch.PackageId))
 							{
 								ModPatchable newMod = new ModPatchable()
 								{
@@ -58,8 +58,6 @@ namespace SmashTools
 					}
 				}
 			}
-			
-			return (modMetaData, modContentPack);
 		}
 	}
 }

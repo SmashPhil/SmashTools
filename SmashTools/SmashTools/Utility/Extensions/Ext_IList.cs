@@ -55,5 +55,26 @@ namespace SmashTools
 				indexOf = 0;
 			return list[indexOf];
 		}
+
+		/// <summary>
+		/// Split list on item T and shift to front
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerable"></param>
+		/// <returns></returns>
+		public static List<T> ReorderOn<T>(this List<T> list, T item)
+		{
+			int index = list.IndexOf(item);
+			if (index < 0)
+			{
+				Log.Error($"Unable to ReorderOn list, item does not exist.");
+				return list;
+			}
+			var frontList = list.GetRange(0, index);
+			var backList = list.GetRange(index + 1, list.Count - 1);
+			var newList = new List<T>(backList);
+			newList.AddRange(frontList);
+			return newList;
+		}
 	}
 }

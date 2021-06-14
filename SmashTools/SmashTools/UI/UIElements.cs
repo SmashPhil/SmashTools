@@ -120,6 +120,27 @@ namespace SmashTools
 			TooltipHandler.TipRegion(rect, tooltip);
 		}
 
+		public static void SliderLabeled(Rect rect, string label, string tooltip, string endSymbol, ref float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
+		{
+			string format = $"{Math.Round(value * multiplier, decimalPlaces)}" + endSymbol;
+			if (!maxValueDisplay.NullOrEmpty() && endValue > 0)
+			{
+				if (value >= endValue)
+				{
+					format = maxValueDisplay;
+				}
+			}
+			if (!tooltip.NullOrEmpty())
+			{
+				DoTooltipRegion(rect, tooltip, true);
+			}
+			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+			if (endValue > 0 && value >= max)
+			{
+				value = endValue;
+			}
+		}
+
 		public static void DrawLineHorizontalGrey(float x, float y, float length)
 		{
 			GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.GreyTex);

@@ -306,6 +306,7 @@
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
+    <Compile Include="Patching\PatchOperations\PatchOperationTrace.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />
     <Compile Include="Structs\Rot8.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
@@ -342,6 +343,7 @@
     <Compile Include="UI\UIElements.cs" />
     <Compile Include="Utility\Extensions\Ext_World.cs" />
     <Compile Include="Utility\Utilities.cs" />
+    <Compile Include="Xml\FilePaths.cs" />
     <Compile Include="Xml\XmlParseHelper.cs" />
   </ItemGroup>
   <ItemGroup>

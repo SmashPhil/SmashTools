@@ -211,6 +211,19 @@ namespace SmashTools
 			return new Vector3(x, pos.y, z);
 		}
 
+		/// <summary>
+		/// Returns point from origin given radius and angle
+		/// </summary>
+		/// <param name="pos"></param>
+		/// <param name="distance"></param>
+		/// <param name="angle"></param>
+		public static IntVec3 PointFromAngle(this IntVec3 pos, float distance, float angle)
+		{
+			int x = Mathf.CeilToInt(pos.x + distance * Mathf.Sin(angle * Mathf.Deg2Rad));
+			int z = Mathf.CeilToInt(pos.z + distance * Mathf.Cos(angle * Mathf.Deg2Rad));
+			return new IntVec3(x, pos.y, z);
+		}
+
 		public static Vector3 PointToEdge(this Vector3 origin, Map map, float angle)
 		{
 			float clampedAngle = angle.ClampAndWrap(0, 360).RoundTo(0.01f);
