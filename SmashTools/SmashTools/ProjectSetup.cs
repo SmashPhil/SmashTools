@@ -26,19 +26,34 @@ namespace SmashTools
 			harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
-			
+
+			harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
+				postfix: new HarmonyMethod(typeof(ComponentCache),
+				nameof(ComponentCache.ClearMapComps)));
+			harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
+				postfix: new HarmonyMethod(typeof(ComponentCache),
+				nameof(ComponentCache.RegisterMapComps)));
 			harmony.Patch(original: AccessTools.Method(typeof(World), "FillComponents"),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ConstructWorldComponents)));
 			harmony.Patch(original: AccessTools.Method(typeof(Game), "FillComponents"),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ConstructGameComponents)));
+			harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
+				postfix: new HarmonyMethod(typeof(UnitTesting),
+				nameof(UnitTesting.DrawDebugWindowButton)));
 
 			if (Prefs.DevMode)
 			{
+				harmony.Patch(original: AccessTools.Method(typeof(MapGenerator), nameof(MapGenerator.GenerateMap)),
+					postfix: new HarmonyMethod(typeof(UnitTesting),
+					nameof(UnitTesting.ExecuteNewGameTesting)));
 				harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.LoadGame)),
 					postfix: new HarmonyMethod(typeof(UnitTesting),
 					nameof(UnitTesting.ExecutePostLoadTesting)));
+				harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
+					postfix: new HarmonyMethod(typeof(UnitTesting),
+					nameof(UnitTesting.ExecuteOnStartupTesting)));
 			}
 		}
 

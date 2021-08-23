@@ -12,7 +12,7 @@ namespace SmashTools
 	[StaticConstructorOnStartup]
 	public static class ComponentCache
 	{
-		public static Dictionary<Map, SelfOrderingList<MapComponent>> mapDict = new Dictionary<Map, SelfOrderingList<MapComponent>>();
+		public static SelfOrderingList<MapComponent>[] mapComps = new SelfOrderingList<MapComponent>[sbyte.MaxValue].Populate(() => new SelfOrderingList<MapComponent>());
 
 		public static SelfOrderingList<WorldComponent> worldComps = new SelfOrderingList<WorldComponent>();
 
@@ -21,28 +21,32 @@ namespace SmashTools
 		/// <summary>
 		/// Cache Retrieval for MapComponents
 		/// </summary>
+		/// <remarks>
+		/// DO NOT USE if you do not know if the MapComponent exists
+		/// </remarks>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="map"></param>
 		public static T GetCachedMapComponent<T>(this Map map) where T : MapComponent
 		{
-			if(mapDict.TryGetValue(map, out var mapComps))
+			var comps = mapComps[map.Index];
+			if (!comps.NullOrEmpty())
 			{
-				for (int i = 0; i < mapComps.Count; i++)
+				for (int i = 0; i < comps.Count; i++)
 				{
-					if (mapComps[i] is T t)
+					if (comps[i] is T t)
 					{
-						mapComps.CountIndex(i);
+						comps.CountIndex(i);
 						return t;
 					}
 				}
 				MapComponent component = map.GetComponent<T>();
 				if (component != null)
 				{
-					mapComps.Add(component);
+					comps.Add(component);
 				}
 				return (T)component;
 			}
-			mapDict.Add(map, new SelfOrderingList<MapComponent>(map.components));
+			mapComps[map.Index] = new SelfOrderingList<MapComponent>(map.components);
 			T comp = map.GetComponent<T>();
 			return comp;
 		}
@@ -88,18 +92,22 @@ namespace SmashTools
 
 		internal static void ConstructWorldComponents(World __instance)
 		{
-			foreach (WorldComponent component in __instance.components)
-			{
-				worldComps.Add(component);
-			}
+			worldComps.AddRange(__instance.components);
 		}
 
 		internal static void ConstructGameComponents(Game __instance)
 		{
-			foreach (GameComponent component in __instance.components)
-			{
-				gameComps.Add(component);
-			}
+			gameComps.AddRange(__instance.components);
+		}
+
+		internal static void ClearMapComps(Map map)
+		{
+			mapComps[map.Index].Clear();
+		}
+
+		internal static void RegisterMapComps(Map map)
+		{
+			mapComps[map.Index].AddRange(map.components);
 		}
 	}
 }

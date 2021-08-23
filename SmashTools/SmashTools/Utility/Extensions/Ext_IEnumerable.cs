@@ -57,5 +57,15 @@ namespace SmashTools
 		{
 			return new RotatingList<T>(sourceCollection);
 		}
+
+		/// <summary>
+		/// Join list into readable string
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerable"></param>
+		public static string ToReadableString<T>(this IEnumerable<T> enumerable)
+		{
+			return string.Join(",", enumerable);
+		}
 	}
 }

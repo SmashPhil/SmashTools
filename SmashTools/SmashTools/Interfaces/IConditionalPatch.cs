@@ -1,10 +1,11 @@
-﻿using HarmonyLib;
+﻿using Verse;
+using HarmonyLib;
 
 namespace SmashTools
 {
 	public interface IConditionalPatch
 	{
-		void PatchAll(ModPatchable mod, Harmony instance);
+		void PatchAll(ModMetaData mod, Harmony instance);
 
 		string PackageId { get; }
 	}

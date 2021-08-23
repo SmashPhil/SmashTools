@@ -64,5 +64,15 @@ namespace SmashTools
 		{
 			return method != null && method.GetBaseDefinition().DeclaringType != method.DeclaringType && !method.IsAbstract;
 		}
+
+		/// <summary>
+		/// <paramref name="source"/> is the same Type as or derived from <paramref name="target"/>
+		/// </summary>
+		/// <param name="source"></param>
+		/// <param name="target"></param>
+		public static bool SameOrSubclass(this Type source, Type target)
+		{
+			return source == target || source.IsSubclassOf(target);
+		}
 	}
 }

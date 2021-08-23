@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Reflection;
 using Verse;
 
 namespace SmashTools
@@ -16,13 +18,45 @@ namespace SmashTools
 		public delegate void ActionRef<T1, T2>(ref T1 item1, ref T2 item2);
 
 		/// <summary>
-		/// <paramref name="source"/> is the same Type as or derived from <paramref name="target"/>
+		/// Delete Mod config file
 		/// </summary>
-		/// <param name="source"></param>
-		/// <param name="target"></param>
-		public static bool SameOrSubclass(this Type source, Type target)
+		/// <param name="modContentPack"></param>
+		/// <param name="mod"></param>
+		public static void DeleteConfig(Mod mod)
 		{
-			return source == target || source.IsSubclassOf(target);
+			string settingsFileName = Path.Combine(GenFilePaths.ConfigFolderPath, GenText.SanitizeFilename(string.Format("Mod_{0}_{1}.xml", mod.Content.FolderName, mod.GetType().Name)));
+			if (File.Exists(settingsFileName))
+			{
+				File.Delete(settingsFileName);
+			}
+		}
+
+		/// <summary>
+		/// Delete <see cref="SmashSettings"/>
+		/// </summary>
+		internal static void DeleteSettings()
+		{
+			string filePath = SmashSettings.FullPath;
+			if (File.Exists(filePath))
+			{
+				File.Delete(filePath);
+			}
+		}
+
+		/// <summary>
+		/// Invoke anonymous method with logging. Useful for quick method execution without having to set up many try catch blocks.
+		/// </summary>
+		/// <param name="action"></param>
+		public static void InvokeWithLogging(this Action action)
+		{
+			try
+			{
+				action();
+			}
+			catch (Exception ex)
+			{
+				SmashLog.Error($"Unable to execute {action.Method?.Name ?? action.ToString()} Exception={ex.Message}");
+			}
 		}
 	}
 }

@@ -20,9 +20,11 @@ namespace SmashTools
 
 		private static HashSet<int> usedKeys = new HashSet<int>();
 
+		private static HashSet<string> suppressedCodes = new HashSet<string>();
+
 		static SmashLog()
 		{
-			RegisterRichTextBracket("text", new Color(1, 1, 1, 1));
+			RegisterRichTextBracket("text", Color.white);
 			RegisterRichTextBracket("field", new Color(0.5f, 0.35f, 0.95f));
 			RegisterRichTextBracket("property", new Color(0.05f, 0.5f, 1));
 			RegisterRichTextBracket("method", new Color(1, 0.65f, 0));
@@ -30,9 +32,24 @@ namespace SmashTools
 			RegisterRichTextBracket("class", new Color(0, 0.65f, 0.5f));
 			RegisterRichTextBracket("type", new Color(0, 0.65f, 0.5f)); 
 			RegisterRichTextBracket("success", new Color(0, 0.5f, 0));
-			RegisterRichTextBracket("error", new Color(1, 0, 0));
-			RegisterRichTextBracket("warning", new Color(1, 1, 0));
+			RegisterRichTextBracket("error", ColorLibrary.LogError);
+			RegisterRichTextBracket("warning", Color.yellow);
 			RegisterRichTextBracket("mod", new Color(0, 0.5f, 0.5f));
+			RegisterRichTextBracket("attribute", new Color(1, 0.4f, 0.4f));
+			RegisterRichTextBracket("xml", new Color(0.25f, 0.75f, 0.95f));
+		}
+
+		public static void RegisterSuppressionCode(string code)
+		{
+			if (!suppressedCodes.Add(code))
+			{
+				Log.Error($"Unable to register {code} as a supression code. It is already being used and codes must be unique.");
+			}
+		}
+
+		public static bool Suppress(string code)
+		{
+			return !code.NullOrEmpty() && suppressedCodes.Contains(code);
 		}
 
 		[Obsolete("Do not use this method outside of development.")]
@@ -47,29 +64,82 @@ namespace SmashTools
 			Log.Message(ColorizeBrackets(text));
 		}
 
-		public static void Warning(string text)
+		public static void Warning(string text, string code = "")
 		{
-			Log.Warning(ColorizeBrackets(text));
-		}
-
-		public static void WarningOnce(string text, int key)
-		{
-			if (usedKeys.Contains(key))
+			if (!Suppress(code))
 			{
-				return;
+				Log.Warning(ColorizeBrackets(text));
 			}
-			usedKeys.Add(key);
-			Warning(text);
 		}
 
-		public static void Error(string text)
+		public static void WarningLabel(string label, string text, string code = "")
 		{
-			Log.Error(ColorizeBrackets(text));
+			if (!Suppress(code))
+			{
+				Log.Message($"{ColorizeBrackets($"<warning>{label}</warning>")} {ColorizeBrackets(text)}");
+			}
 		}
 
-		public static void ErrorOnce(string text, int key)
+		public static void WarningOnce(string text, int key, string code = "")
 		{
-			Log.ErrorOnce(ColorizeBrackets(text), key);
+			if (!Suppress(code))
+			{
+				if (usedKeys.Contains(key))
+				{
+					return;
+				}
+				usedKeys.Add(key);
+				Warning(text);
+			}
+		}
+
+		public static void Error(string text, string code = "")
+		{
+			if (!Suppress(code))
+			{
+				Log.Error(ColorizeBrackets(text));
+			}
+		}
+
+		public static void ErrorLabel(string label, string text, string code = "")
+		{
+			if (!Suppress(code))
+			{
+				try
+				{
+					if (Prefs.PauseOnError && Current.ProgramState == ProgramState.Playing)
+					{
+						Find.TickManager.Pause();
+					}
+					Log.Message($"{ColorizeBrackets($"<error>{label}</error>")} {ColorizeBrackets(text)}");
+					if (!PlayDataLoader.Loaded || Prefs.DevMode)
+					{
+						Log.TryOpenLogWindow();
+					}
+				}
+				catch (Exception ex)
+				{
+					Log.Error($"An error occurred while logging an error with a label: {ex.Message}");
+				}
+			}
+		}
+
+		public static void ErrorOnce(string text, int key, string code = "")
+		{
+			if (!Suppress(code))
+			{
+				Log.ErrorOnce(ColorizeBrackets(text), key);
+			}
+		}
+
+		public static void Success(string text)
+		{
+			Log.Message(ColorizeBrackets($"<success>{text}</success>"));
+		}
+
+		public static void SuccessLabel(string label, string text)
+		{
+			Log.Message($"{ColorizeBrackets($"<success>{label}</success>")} {ColorizeBrackets(text)}");
 		}
 
 		internal static string ColorizeBrackets(string text)

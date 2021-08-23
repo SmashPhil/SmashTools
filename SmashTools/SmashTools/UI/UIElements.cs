@@ -88,7 +88,7 @@ namespace SmashTools
 			GUI.color = orgColor;
 		}
 
-		public static bool ClickableLabel(Rect rect, string label, Color mouseOver, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
+		public static bool ClickableLabel(Rect rect, string label, Color mouseOver, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft, Color? clickColor = null)
 		{
 			var color = GUI.color;
 			var textSize = Text.Font;
@@ -97,6 +97,11 @@ namespace SmashTools
 			if (Mouse.IsOver(rect))
 			{
 				GUI.color = mouseOver;
+				if (Input.GetMouseButton(0))
+				{
+					clickColor ??= Color.grey;
+					GUI.color = clickColor.Value;
+				}
 			}
 			else
 			{
@@ -146,14 +151,10 @@ namespace SmashTools
 			GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.GreyTex);
 		}
 
-		//public static void DrawLineTo(Vector3 origin, float angle, float distance)
-		//{
-		//	Quaternion quat = Quaternion.LookRotation(Vector3.Ang);
-		//	Vector3 s = new Vector3(0.2f, 1f, z);
-		//	Matrix4x4 matrix = default(Matrix4x4);
-		//	matrix.SetTRS(pos, q, s);
-		//	Graphics.DrawMesh(MeshPool.plane10, matrix, mat, 0);
-		//}
+		public static void DrawLineVerticalGrey(float x, float y, float length)
+		{
+			GUI.DrawTexture(new Rect(x, y, 1f, length), BaseContent.GreyTex);
+		}
 
 		public static void LabelStyled(Rect rect, string label, GUIStyle style)
 		{

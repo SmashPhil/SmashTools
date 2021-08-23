@@ -16,7 +16,7 @@ namespace SmashTools
 			{
 				if (xml.SelectSingleNode(xpathChecking) is null)
 				{
-					SmashLog.Error($"Failed at <message>{xpathChecking}</message>");
+					SmashLog.Error($"Failed at <text>{xpathChecking}</text>");
 					return false;
 				}
 				xpathChecking += $"/{nodes[i]}";

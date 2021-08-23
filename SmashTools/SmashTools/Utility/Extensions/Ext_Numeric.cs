@@ -48,6 +48,28 @@ namespace SmashTools
 		}
 
 		/// <summary>
+		/// Clamp value between a in and max but wrap around rather than return min / max
+		/// </summary>
+		/// <param name="val"></param>
+		/// <param name="min"></param>
+		/// <param name="max"></param>
+		public static int ClampAndWrap(this int val, int min, int max)
+		{
+			while (val < min || val > max)
+			{
+				if (val < min)
+				{
+					val += max;
+				}
+				if (val > max)
+				{
+					val -= max;
+				}
+			}
+			return val;
+		}
+
+		/// <summary>
 		/// Convert > 360 and < 0 angles to relative 0:360 angles in a unit circle
 		/// </summary>
 		/// <param name="theta"></param>

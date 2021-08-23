@@ -112,10 +112,6 @@
       <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.DSPGraphModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEngine.FileSystemHttpModule">
-      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.FileSystemHttpModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="UnityEngine.GameCenterModule">
       <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.GameCenterModule.dll</HintPath>
       <Private>False</Private>
@@ -302,16 +298,22 @@
     <Compile Include="Attributes\UnitTestAttribute.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
+    <Compile Include="Debugging\GameState.cs" />
     <Compile Include="Debugging\UnitTesting.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationTrace.cs" />
+    <Compile Include="SmashSettings.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />
     <Compile Include="Structs\Rot8.cs" />
+    <Compile Include="UI\Windows\Dialog_DebugCheckboxLister.cs" />
+    <Compile Include="UI\Windows\Dialog_UnitTesting.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
     <Compile Include="UI\Windows\SingleWindow.cs" />
     <Compile Include="Utility\Extensions\ComponentCache.cs" />
+    <Compile Include="Utility\Extensions\Ext_Array.cs" />
+    <Compile Include="Utility\Extensions\Ext_Color.cs" />
     <Compile Include="Utility\Extensions\Ext_Conversion.cs" />
     <Compile Include="Utility\Extensions\Ext_IDictionary.cs" />
     <Compile Include="Utility\Extensions\Ext_IEnumerable.cs" />
@@ -341,6 +343,7 @@
     <Compile Include="Saving\Scribe\Scribe_ObjectValue.cs" />
     <Compile Include="UI\UIData.cs" />
     <Compile Include="UI\UIElements.cs" />
+    <Compile Include="Utility\Extensions\Ext_Unity.cs" />
     <Compile Include="Utility\Extensions\Ext_World.cs" />
     <Compile Include="Utility\Utilities.cs" />
     <Compile Include="Xml\FilePaths.cs" />

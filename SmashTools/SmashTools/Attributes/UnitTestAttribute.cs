@@ -10,8 +10,24 @@ namespace SmashTools
 	public class UnitTestAttribute : Attribute
 	{
 		/// <summary>
-		/// Queue method for unit testing
+		/// Name assigned to checkbox label in UnitTesting dialog. Overrides method name.
 		/// </summary>
-		public bool Active { get; set; } = false;
+		public string Name { get; set; }
+
+		/// <summary>
+		/// Category for splitting up UnitTest cases between different mods
+		/// </summary>
+		public string Category { get; set; }
+
+		/// <summary>
+		/// GameState to initiate UnitTest
+		/// </summary>
+		/// <remarks>
+		/// <para><see cref="GameState.OnStartup"/> executes after the main menu has loaded</para>
+		/// <para><see cref="GameState.NewGame"/> executes after a new game has been initialized</para>
+		/// <para><see cref="GameState.LoadedSave"/> executes after a loaded save has finished initializing</para>
+		/// <para><see cref="GameState.Playing"/> executes for both new games and loaded saves</para>
+		/// </remarks>
+		public GameState GameState { get; set; } = GameState.Playing;
 	}
 }

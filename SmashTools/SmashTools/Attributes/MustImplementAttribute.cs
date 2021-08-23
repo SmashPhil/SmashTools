@@ -6,11 +6,11 @@ namespace SmashTools
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = true)]
 	public class MustImplementAttribute : Attribute
 	{
-		private string methodName;
+		private string MethodName { get; set; }
 
 		public MustImplementAttribute(string methodName)
 		{
-			this.methodName = methodName;
+			MethodName = methodName;
 		}
 
 		public static bool MethodImplemented(Type type, out string methodName)
@@ -18,8 +18,8 @@ namespace SmashTools
 			methodName = string.Empty;
 			if (type.GetCustomAttributes(typeof(MustImplementAttribute), true).FirstOrDefault() is MustImplementAttribute mustImplement)
 			{
-				methodName = mustImplement.methodName;
-				return type.GetMethods().Where(m => m.Name == mustImplement.methodName).NotNullAndAny();
+				methodName = mustImplement.MethodName;
+				return type.GetMethods().Where(m => m.Name == mustImplement.MethodName).NotNullAndAny();
 			}
 			return false;
 		}

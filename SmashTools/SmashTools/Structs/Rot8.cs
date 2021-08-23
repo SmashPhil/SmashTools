@@ -84,9 +84,10 @@ namespace SmashTools
 		{
 			get
 			{
-				return rotInt < 100;
+				return AsInt >= 0 && AsInt <= 7;
 			}
 		}
+
 		public static Rot8 Invalid
 		{
 			get
@@ -178,7 +179,7 @@ namespace SmashTools
 					5 => 135,
 					6 => 225,
 					7 => 315,
-					_ => throw new Exception("rotInt's value cannot be > 7 but it is:" + rotInt)
+					_ => throw new Exception($"value cannot be > 7 but it is = {rotInt}")
 				};
 			}
 		}
@@ -194,6 +195,25 @@ namespace SmashTools
 					6 => -45,
 					7 => 45,
 					_ => 0
+				};
+			}
+		}
+
+		public int AsIntCompass
+		{
+			get
+			{
+				return AsInt switch
+				{
+					0 => 0,
+					1 => 2,
+					2 => 4,
+					3 => 6,
+					4 => 1,
+					5 => 3,
+					6 => 5,
+					7 => 7,
+					_ => throw new Exception($"value cannot be > 7 but it is = {rotInt}")
 				};
 			}
 		}
@@ -295,30 +315,55 @@ namespace SmashTools
 			return Invalid;
 		}
 
-		public void Rotate(RotationDirection RotDir)
+		public int Difference(Rot8 rot)
 		{
-			if (RotDir == RotationDirection.Clockwise)
+			if (!rot.IsValid || !IsValid)
+			{
+				return 0;
+			}
+			return Mathf.Abs(rot.AsIntCompass - AsIntCompass).ClampAndWrap(North.AsIntCompass, South.AsIntCompass);
+		}
+
+		public void Rotate(RotationDirection rotDir)
+		{
+			if (rotDir == RotationDirection.Clockwise)
 			{
 				int asInt = AsInt;
 				AsInt = asInt + 1;
 			}
-			if (RotDir == RotationDirection.Counterclockwise)
+			if (rotDir == RotationDirection.Counterclockwise)
 			{
 				int asInt = AsInt;
 				AsInt = asInt - 1;
 			}
 		}
 
-		public Rot8 Rotated(RotationDirection RotDir)
+		public Rot8 Rotated(RotationDirection rotDir)
 		{
 			Rot8 result = this;
-			result.Rotate(RotDir);
+			result.Rotate(rotDir);
 			return result;
+		}
+
+		public Rot8 Rotated(float angle, RotationDirection rotDir)
+		{
+			if (angle % 45 != 0)
+			{
+				SmashLog.Error($"Cannot rotate <type>Rot8</type> with angle non-multiple of 45.");
+				return this;
+			}
+			int rotate = Mathf.RoundToInt(angle / 45);
+			Rot8 newRot = this;
+			for (int i = 0; i < rotate; i++)
+			{
+				newRot.Rotate(rotDir);
+			}
+			return newRot;
 		}
 
 		public static Rot8 DirectionFromCells(IntVec3 from, IntVec3 to)
 		{
-			IntVec3 result = from - to;
+			IntVec3 result = to - from;
 			return FromDirection(new IntVec2(result.x, result.z));
 		}
 

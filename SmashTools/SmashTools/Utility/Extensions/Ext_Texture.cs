@@ -6,8 +6,8 @@ using System;
 namespace SmashTools
 {
     [StaticConstructorOnStartup]
-	public static class Ext_Texture
-	{
+    public static class Ext_Texture
+    {
         private static readonly Dictionary<Texture2D, Texture2D> wrapTexDictionary = new Dictionary<Texture2D, Texture2D>();
         private static readonly Dictionary<Pair<Texture2D, float>, Texture2D> rotatedTexDictionary = new Dictionary<Pair<Texture2D, float>, Texture2D>();
         private static RenderTexture previous;
@@ -19,10 +19,10 @@ namespace SmashTools
                 return wrappedTex;
             }
             if (source.isReadable)
-			{
+            {
                 source.wrapMode = wrapMode;
                 return source;
-			}
+            }
             RenderTexture renderTex = ConvertToRenderTex(source);
             wrappedTex = new Texture2D(source.width, source.height)
             {
@@ -38,7 +38,7 @@ namespace SmashTools
         }
 
         public static RenderTexture ConvertToRenderTex(Texture2D source)
-		{
+        {
             RenderTexture renderTex = RenderTexture.GetTemporary(
                 source.width,
                 source.height,
@@ -53,7 +53,7 @@ namespace SmashTools
         }
 
         public static Texture2D ConvertToReadableTex(Texture2D source)
-		{
+        {
             RenderTexture renderTex = RenderTexture.GetTemporary(
                 source.width,
                 source.height,
@@ -77,7 +77,7 @@ namespace SmashTools
         }
 
         public static void ReleaseMemory(RenderTexture renderTex)
-		{
+        {
             RenderTexture.active = previous;
             RenderTexture.ReleaseTemporary(renderTex);
         }
@@ -90,25 +90,25 @@ namespace SmashTools
         public static Texture2D Rotate(this Texture2D tex, float angle)
         {
             if (angle != 90 && angle != 180 && angle != 270)
-			{
+            {
                 Log.Error($"Unable to rotate {tex.name} by angle=\"{angle}\". Angle must equal 90, 180, or 270.");
                 return tex;
-			}
+            }
             if (rotatedTexDictionary.TryGetValue(new Pair<Texture2D, float>(tex, angle), out Texture2D rotImage))
-			{
+            {
                 return rotImage;
-			}
+            }
             if (tex.width != tex.height)
-			{
+            {
                 Log.Warning($"Rotating patterns with non-square dimensions may result in inaccurate conversions. Tex=\"{tex.name}\" ({tex.width},{tex.height})");
-			}
+            }
             Texture2D readableTex;
             if (tex.isReadable)
             {
                 readableTex = tex;
             }
-			else
-			{
+            else
+            {
                 RenderTexture renderTex = ConvertToRenderTex(tex);
                 readableTex = new Texture2D(tex.width, tex.height)
                 {

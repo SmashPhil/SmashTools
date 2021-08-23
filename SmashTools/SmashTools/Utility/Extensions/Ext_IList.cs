@@ -14,7 +14,6 @@ namespace SmashTools
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="list"></param>
-		/// <returns></returns>
 		public static T PopRandom<T>(this IList<T> list)
 		{
 			if (!list.NotNullAndAny())
@@ -47,12 +46,13 @@ namespace SmashTools
 		/// <typeparam name="T"></typeparam>
 		/// <param name="list"></param>
 		/// <param name="current"></param>
-		/// <returns></returns>
 		public static T Next<T>(this IList<T> list, T current)
 		{
 			int indexOf = list.IndexOf(current) + 1;
 			if (indexOf >= list.Count)
+			{
 				indexOf = 0;
+			}
 			return list[indexOf];
 		}
 
@@ -61,7 +61,6 @@ namespace SmashTools
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="enumerable"></param>
-		/// <returns></returns>
 		public static List<T> ReorderOn<T>(this List<T> list, T item)
 		{
 			int index = list.IndexOf(item);

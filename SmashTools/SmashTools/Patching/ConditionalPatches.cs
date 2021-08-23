@@ -45,7 +45,7 @@ namespace SmashTools
 									Patched = true
 								};
 						
-								patch.PatchAll(newMod, harmony);
+								patch.PatchAll(mod, harmony);
 
 								SmashLog.Message($"[{modContentPack.Name}] Successfully applied compatibility patches for <mod>{mod.Name}</mod>");
 								patchableModActivators.Add(new Pair<string, string>(sourcePackageID, mod.PackageId), newMod);

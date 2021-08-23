@@ -88,8 +88,6 @@ namespace SmashTools
 			}
 		}
 
-		//Capacity
-
 		bool ICollection<T>.IsReadOnly => false;
 
 		public int Count
@@ -179,7 +177,10 @@ namespace SmashTools
 		{
 			Contract.Ensures(Count >= Contract.OldValue(Count));
 
-			InsertRange(size, enumerable);
+			foreach (T item in enumerable)
+			{
+				Add(item);
+			}
 		}
 
 		public void InsertRange(int index, IEnumerable<T> enumerable) 
@@ -437,7 +438,38 @@ namespace SmashTools
 				version = list.version;
 				current = default;
 			}
- 
+
+			public T Current
+			{
+				get
+				{
+					return current;
+				}
+			}
+
+			object IEnumerator.Current
+			{
+				get
+				{
+					if (index == 0 || index == list.size + 1)
+					{
+						throw new InvalidOperationException();
+					}
+					return Current;
+				}
+			}
+
+			void IEnumerator.Reset()
+			{
+				if (version != list.version)
+				{
+					throw new InvalidOperationException();
+				}
+
+				index = 0;
+				current = default;
+			}
+
 			public void Dispose() 
 			{
 			}
@@ -466,38 +498,6 @@ namespace SmashTools
 				current = default;
 				return false;				
 			}
- 
-			public T Current 
-			{
-				get 
-				{
-					return current;
-				}
-			}
- 
-			object IEnumerator.Current 
-			{
-				get 
-				{
-					if( index == 0 || index == list.size + 1) 
-					{
-						throw new InvalidOperationException();
-					}
-					return Current;
-				}
-			}
-	
-			void IEnumerator.Reset() 
-			{
-				if (version != list.version) 
-				{
-					throw new InvalidOperationException();
-				}
-				
-				index = 0;
-				current = default;
-			}
- 
 		}
 	}
 }
