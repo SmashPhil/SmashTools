@@ -294,20 +294,27 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attributes\IsMainThreadAttribute.cs" />
     <Compile Include="Attributes\MustImplementAttribute.cs" />
+    <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
     <Compile Include="Attributes\UnitTestAttribute.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
     <Compile Include="Debugging\GameState.cs" />
     <Compile Include="Debugging\UnitTesting.cs" />
+    <Compile Include="Interfaces\IInspectable.cs" />
+    <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationTrace.cs" />
+    <Compile Include="Rendering\PawnOverlayRenderer.cs" />
     <Compile Include="SmashSettings.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />
     <Compile Include="Structs\Rot8.cs" />
+    <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Windows\Dialog_DebugCheckboxLister.cs" />
+    <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />
     <Compile Include="UI\Windows\Dialog_UnitTesting.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
     <Compile Include="UI\Windows\SingleWindow.cs" />

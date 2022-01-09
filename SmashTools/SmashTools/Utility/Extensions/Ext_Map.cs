@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Verse;
+using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
 
@@ -221,6 +222,11 @@ namespace SmashTools
 				}
 			}
 			return -1;
+		}
+
+		public static List<T> AllPawnsOnMap<T>(this Map map, Faction faction = null, Predicate<T> validator = null) where T : Pawn
+		{
+			return map.mapPawns.AllPawnsSpawned.Where(p => p is T t && (faction is null || p.Faction == faction) && (validator is null || validator(t))).Cast<T>().ToList();
 		}
 	}
 }

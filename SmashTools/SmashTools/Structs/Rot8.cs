@@ -324,7 +324,7 @@ namespace SmashTools
 			return Mathf.Abs(rot.AsIntCompass - AsIntCompass).ClampAndWrap(North.AsIntCompass, South.AsIntCompass);
 		}
 
-		public void Rotate(RotationDirection rotDir)
+		public void Rotate(RotationDirection rotDir, bool diagonals = true)
 		{
 			if (rotDir == RotationDirection.Clockwise)
 			{
@@ -336,12 +336,16 @@ namespace SmashTools
 				int asInt = AsInt;
 				AsInt = asInt - 1;
 			}
+			if (!diagonals)
+			{
+				AsInt %= 4;
+			}
 		}
 
-		public Rot8 Rotated(RotationDirection rotDir)
+		public Rot8 Rotated(RotationDirection rotDir, bool diagonals = true)
 		{
 			Rot8 result = this;
-			result.Rotate(rotDir);
+			result.Rotate(rotDir, diagonals);
 			return result;
 		}
 
@@ -413,6 +417,25 @@ namespace SmashTools
 			if (int.TryParse(innerText, out int num))
 			{
 				return new Rot8(num);
+			}
+			switch (innerText.ToUpperInvariant())
+			{
+				case "NORTH":
+					return North;
+				case "EAST":
+					return East;
+				case "SOUTH":
+					return South;
+				case "WEST":
+					return West;
+				case "NORTHEAST":
+					return NorthEast;
+				case "SOUTHEAST":
+					return SouthEast;
+				case "SOUTHWEST":
+					return SouthWest;
+				case "NORTHWEST":
+					return NorthWest;
 			}
 			Log.Error($"Unable to parse Rot8: {innerText}");
 			return Invalid;

@@ -6,7 +6,7 @@ using Verse;
 
 namespace SmashTools
 {
-	public class SmashSettings : ModSettings
+	public class SmashSettings : IExposable
 	{
 		public Dictionary<string, bool> unitTests = new Dictionary<string, bool>();
 
@@ -25,7 +25,7 @@ namespace SmashTools
 			}
 		}
 
-		public override void ExposeData()
+		public void ExposeData()
 		{
 			Scribe_Collections.Look(ref unitTests, "unitTests", LookMode.Value, LookMode.Value);
 		}
@@ -39,12 +39,12 @@ namespace SmashTools
 		public SmashMod(ModContentPack modContentPack) : base(modContentPack)
 		{
 			mod = this;
-			settings = GetSettings<SmashSettings>();
+			settings = new SmashSettings();
 		}
 
 		public static void Serialize()
 		{
-			Scribe.saver.InitSaving(SmashSettings.FullPath, "SettingsBlock");
+			Scribe.saver.InitSaving(SmashSettings.FullPath, "SmashSettings");
 			try
 			{
 				Scribe_Deep.Look(ref settings, "SmashSettings");
@@ -52,6 +52,22 @@ namespace SmashTools
 			finally
 			{
 				Scribe.saver.FinalizeSaving();
+			}
+		}
+
+		public static void LoadFromSettings()
+		{
+			if (File.Exists(SmashSettings.FullPath))
+			{
+				Scribe.loader.InitLoading(SmashSettings.FullPath);
+				try
+				{
+					Scribe_Deep.Look(ref settings, "SmashSettings");
+				}
+				finally
+				{
+					Scribe.loader.FinalizeLoading();
+				}
 			}
 		}
 	}

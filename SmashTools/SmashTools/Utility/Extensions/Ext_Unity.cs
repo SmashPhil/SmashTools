@@ -26,5 +26,23 @@ namespace SmashTools
 		{
 			return new Pair<float, float>(vector.x, vector.z);
 		}
+
+		/// <summary>
+		/// Mirror <paramref name="vector"/> around (0, 0, 0)
+		/// </summary>
+		/// <param name="vector"></param>
+		public static Vector3 MirrorHorizontal(this Vector3 vector)
+		{
+			return new Vector3(-vector.x, vector.y, vector.z);
+		}
+
+		/// <summary>
+		/// Mirror <paramref name="vector"/> around (0, 0, 0)
+		/// </summary>
+		/// <param name="vector"></param>
+		public static Vector3 MirrorVertical(this Vector3 vector)
+		{
+			return new Vector3(vector.x, vector.y, -vector.z);
+		}
 	}
 }

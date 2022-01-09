@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace SmashTools
 {
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = true)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, Inherited = true)]
 	public class MustImplementAttribute : Attribute
 	{
 		private string MethodName { get; set; }

@@ -12,6 +12,12 @@ namespace SmashTools
         private static readonly Dictionary<Pair<Texture2D, float>, Texture2D> rotatedTexDictionary = new Dictionary<Pair<Texture2D, float>, Texture2D>();
         private static RenderTexture previous;
 
+        /// <summary>
+        /// Change <seealso cref="TextureWrapMode"/> of <paramref name="source"/> to <paramref name="wrapMode"/>
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="wrapMode"></param>
+        /// <returns></returns>
         public static Texture2D WrapTexture(Texture2D source, TextureWrapMode wrapMode)
         {
             if (wrapTexDictionary.TryGetValue(source, out var wrappedTex))
@@ -37,6 +43,13 @@ namespace SmashTools
             return wrappedTex;
         }
 
+        /// <summary>
+        /// Convert <paramref name="source"/> into a <seealso cref="RenderTexture"/>
+        /// </summary>
+        /// <remarks>
+        /// Due to how this extension is used, it does not release the memory of the <seealso cref="RenderTexture"/>. Do not forget to release its memory when you are done using it!
+        /// </remarks>
+        /// <param name="source"></param>
         public static RenderTexture ConvertToRenderTex(Texture2D source)
         {
             RenderTexture renderTex = RenderTexture.GetTemporary(
@@ -52,6 +65,10 @@ namespace SmashTools
             return renderTex;
         }
 
+        /// <summary>
+        /// Create an exact copy of <paramref name="source"/> into a readable and writable <seealso cref="Texture2D"/>
+        /// </summary>
+        /// <param name="source"></param>
         public static Texture2D ConvertToReadableTex(Texture2D source)
         {
             RenderTexture renderTex = RenderTexture.GetTemporary(
@@ -83,7 +100,7 @@ namespace SmashTools
         }
 
         /// <summary>
-        /// Rotate pixels of Texture2D by θ (Counter-Clockwise)
+        /// Rotate pixels of <paramref name="tex"/> by <paramref name="angle"/> (Counter-Clockwise)
         /// </summary>
         /// <param name="tex"></param>
         /// <param name="angle"></param>

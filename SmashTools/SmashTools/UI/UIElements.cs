@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using HarmonyLib;
 using Verse;
 using Verse.Sound;
 using RimWorld;
@@ -196,6 +197,57 @@ namespace SmashTools
 			position.y--;
 			style.normal.textColor = innerColor;
 			GUI.Label(position, label, style);
+		}
+
+		/// <summary>
+		/// Draw <paramref name="texture"/> with <paramref name="material"/> rotated by <paramref name="angle"/>
+		/// </summary>
+		/// <param name="rect"></param>
+		/// <param name="texture"></param>
+		/// <param name="material"></param>
+		/// <param name="angle"></param>
+		/// <param name="texCoords"></param>
+		public static void DrawTextureWithMaterialOnGUI(Rect rect, Texture texture, Material material, float angle, Rect texCoords = default)
+		{
+			bool rotate = angle != 0 && angle != 360;
+			Matrix4x4 matrix = GUI.matrix;
+			try
+			{
+				if (rotate)
+				{
+					matrix = GUI.matrix;
+					UI.RotateAroundPivot(angle, rect.center);
+				}
+				if (texCoords == default)
+				{
+					if (material is null)
+					{
+						GUI.DrawTexture(rect, texture);
+						return;
+					}
+					if (Event.current.type == EventType.Repaint)
+					{
+						Graphics.DrawTexture(rect, texture, new Rect(0f, 0f, 1f, 1f), 0, 0, 0, 0, new Color(GUI.color.r * 0.5f, GUI.color.g * 0.5f, GUI.color.b * 0.5f, GUI.color.a * 0.5f), material);
+						return;
+					}
+				}
+				else
+				{
+					if (material is null)
+					{
+						GUI.DrawTextureWithTexCoords(rect, texture, texCoords);
+						return;
+					}
+					if (Event.current.type == EventType.Repaint)
+					{
+						Graphics.DrawTexture(rect, texture, texCoords, 0, 0, 0, 0, new Color(GUI.color.r * 0.5f, GUI.color.g * 0.5f, GUI.color.b * 0.5f, GUI.color.a * 0.5f), material);
+					}
+				}
+			}
+			finally
+			{
+				GUI.matrix = matrix;
+			}
 		}
 
 		/// <summary>
@@ -395,6 +447,15 @@ namespace SmashTools
 			Widgets.DrawLineHorizontal(rect.x - 1, rect.y, rect.width - 1);
 			rect.y += 2f;
 			GUI.color = color;
+		}
+
+		public static bool InfoCardButton(Rect rect)
+		{
+			MouseoverSounds.DoRegion(rect);
+			TooltipHandler.TipRegionByKey(rect, "DefInfoTip");
+			bool result = Widgets.ButtonImage(rect, TexButton.Info, GUI.color, true);
+			UIHighlighter.HighlightOpportunity(rect, "InfoCard");
+			return result;
 		}
 	}
 }

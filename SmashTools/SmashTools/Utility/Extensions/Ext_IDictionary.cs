@@ -91,5 +91,21 @@ namespace SmashTools
 			}
 			dictionary[key].Add(value);
 		}
+
+		/// <summary>
+		/// Add range of <paramref name="keys"/> with <paramref name="defaultValue"/> populating the open values
+		/// </summary>
+		/// <typeparam name="K"></typeparam>
+		/// <typeparam name="V"></typeparam>
+		/// <param name="dictionary"></param>
+		/// <param name="keys"></param>
+		/// <param name="defaultValue"></param>
+		public static void AddRangeDefault<K, V>(this IDictionary<K, V> dictionary, IEnumerable<K> keys, V defaultValue)
+		{
+			foreach (K key in keys)
+			{
+				dictionary.TryAdd(key, defaultValue);
+			}
+		}
 	}
 }

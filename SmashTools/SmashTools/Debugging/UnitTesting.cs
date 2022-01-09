@@ -42,7 +42,7 @@ namespace SmashTools.Debugging
 
 		private static void InitializeUnitTesting()
 		{
-			new SmashSettings();
+			SmashMod.LoadFromSettings();
 			postLoadActions.Clear();
 			foreach (GameState enumValue in Enum.GetValues(typeof(GameState)))
 			{
@@ -122,7 +122,10 @@ namespace SmashTools.Debugging
 		{
 			if (Enabled)
 			{
-				postLoadActions[gameState].ForEach(action => action());
+				foreach (Action action in postLoadActions[gameState])
+				{
+					action.Invoke();
+				}
 			}
 		}
 

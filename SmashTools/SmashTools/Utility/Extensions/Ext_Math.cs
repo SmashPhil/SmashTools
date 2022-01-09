@@ -39,6 +39,16 @@ namespace SmashTools
 		}
 
 		/// <summary>
+		/// Round to nearest n
+		/// </summary>
+		/// <param name="num"></param>
+		/// <param name="roundTo"></param>
+		public static int RoundTo(this int num, int roundTo)
+		{
+			return Mathf.RoundToInt(num / roundTo) * roundTo;
+		}
+
+		/// <summary>
 		/// Math.Pow simple casting for integers
 		/// </summary>
 		/// <param name="val"></param>

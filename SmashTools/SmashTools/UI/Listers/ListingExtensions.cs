@@ -21,13 +21,15 @@ namespace SmashTools
 
 		public static readonly Color MenuSectionBGFillColor = new ColorInt(42, 43, 44).ToColor;
 
+		public static readonly Color LightHighlightColor = new Color(1f, 1f, 1f, 0.04f);
+
 		public static readonly Texture2D ButtonBGAtlas = ContentFinder<Texture2D>.Get("UI/Widgets/ButtonBG", true);
 
 		public static readonly Texture2D ButtonBGAtlasMouseover = ContentFinder<Texture2D>.Get("UI/Widgets/ButtonBGMouseover", true);
 
 		public static readonly Texture2D ButtonBGAtlasClick = ContentFinder<Texture2D>.Get("UI/Widgets/ButtonBGClick", true);
 
-		public static readonly Texture2D LightHighlight = SolidColorMaterials.NewSolidColorTexture(new Color(1f, 1f, 1f, 0.04f));
+		public static readonly Texture2D LightHighlight = SolidColorMaterials.NewSolidColorTexture(LightHighlightColor);
 
 		public static void IntegerBox(this Listing lister, string text, string tooltip, ref int value, float labelLength, float padding, int min = int.MinValue, int max = int.MaxValue)
 		{
@@ -100,7 +102,7 @@ namespace SmashTools
 			}
 		}
 
-		public static void SliderLabeled(this Listing lister, string label, string tooltip, string endSymbol, ref int value, int min, int max, string maxValueDisplay = "", string minValueDisplay = "")
+		public static void SliderLabeled(this Listing lister, string label, string tooltip, string endSymbol, ref int value, int min, int max, int roundTo = 1, string maxValueDisplay = "", string minValueDisplay = "")
 		{
 			lister.Gap(12f);
 			Rect rect = lister.GetRect(24f);
@@ -123,7 +125,7 @@ namespace SmashTools
 			{
 				UIElements.DoTooltipRegion(rect, tooltip, true);
 			}
-			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format).RoundTo(roundTo);
 		}
 
 		public static void Header(this Listing lister, string header, Color highlight, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
