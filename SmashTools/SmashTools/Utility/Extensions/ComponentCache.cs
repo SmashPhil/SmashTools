@@ -92,12 +92,17 @@ namespace SmashTools
 
 		internal static void ConstructWorldComponents(World __instance)
 		{
-			worldComps.AddRange(__instance.components);
+			worldComps = new SelfOrderingList<WorldComponent>(__instance.components);
 		}
 
 		internal static void ConstructGameComponents(Game __instance)
 		{
-			gameComps.AddRange(__instance.components);
+			gameComps = new SelfOrderingList<GameComponent>(__instance.components);
+		}
+
+		internal static void ClearAllMapComps()
+		{
+			mapComps = new SelfOrderingList<MapComponent>[sbyte.MaxValue].Populate(() => new SelfOrderingList<MapComponent>());
 		}
 
 		internal static void ClearMapComps(Map map)

@@ -33,6 +33,9 @@ namespace SmashTools
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
 
+			harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
+				prefix: new HarmonyMethod(typeof(ComponentCache),
+				nameof(ComponentCache.ClearAllMapComps)));
 			harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearMapComps)));
@@ -120,8 +123,8 @@ namespace SmashTools
 				{
 					Find.WindowStack.Add(new Dialog_InspectWindow(inspectable));
 				}
-				lineEndWidth += 24f;
-				inspectable.DoInspectPaneButtons(num);
+				num -= 30;
+				lineEndWidth += 24f + inspectable.DoInspectPaneButtons(num);
 				return false;
 			}
 			return true;

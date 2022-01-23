@@ -3,10 +3,13 @@ using UnityEngine;
 
 namespace SmashTools
 {
+	/// <summary>
+	/// Render custom Inspect Pane for selected thing given interface method implementations
+	/// </summary>
 	public interface IInspectable
 	{
 		void DrawInspectDialog(Rect rect);
 
-		void DoInspectPaneButtons(float x);
+		float DoInspectPaneButtons(float x);
 	}
 }
