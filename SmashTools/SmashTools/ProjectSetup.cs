@@ -17,6 +17,8 @@ namespace SmashTools
 	{
 		public const string ProjectLabel = "[SmashTools]";
 
+		public const bool ExportXmlDoc = false;
+
 		public ProjectSetup(ModContentPack content) : base(content)
 		{
 			RegisterParseableStructs();
@@ -29,6 +31,16 @@ namespace SmashTools
 			harmony.Patch(original: AccessTools.Method(typeof(DirectXmlToObject), "GetFieldInfoForType"),
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributes)));
+
+			if (ExportXmlDoc)
+			{
+#pragma warning disable CS0162 // Unreachable code detected
+				harmony.Patch(original: AccessTools.Method(typeof(LoadedModManager), nameof(LoadedModManager.ParseAndProcessXML)),
+					postfix: new HarmonyMethod(typeof(XmlParseHelper),
+					nameof(XmlParseHelper.ExportCombinedXmlDocument)));
+#pragma warning restore CS0162 // Unreachable code detected
+			}
+
 			harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
@@ -36,9 +48,12 @@ namespace SmashTools
 			harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearAllMapComps)));
+			harmony.Patch(original: AccessTools.Method(typeof(MapGenerator), nameof(MapGenerator.GenerateContentsIntoMap)),
+				prefix: new HarmonyMethod(typeof(ComponentCache),
+				nameof(ComponentCache.MapGenerated)));
 			harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
-				nameof(ComponentCache.ClearMapComps)));
+				nameof(ComponentCache.ClearMapComps), new Type[] { typeof(Map) }));
 			harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.RegisterMapComps)));

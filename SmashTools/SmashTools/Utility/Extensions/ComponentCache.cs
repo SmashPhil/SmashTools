@@ -107,7 +107,17 @@ namespace SmashTools
 
 		internal static void ClearMapComps(Map map)
 		{
-			mapComps[map.Index].Clear();
+			ClearMapComps(map.Index);
+		}
+
+		internal static void ClearMapComps(int index)
+		{
+			mapComps[index].Clear();
+		}
+
+		internal static void MapGenerated(IEnumerable<GenStepWithParams> genStepDefs, Map map, int seed)
+		{
+			ClearMapComps(map.Index);
 		}
 
 		internal static void RegisterMapComps(Map map)

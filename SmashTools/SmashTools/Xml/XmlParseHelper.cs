@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
+using System.IO;
 using System.Xml;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using UnityEngine;
+using HarmonyLib;
 using Verse;
 
 namespace SmashTools.Xml
@@ -160,6 +164,13 @@ namespace SmashTools.Xml
 				defNode = parentNode.SelectSingleNode("defName");
 			}
 			return defNode.InnerText;
+		}
+
+		public static void ExportCombinedXmlDocument(XmlDocument xmlDoc)
+		{
+			string filePath = Path.Combine(Application.dataPath, "CombinedXmlDoc.xml");
+			xmlDoc.Save(filePath);
+			Application.OpenURL(filePath);
 		}
 	}
 }
