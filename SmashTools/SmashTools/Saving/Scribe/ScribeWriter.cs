@@ -13,7 +13,7 @@ namespace SmashTools
 			XmlWriter writer = (XmlWriter)AccessTools.Field(typeof(ScribeSaver), "writer").GetValue(saver);
 			if (writer is null)
 			{
-				Log.Error("Called WriteAttribute(), but writer is null.");
+				Log.Error("Called WriteElementWithAttribute(), but writer is null.");
 				return;
 			}
 			try
@@ -33,7 +33,7 @@ namespace SmashTools
 			XmlWriter writer = (XmlWriter)AccessTools.Field(typeof(ScribeSaver), "writer").GetValue(saver);
 			if (writer is null)
 			{
-				Log.Error("Called WriteAttribute(), but writer is null.");
+				Log.Error("Called WriteElementWithAttributes(), but writer is null.");
 				return;
 			}
 			try

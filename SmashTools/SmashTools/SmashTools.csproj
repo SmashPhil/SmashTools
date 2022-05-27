@@ -32,9 +32,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="0Harmony, Version=2.0.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Lib.Harmony.2.0.4\lib\net472\0Harmony.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="0Harmony, Version=2.2.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lib.Harmony.2.2.1\lib\net472\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
@@ -298,6 +297,7 @@
     <Compile Include="Attributes\MustImplementAttribute.cs" />
     <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
     <Compile Include="Attributes\UnitTestAttribute.cs" />
+    <Compile Include="BackCompatibility\BackCompatibilityRegistry.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
     <Compile Include="Debugging\GameState.cs" />
@@ -307,7 +307,6 @@
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
-    <Compile Include="Patching\PatchOperations\PatchOperationTrace.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
     <Compile Include="SmashSettings.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />

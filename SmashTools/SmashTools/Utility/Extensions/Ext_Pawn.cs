@@ -21,22 +21,22 @@ namespace SmashTools
 			int x = pawn.def.size.x;
 			int z = pawn.def.size.z;
 			int offset = x > z ? x + extraOffset : z + extraOffset;
-
+			int offsetFitted = Mathf.CeilToInt(offset / 2f);
 			if (exitPoint.x < offset)
 			{
-				exitPoint.x = (offset / 2);
+				exitPoint.x = offsetFitted;
 			}
-			else if (exitPoint.x >= (map.Size.x - (offset / 2)))
+			else if (exitPoint.x >= (map.Size.x - offsetFitted))
 			{
-				exitPoint.x = (map.Size.x - (offset / 2));
+				exitPoint.x = map.Size.x - offsetFitted;
 			}
 			if (exitPoint.z < offset)
 			{
-				exitPoint.z = (offset / 2);
+				exitPoint.z = offsetFitted;
 			}
-			else if (exitPoint.z > (map.Size.z - (offset / 2)))
+			else if (exitPoint.z > (map.Size.z - offsetFitted))
 			{
-				exitPoint.z = (map.Size.z - (offset / 2));
+				exitPoint.z = map.Size.z - offsetFitted;
 			}
 		}
 

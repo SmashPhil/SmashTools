@@ -12,6 +12,15 @@ namespace SmashTools
 	{
 		private byte rotInt;
 
+		public const byte NorthInt = 0;
+		public const byte EastInt = 1;
+		public const byte SouthInt = 2;
+		public const byte WestInt = 3;
+		public const byte NorthEastInt = 4;
+		public const byte SouthEastInt = 5;
+		public const byte SouthWestInt = 6;
+		public const byte NorthWestInt = 7;
+
 		public Rot8(byte newRot)
 		{
 			rotInt = newRot;

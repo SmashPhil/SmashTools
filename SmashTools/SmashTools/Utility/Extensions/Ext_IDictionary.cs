@@ -10,6 +10,20 @@ namespace SmashTools
 	public static class Ext_IDictionary
 	{
 		/// <summary>
+		/// Deconstruct KeyValuePair into ValueTuple for better enumerations
+		/// </summary>
+		/// <typeparam name="TKey"></typeparam>
+		/// <typeparam name="TValue"></typeparam>
+		/// <param name="kvp"></param>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp, out TKey key, out TValue value)
+		{
+			key = kvp.Key;
+			value = kvp.Value;
+		}
+
+		/// <summary>
 		/// Grab random value from dictionary
 		/// </summary>
 		/// <typeparam name="K"></typeparam>
@@ -40,22 +54,6 @@ namespace SmashTools
 			}
 			dictionary.Add(key, value);
 			return true;
-		}
-
-		/// <summary>
-		/// Add <paramref name="value"/> for <paramref name="key"/> into <paramref name="dictionary"/> or replace old <paramref name="value"/>
-		/// </summary>
-		/// <typeparam name="K"></typeparam>
-		/// <typeparam name="V"></typeparam>
-		/// <param name="dictionary"></param>
-		/// <param name="key"></param>
-		/// <param name="value"></param>
-		public static void AddOrReplace<K, V>(this IDictionary<K, V> dictionary, K key, V value)
-		{
-			if (!dictionary.TryAdd(key, value))
-			{
-				dictionary[key] = value;
-			}
 		}
 
 		/// <summary>
