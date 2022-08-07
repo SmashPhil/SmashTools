@@ -208,7 +208,7 @@ namespace SmashTools
 			}
 		}
 
-		public int AsIntCompass
+		public int AsIntClockwise
 		{
 			get
 			{
@@ -324,13 +324,46 @@ namespace SmashTools
 			return Invalid;
 		}
 
+		public static Rot8 FromAngle(float angle)
+		{
+			if (angle > 22.5f && angle <= 67.5f)
+			{
+				return NorthEast;
+			}
+			else if (angle > 67.5f && angle <= 112.5f)
+			{
+				return East;
+			}
+			else if (angle > 112.5f && angle <= 157.5f)
+			{
+				return SouthEast;
+			}
+			else if (angle > 157.5f && angle <= 202.5f)
+			{
+				return South;
+			}
+			else if (angle > 202.5f && angle <= 247.5f)
+			{
+				return SouthWest;
+			}
+			else if (angle > 247.5f && angle <= 292.5f)
+			{
+				return West;
+			}
+			else if (angle > 292.5f && angle <= 337.5f)
+			{
+				return NorthWest;
+			}
+			return North;
+		}
+
 		public int Difference(Rot8 rot)
 		{
 			if (!rot.IsValid || !IsValid)
 			{
 				return 0;
 			}
-			return Mathf.Abs(rot.AsIntCompass - AsIntCompass).ClampAndWrap(North.AsIntCompass, South.AsIntCompass);
+			return Mathf.Abs(rot.AsIntClockwise - AsIntClockwise).ClampAndWrap(North.AsIntClockwise, South.AsIntClockwise);
 		}
 
 		public void Rotate(RotationDirection rotDir, bool diagonals = true)

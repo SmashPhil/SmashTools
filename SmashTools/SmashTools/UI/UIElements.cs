@@ -40,8 +40,9 @@ namespace SmashTools
 			}
 		}
 
-		public static void CheckboxLabeled(Rect rect, string label, ref bool checkOn, bool disabled = false, Texture2D texChecked = null, Texture2D texUnchecked = null, bool placeCheckboxNearText = false)
+		public static bool CheckboxLabeled(Rect rect, string label, ref bool checkOn, bool disabled = false, Texture2D texChecked = null, Texture2D texUnchecked = null, bool placeCheckboxNearText = false)
 		{
+			bool clicked = false;
 			TextAnchor anchor = Text.Anchor;
 			Text.Anchor = TextAnchor.MiddleLeft;
 			if (placeCheckboxNearText)
@@ -52,6 +53,7 @@ namespace SmashTools
 			if (!disabled && Widgets.ButtonInvisible(rect, true))
 			{
 				checkOn = !checkOn;
+				clicked = true;
 				if (checkOn)
 				{
 					SoundDefOf.Checkbox_TurnedOn.PlayOneShotOnCamera(null);
@@ -63,6 +65,8 @@ namespace SmashTools
 			}
 			CheckboxDraw(rect.x + rect.width - 24f, rect.y, checkOn, disabled, 20, null, null);
 			Text.Anchor = anchor;
+
+			return clicked;
 		}
 
 		public static string HexField(string label, Rect rect, string text)
@@ -218,31 +222,7 @@ namespace SmashTools
 					matrix = GUI.matrix;
 					UI.RotateAroundPivot(angle, rect.center);
 				}
-				if (texCoords == default)
-				{
-					if (material is null)
-					{
-						GUI.DrawTexture(rect, texture);
-						return;
-					}
-					if (Event.current.type == EventType.Repaint)
-					{
-						Graphics.DrawTexture(rect, texture, new Rect(0f, 0f, 1f, 1f), 0, 0, 0, 0, new Color(GUI.color.r * 0.5f, GUI.color.g * 0.5f, GUI.color.b * 0.5f, GUI.color.a * 0.5f), material);
-						return;
-					}
-				}
-				else
-				{
-					if (material is null)
-					{
-						GUI.DrawTextureWithTexCoords(rect, texture, texCoords);
-						return;
-					}
-					if (Event.current.type == EventType.Repaint)
-					{
-						Graphics.DrawTexture(rect, texture, texCoords, 0, 0, 0, 0, new Color(GUI.color.r * 0.5f, GUI.color.g * 0.5f, GUI.color.b * 0.5f, GUI.color.a * 0.5f), material);
-					}
-				}
+				GenUI.DrawTextureWithMaterial(rect, texture, material, texCoords);
 			}
 			finally
 			{

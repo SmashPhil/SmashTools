@@ -8,59 +8,60 @@ namespace SmashTools
 {
 	public struct SavedField<T1> : IEquatable<SavedField<T1>>, INestedType
 	{
-		public SavedField(T1 duplicate)
+		private T1 value;
+		private T1 endValue;
+
+		public SavedField(T1 value)
 		{
-			first = duplicate;
-			second = duplicate;
+			this.value = value;
+			endValue = value;
 		}
 
-		public SavedField(T1 first, T1 second)
+		public SavedField(T1 value, T1 endValue)
 		{
-			this.first = first;
-			this.second = second;
+			this.value = value;
+			this.endValue = endValue;
 		}
 
-		public static T1 DefaultValue => (T1)Activator.CreateInstance(typeof(T1));
+		public Type InnerType => value.GetType();
 
 		public T1 First
 		{
 			get
 			{
-				return first;
+				return value;
 			}
 			set
 			{
-				if(value is T1)
+				if (value is T1)
 				{
-					first = value;
+					this.value = value;
 					return;
 				}
 				Log.Error("Tried to assign value of different type to SavedField. T1: " + typeof(T1) + " value: " + value.GetType());
 			}
 		}
 
-		public T1 Second
+		public T1 EndValue
 		{
 			get
 			{
-				return second;
+				return endValue;
 			}
 			set
 			{
 				if (value is T1)
 				{
-					second = value;
+					endValue = value;
 					return;
 				}
 				Log.Error("Tried to assign value of different type to SavedField. T2: " + typeof(T1) + " value: " + value.GetType());
 			}
 		}
 
-		public Type InnerType => first.GetType();
-
 		public override string ToString()
 		{
-			return $"({first},{second})";
+			return $"({value},{endValue})";
 		}
 
 		public static object FromTypedString(string entry, Type objType)
@@ -86,9 +87,13 @@ namespace SmashTools
 		{
 			int hash = 0;
 			if (First is object)
+			{
 				hash = EqualityComparer<T1>.Default.GetHashCode(First);
-			if (Second is object)
-				hash = (hash << 3) + hash ^ EqualityComparer<T1>.Default.GetHashCode(Second);
+			}
+			if (EndValue is object)
+			{
+				hash = (hash << 3) + hash ^ EqualityComparer<T1>.Default.GetHashCode(EndValue);
+			}
 			return hash;
 		}
 
@@ -99,7 +104,7 @@ namespace SmashTools
 
 		public bool Equals(SavedField<T1> other)
 		{
-			return EqualityComparer<T1>.Default.Equals(first, other.first) && EqualityComparer<T1>.Default.Equals(second, other.second);
+			return EqualityComparer<T1>.Default.Equals(value, other.value) && EqualityComparer<T1>.Default.Equals(endValue, other.endValue);
 		}
 
 		public static bool operator ==(SavedField<T1> lhs, SavedField<T1> rhs)
@@ -111,9 +116,5 @@ namespace SmashTools
 		{
 			return !(lhs == rhs);
 		}
-
-		private T1 first;
-
-		private T1 second;
 	}
 }

@@ -128,11 +128,11 @@ namespace SmashTools
 			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format).RoundTo(roundTo);
 		}
 
-		public static void Header(this Listing lister, string header, Color highlight, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
+		public static void Header(this Listing lister, string header, Color highlight, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft, float rowGap = 16)
 		{
 			Listing_SplitColumns splitLister = lister as Listing_SplitColumns;
 
-			splitLister?.NextRow(16);
+			splitLister?.NextRow(rowGap);
 			var textSize = Text.Font;
 			Text.Font = fontSize;
 
@@ -147,7 +147,7 @@ namespace SmashTools
 			Text.Font = textSize;   
 			Text.Anchor = anchorTmp;
 
-			splitLister?.Gap(16);
+			splitLister?.Gap(2);
 		}
 
 		public static bool Button(this Listing lister, string label, Rect rect, Color customColor, bool background = true, bool active = true)

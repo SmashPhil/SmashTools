@@ -49,7 +49,6 @@ namespace SmashTools.Xml
 		/// <summary>
 		/// Parse <paramref name="debugXmlNode"/> and handle registered custom attributes
 		/// </summary>
-		/// <param name="type"></param>
 		/// <param name="token"></param>
 		/// <param name="debugXmlNode"></param>
 		/// <param name="__result"></param>

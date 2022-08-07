@@ -80,10 +80,10 @@ namespace SmashTools
 			harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.DrawDebugWindowButton)));
-			harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
+			harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.StartedNewGame)),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecuteNewGameTesting)));
-			harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.LoadGame)),
+			harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.LoadedGame)),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecutePostLoadTesting)));
 			harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),

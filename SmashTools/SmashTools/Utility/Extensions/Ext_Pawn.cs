@@ -51,7 +51,12 @@ namespace SmashTools
 		{
 			int x = pawn.def.size.x;
 			int z = pawn.def.size.z;
-			int offset = x > z ? x + extraOffset : z + extraOffset;
+			return ClampToMap(x, z, spawnPoint, map, extraOffset);
+		}
+
+		public static IntVec3 ClampToMap(int width, int height, IntVec3 spawnPoint, Map map, int extraOffset = 0)
+		{
+			int offset = width > height ? width + extraOffset : height + extraOffset;
 			if (spawnPoint.x < offset)
 			{
 				spawnPoint.x = offset / 2;
@@ -72,23 +77,22 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Clamp a pawns active location based on their hitbox size. Avoids derendering issues for multicell-pawns
+		/// Verify that <paramref name="pawn"/> is inside the map at <paramref name="cell"/>
 		/// </summary>
-		/// <param name="p"></param>
+		/// <param name="pawn"></param>
 		/// <param name="nextCell"></param>
 		/// <param name="map"></param>
-		/// <returns></returns>
-		public static bool ClampHitboxToMap(this Pawn pawn, IntVec3 nextCell, Map map)
+		public static bool InsideMap(this Pawn pawn, IntVec3 cell, Map map)
 		{
 			int x = pawn.def.size.x % 2 == 0 ? pawn.def.size.x / 2 : (pawn.def.size.x + 1) / 2;
 			int z = pawn.def.size.z % 2 == 0 ? pawn.def.size.z / 2 : (pawn.def.size.z + 1) / 2;
 
 			int hitbox = x > z ? x : z;
-			if (nextCell.x + hitbox > map.Size.x || nextCell.z + hitbox > map.Size.z)
+			if (cell.x + hitbox > map.Size.x || cell.z + hitbox > map.Size.z)
 			{
 				return true;
 			}
-			if (nextCell.x - hitbox < 0 || nextCell.z - hitbox < 0)
+			if (cell.x - hitbox < 0 || cell.z - hitbox < 0)
 			{
 				return true;
 			}

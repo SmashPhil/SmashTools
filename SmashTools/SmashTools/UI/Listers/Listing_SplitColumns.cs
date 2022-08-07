@@ -163,6 +163,10 @@ namespace SmashTools
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
 				UIElements.DoTooltipRegion(rect, tooltip);
 			}
 			Widgets.Label(rectLeft, label);
@@ -195,6 +199,10 @@ namespace SmashTools
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
 				UIElements.DoTooltipRegion(rect, tooltip);
 			}
 			Widgets.Label(rectLeft, label);
@@ -236,6 +244,10 @@ namespace SmashTools
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
 				UIElements.DoTooltipRegion(rect, tooltip, true);
 			}
 			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
@@ -274,6 +286,10 @@ namespace SmashTools
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
 				UIElements.DoTooltipRegion(rect, tooltip, true);
 			}
 			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
@@ -328,6 +344,10 @@ namespace SmashTools
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
 				UIElements.DoTooltipRegion(rect, tooltip, true);
 			}
 			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
@@ -364,6 +384,10 @@ namespace SmashTools
 				}
 				else if (!tooltip.NullOrEmpty())
 				{
+					if (Mouse.IsOver(rect))
+					{
+						Widgets.DrawHighlight(rect);
+					}
 					UIElements.DoTooltipRegion(rect, tooltip, true);
 				}
 				value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);

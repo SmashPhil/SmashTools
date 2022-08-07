@@ -74,5 +74,32 @@ namespace SmashTools
 		{
 			return source == target || source.IsSubclassOf(target);
 		}
+
+		public static Type GetInterface(this Type type, Type interfaceType)
+		{
+			if (!interfaceType.IsInterface)
+			{
+				Log.Error($"Attempting to find type implementation as interface for non-interface type {interfaceType}.");
+				return null;
+			}
+			Type[] interfaces = type.GetInterfaces();
+			foreach (Type @interface in interfaces)
+			{
+				if (@interface == interfaceType)
+				{
+					return @interface;
+				}
+				else if (@interface.IsGenericType && @interface.GetGenericTypeDefinition() == interfaceType)
+				{
+					return @interface;
+				}
+			}
+			return null;
+		}
+
+		public static bool HasInterface(this Type type, Type interfaceType)
+		{
+			return GetInterface(type, interfaceType) != null;
+		}
 	}
 }

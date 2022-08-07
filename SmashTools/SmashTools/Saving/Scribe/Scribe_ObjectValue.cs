@@ -31,7 +31,7 @@ namespace SmashTools
 					Log.Error("Using Scribe_Values with a Def " + label + ". Use Scribe_Defs instead.");
 					return;
 				}
-				object defaultValue = obj.GetType().GetDefaultValue();
+				object defaultValue = obj.GetDefaultValue();
 				if (forceSave || (obj is null && defaultValue != null) || (obj != null && !obj.Equals(defaultValue)))
 				{
 					if (obj is null)
@@ -91,7 +91,7 @@ namespace SmashTools
 
 		public static Pair<string, string> SavingTypeAttributePair(object obj)
 		{
-			return new Pair<string, string>("SavedType", (obj.GetType() == typeof(SavedField<object>)).ToString());
+			return new Pair<string, string>("SavedField", (obj.GetType() == typeof(SavedField<object>)).ToString());
 		}
 	}
 }

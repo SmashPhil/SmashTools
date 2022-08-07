@@ -301,11 +301,16 @@
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
     <Compile Include="Debugging\GameState.cs" />
+    <Compile Include="Debugging\TimerUtility.cs" />
     <Compile Include="Debugging\UnitTesting.cs" />
+    <Compile Include="Events\EventTrigger.cs" />
+    <Compile Include="Interfaces\IDefaultValue.cs" />
+    <Compile Include="Interfaces\IEventManager.cs" />
     <Compile Include="Interfaces\IInspectable.cs" />
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
+    <Compile Include="Patching\PatchOperations\PatchOperationAddOrReplace.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
     <Compile Include="SmashSettings.cs" />
@@ -317,6 +322,7 @@
     <Compile Include="UI\Windows\Dialog_UnitTesting.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
     <Compile Include="UI\Windows\SingleWindow.cs" />
+    <Compile Include="Utility\Extensions\Ext_EventManager.cs" />
     <Compile Include="Utility\Extensions\ComponentCache.cs" />
     <Compile Include="Utility\Extensions\Ext_Array.cs" />
     <Compile Include="Utility\Extensions\Ext_Color.cs" />
@@ -327,10 +333,12 @@
     <Compile Include="Utility\Extensions\Ext_Mods.cs" />
     <Compile Include="Utility\Extensions\Ext_Numeric.cs" />
     <Compile Include="Utility\Extensions\Ext_Map.cs" />
+    <Compile Include="Utility\Extensions\Ext_object.cs" />
     <Compile Include="Utility\Extensions\Ext_Pawn.cs" />
     <Compile Include="Utility\Extensions\Ext_Math.cs" />
     <Compile Include="Utility\Extensions\Ext_String.cs" />
     <Compile Include="Utility\Extensions\Ext_Texture.cs" />
+    <Compile Include="Utility\Extensions\Ext_ThingOwner.cs" />
     <Compile Include="Utility\Extensions\Ext_Type.cs" />
     <Compile Include="Interfaces\IConditionalPatch.cs" />
     <Compile Include="Interfaces\INestedType.cs" />

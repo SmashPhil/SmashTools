@@ -14,7 +14,7 @@ namespace SmashTools
 				return null;
 			}
 			XmlAttribute xmlType = subNode.Attributes["Type"];
-			XmlAttribute xmlSavedType = subNode.Attributes["SavedType"];
+			XmlAttribute xmlSavedField = subNode.Attributes["SavedField"];
 			if (xmlType is null)
 			{
 				Log.Error($"Failed to retrieve Type attribute from ObjectValue saved XmlNode. Cannot parse into game. Node: {subNode}");
@@ -30,7 +30,7 @@ namespace SmashTools
 			{
 				try
 				{
-					if (xmlSavedType != null)
+					if (xmlSavedField != null)
 					{
 						return SavedField<object>.FromTypedString(subNode.InnerText, objectType);
 					}
