@@ -311,7 +311,6 @@
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationAddSafely.cs" />
-    <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
     <Compile Include="SmashSettings.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />

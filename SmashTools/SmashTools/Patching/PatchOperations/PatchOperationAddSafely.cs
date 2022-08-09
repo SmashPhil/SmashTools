@@ -6,16 +6,16 @@ using Verse;
 
 namespace SmashTools
 {
-	public class PatchOperationAddSafely : PatchOperationPathed
+	public class PatchOperationAddOrReplace : PatchOperationPathed
 	{
 		private XmlContainer value;
 		private Order order = Order.Append;
 
-		protected override bool ApplyWorker(XmlDocument xmlDoc)
+		protected override bool ApplyWorker(XmlDocument xml)
 		{
 			XmlNode node = value.node;
 			bool result = false;
-			foreach (XmlNode xmlNode in xmlDoc.SelectNodes(xpath))
+			foreach (XmlNode xmlNode in xml.SelectNodes(xpath))
 			{
 				result = true;
 				switch (order)
