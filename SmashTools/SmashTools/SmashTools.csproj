@@ -310,7 +310,7 @@
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
-    <Compile Include="Patching\PatchOperations\PatchOperationAddOrReplace.cs" />
+    <Compile Include="Patching\PatchOperations\PatchOperationAddSafely.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationFindModId.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
     <Compile Include="SmashSettings.cs" />
