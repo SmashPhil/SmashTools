@@ -303,6 +303,7 @@
     <Compile Include="Debugging\GameState.cs" />
     <Compile Include="Debugging\TimerUtility.cs" />
     <Compile Include="Debugging\UnitTesting.cs" />
+    <Compile Include="Enums\MathOp.cs" />
     <Compile Include="Events\EventTrigger.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
     <Compile Include="Interfaces\IEventManager.cs" />
@@ -312,6 +313,7 @@
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationAddSafely.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
+    <Compile Include="Saving\ClassLoader.cs" />
     <Compile Include="SmashSettings.cs" />
     <Compile Include="Structs\RimWorldTime.cs" />
     <Compile Include="Structs\Rot8.cs" />

@@ -10,6 +10,21 @@ namespace SmashTools
 	public static class Ext_IEnumerable
 	{
 		/// <summary>
+		/// Random item from those that fit conditions
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerable"></param>
+		/// <param name="predicate"></param>
+		public static T RandomOrDefault<T>(this IEnumerable<T> enumerable, Predicate<T> predicate = null)
+		{
+			if (enumerable.Where(item => predicate is null || predicate(item)).TryRandomElement(out T result))
+			{
+				return result;
+			}
+			return default(T);
+		}
+
+		/// <summary>
 		/// .Any extension method but takes into account null collections do not contain the object. 
 		/// Does not throw error on null collections which is more applicable to this project.
 		/// </summary>

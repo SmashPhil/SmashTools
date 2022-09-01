@@ -68,5 +68,10 @@ namespace SmashTools
 		{
 			manager.EventRegistry[@event].RemoveSingle(action);
 		}
+
+		public static void ClearAll<T>(this IEventManager<T> manager, T @event)
+		{
+			manager.EventRegistry[@event].ClearAll();
+		}
 	}
 }

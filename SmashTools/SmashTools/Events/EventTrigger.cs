@@ -25,6 +25,12 @@ namespace SmashTools
 
 		public bool RemoveSingle(Action action) => singles.Remove(action);
 
+		public void ClearAll()
+		{
+			singles.Clear();
+			persistents.Clear();
+		}
+
 		public void ExecuteEvents()
 		{
 			foreach (Action action in persistents)

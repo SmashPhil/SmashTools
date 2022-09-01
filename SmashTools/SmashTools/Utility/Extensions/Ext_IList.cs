@@ -75,5 +75,20 @@ namespace SmashTools
 			newList.AddRange(frontList);
 			return newList;
 		}
+
+		/// <summary>
+		/// Check if index is within bounds of list
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="list"></param>
+		/// <param name="index"></param>
+		public static bool OutOfBounds<T>(this IList<T> list, int index)
+		{
+			if (list.NullOrEmpty())
+			{
+				return true;
+			}
+			return index < 0 || index >= list.Count;
+		}
 	}
 }

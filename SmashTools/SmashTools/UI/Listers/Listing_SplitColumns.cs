@@ -128,7 +128,7 @@ namespace SmashTools
 			bool disabled = !disabledTooltip.NullOrEmpty();
 			if (disabled)
 			{
-				UIElements.DoTooltipRegion(rect, disabledTooltip);
+				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
@@ -136,7 +136,7 @@ namespace SmashTools
 				{
 					Widgets.DrawHighlight(rect);
 				}
-				UIElements.DoTooltipRegion(rect, tooltip);
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 			if (locked)
 			{
@@ -159,7 +159,7 @@ namespace SmashTools
 			{
 				GUI.color = UIElements.InactiveColor;
 				GUI.enabled = false;
-				UIElements.DoTooltipRegion(rect, disabledTooltip);
+				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
@@ -167,7 +167,7 @@ namespace SmashTools
 				{
 					Widgets.DrawHighlight(rect);
 				}
-				UIElements.DoTooltipRegion(rect, tooltip);
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 			Widgets.Label(rectLeft, label);
 
@@ -195,7 +195,7 @@ namespace SmashTools
 			{
 				GUI.color = UIElements.InactiveColor;
 				GUI.enabled = false;
-				UIElements.DoTooltipRegion(rect, disabledTooltip);
+				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
@@ -203,7 +203,7 @@ namespace SmashTools
 				{
 					Widgets.DrawHighlight(rect);
 				}
-				UIElements.DoTooltipRegion(rect, tooltip);
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 			Widgets.Label(rectLeft, label);
 
@@ -240,7 +240,7 @@ namespace SmashTools
 			{
 				GUI.color = UIElements.InactiveColor;
 				GUI.enabled = false;
-				UIElements.DoTooltipRegion(rect, disabledTooltip);
+				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
@@ -248,7 +248,7 @@ namespace SmashTools
 				{
 					Widgets.DrawHighlight(rect);
 				}
-				UIElements.DoTooltipRegion(rect, tooltip, true);
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
 			float value2 = value;
@@ -282,7 +282,7 @@ namespace SmashTools
 			{
 				GUI.color = UIElements.InactiveColor;
 				GUI.enabled = false;
-				UIElements.DoTooltipRegion(rect, disabledTooltip);
+				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
@@ -290,7 +290,7 @@ namespace SmashTools
 				{
 					Widgets.DrawHighlight(rect);
 				}
-				UIElements.DoTooltipRegion(rect, tooltip, true);
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
 			float value2 = value;
@@ -340,7 +340,7 @@ namespace SmashTools
 			{
 				GUI.color = UIElements.InactiveColor;
 				GUI.enabled = false;
-				UIElements.DoTooltipRegion(rect, disabledTooltip);
+				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
 			{
@@ -348,7 +348,7 @@ namespace SmashTools
 				{
 					Widgets.DrawHighlight(rect);
 				}
-				UIElements.DoTooltipRegion(rect, tooltip, true);
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
 			int value2 = value;
@@ -380,7 +380,7 @@ namespace SmashTools
 				{
 					GUI.color = UIElements.InactiveColor;
 					GUI.enabled = false;
-					UIElements.DoTooltipRegion(rect, disabledTooltip);
+					TooltipHandler.TipRegion(rect, disabledTooltip);
 				}
 				else if (!tooltip.NullOrEmpty())
 				{
@@ -388,7 +388,7 @@ namespace SmashTools
 					{
 						Widgets.DrawHighlight(rect);
 					}
-					UIElements.DoTooltipRegion(rect, tooltip, true);
+					TooltipHandler.TipRegion(rect, tooltip);
 				}
 				value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
 				GUI.color = color;

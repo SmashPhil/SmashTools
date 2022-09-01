@@ -48,7 +48,11 @@ namespace SmashTools
 
 			if (!tooltip.NullOrEmpty())
 			{
-				UIElements.DoTooltipRegion(rect, tooltip, true);
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 			Text.CurTextFieldStyle.alignment = align;
 			GUI.color = color;
@@ -72,7 +76,11 @@ namespace SmashTools
 
 			if (!tooltip.NullOrEmpty())
 			{
-				UIElements.DoTooltipRegion(rect, tooltip, true);
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
+				TooltipHandler.TipRegion(rect, tooltip);
 			}
 
 			Text.CurTextFieldStyle.alignment = align;
@@ -83,6 +91,11 @@ namespace SmashTools
 		{
 			lister.Gap(12f);
 			Rect rect = lister.GetRect(24f);
+			float highlightAdjust = label.NullOrEmpty() ? 18 : Text.CalcSize(label).y;
+			Rect fullRect = new Rect(rect)
+			{
+				y = rect.y - highlightAdjust / 2 - 3
+			};
 			string format = $"{Math.Round(value * multiplier, decimalPlaces)}" + endSymbol;
 			if (!maxValueDisplay.NullOrEmpty() && endValue > 0)
 			{
@@ -93,7 +106,11 @@ namespace SmashTools
 			}
 			if (!tooltip.NullOrEmpty())
 			{
-				UIElements.DoTooltipRegion(rect, tooltip, true);
+				if (Mouse.IsOver(fullRect))
+				{
+					Widgets.DrawHighlight(fullRect);
+				}
+				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
 			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
 			if (endValue > 0 && value >= max)
@@ -106,6 +123,11 @@ namespace SmashTools
 		{
 			lister.Gap(12f);
 			Rect rect = lister.GetRect(24f);
+			float highlightAdjust = label.NullOrEmpty() ? 18 : Text.CalcSize(label).y;
+			Rect fullRect = new Rect(rect)
+			{
+				y = rect.y - highlightAdjust / 2 - 3
+			};
 			string format = string.Format("{0}" + endSymbol, value);
 			if (!maxValueDisplay.NullOrEmpty())
 			{
@@ -123,7 +145,11 @@ namespace SmashTools
 			}
 			if (!tooltip.NullOrEmpty())
 			{
-				UIElements.DoTooltipRegion(rect, tooltip, true);
+				if (Mouse.IsOver(fullRect))
+				{
+					Widgets.DrawHighlight(fullRect);
+				}
+				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
 			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format).RoundTo(roundTo);
 		}

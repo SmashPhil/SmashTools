@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using Verse;
 
@@ -8,11 +9,6 @@ namespace SmashTools
 {
 	public static class ConditionalPatches
 	{
-		/// <summary>
-		/// <c>Key</c>: (source mod applying patch, package ID of mod being patched)
-		/// </summary>
-		public static Dictionary<Pair<string, string>, ModPatchable> patchableModActivators = new Dictionary<Pair<string, string>, ModPatchable>();
-
 		/// <summary>
 		/// Apply all conditional patches for a mod
 		/// </summary>
@@ -47,8 +43,12 @@ namespace SmashTools
 						
 								patch.PatchAll(mod, harmony);
 
+								if (type.GetProperty("Active", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static) is PropertyInfo property && property.GetSetMethod() != null)
+								{
+									property.SetValue(null, true);
+								}
+
 								SmashLog.Message($"[{modContentPack.Name}] Successfully applied compatibility patches for <mod>{mod.Name}</mod>");
-								patchableModActivators.Add(new Pair<string, string>(sourcePackageID, mod.PackageId), newMod);
 							}
 						}
 						catch (Exception ex)
