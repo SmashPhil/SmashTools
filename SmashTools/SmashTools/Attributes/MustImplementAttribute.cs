@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 
 namespace SmashTools
 {
@@ -19,7 +20,7 @@ namespace SmashTools
 			if (type.GetCustomAttributes(typeof(MustImplementAttribute), true).FirstOrDefault() is MustImplementAttribute mustImplement)
 			{
 				methodName = mustImplement.MethodName;
-				return type.GetMethods().Where(m => m.Name == mustImplement.MethodName).NotNullAndAny();
+				return type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static).Where(m => m.Name == mustImplement.MethodName).NotNullAndAny();
 			}
 			return false;
 		}

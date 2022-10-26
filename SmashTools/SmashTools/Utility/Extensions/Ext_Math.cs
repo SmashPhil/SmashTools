@@ -10,6 +10,43 @@ namespace SmashTools
 {
 	public static class Ext_Math
 	{
+		//Up to n=16
+		private static float[] factorials = new float[]
+		{
+			1,
+			1,
+			2,
+			6,
+			24,
+			120,
+			720,
+			5040,
+			40320,
+			362880,
+			3628800,
+			39916800,
+			479001600,
+			6227020800,
+			87178291200,
+			1307674368000,
+			20922789888000,
+		};
+
+		public static float Binomial(int n, int i)
+		{
+			float a1 = factorials[n];
+			float a2 = factorials[i];
+			float a3 = factorials[n - i];
+			return a1 / (a2 * a3);
+		}
+
+		public static float Bernstein(int n, int i, float t)
+		{
+			float t1 = Mathf.Pow(t, i); //t_i
+			float t2 = Mathf.Pow(1 - t, n - i); //t_n-i
+			return Binomial(n, i) * t1 * t2;
+		}
+
 		/// <summary>
 		/// Get Absolute Value of IntVec2
 		/// </summary>
@@ -26,6 +63,29 @@ namespace SmashTools
 		public static IntVec3 Abs(IntVec3 c)
 		{
 			return new IntVec3(Mathf.Abs(c.x), Mathf.Abs(c.y), Mathf.Abs(c.z));
+		}
+
+		/// <summary>
+		/// Shift <paramref name="cell"/>.
+		/// </summary>
+		/// <param name="cell"></param>
+		/// <param name="dir"></param>
+		/// <param name="a">vertical relative to <paramref name="dir"/></param>
+		/// <param name="b">horizontal relative to <paramref name="dir"/></param>
+		public static IntVec2 Shifted(this IntVec2 cell, Rot4 dir, int a, int b = 0)
+		{
+			if (!dir.IsValid)
+			{
+				return cell;
+			}
+			return dir.AsInt switch
+			{
+				0 => new IntVec2(cell.x + b, cell.z + a),
+				1 => new IntVec2(cell.x + a, cell.z - b),
+				2 => new IntVec2(cell.x - b, cell.z - a),
+				3 => new IntVec2(cell.x - a, cell.z + b),
+				_ => throw new NotImplementedException("Beyond what Rot4 supports")
+			};
 		}
 
 		/// <summary>

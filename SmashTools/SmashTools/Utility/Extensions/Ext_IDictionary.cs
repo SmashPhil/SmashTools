@@ -17,11 +17,11 @@ namespace SmashTools
 		/// <param name="kvp"></param>
 		/// <param name="key"></param>
 		/// <param name="value"></param>
-		public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp, out TKey key, out TValue value)
-		{
-			key = kvp.Key;
-			value = kvp.Value;
-		}
+		//public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp, out TKey key, out TValue value)
+		//{
+		//	key = kvp.Key;
+		//	value = kvp.Value;
+		//}
 
 		/// <summary>
 		/// Grab random value from dictionary

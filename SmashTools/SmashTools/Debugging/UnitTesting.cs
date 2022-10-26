@@ -4,16 +4,17 @@ using System.Linq;
 using System.Reflection;
 using Verse;
 
-namespace SmashTools.Debugging
+namespace SmashTools
 {
 	[StaticConstructorOnStartup]
 	public static class UnitTesting
 	{
 		internal static readonly Dictionary<GameState, List<Action>> postLoadActions = new Dictionary<GameState, List<Action>>();
 		internal static readonly Dictionary<string, UnitTestAction> unitTests = new Dictionary<string, UnitTestAction>();
-		internal static readonly Dictionary<string, List<string>> unitTestCategories = new Dictionary<string, List<string>>();
+		internal static readonly List<Toggle> unitTestRadioButtons = new List<Toggle>();
 
-		private static bool Enabled { get; set; }
+		internal static bool NoUnitTest { get; private set; }
+		internal static bool Enabled { get; private set; }
 
 		static UnitTesting()
 		{
@@ -40,6 +41,11 @@ namespace SmashTools.Debugging
 			PostLoadSetup();
 		}
 
+		public static void OpenMenu()
+		{
+			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Unit Testing", unitTestRadioButtons, postClose: SmashMod.Serialize));
+		}
+
 		private static void InitializeUnitTesting()
 		{
 			SmashMod.LoadFromSettings();
@@ -49,34 +55,41 @@ namespace SmashTools.Debugging
 				postLoadActions.Add(enumValue, new List<Action>());
 			}
 			unitTests.Clear();
+			unitTestRadioButtons.Clear();
+			NoUnitTest = !SmashSettings.unitTests.Any(kvp => kvp.Value);
+			unitTestRadioButtons.Add(new Toggle("NoUnitTest", "None", string.Empty, () => NoUnitTest, (value) => NoUnitTest = value));
 			List<MethodInfo> methods = new List<MethodInfo>();
 			foreach (Type type in GenTypes.AllTypes)
 			{
 				foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Where(m => !m.GetParameters().Any()))
 				{
-					if (method.GetCustomAttribute<UnitTestAttribute>() is UnitTestAttribute unitTest)
+					if (method.GetCustomAttribute<UnitTestAttribute>() is UnitTestAttribute unitTestAttr)
 					{
-						string name = unitTest.Name;
+						string name = unitTestAttr.Name;
 						if (string.IsNullOrEmpty(name))
 						{
 							name = method.Name;
 						}
-						string category = unitTest.Category;
+						string category = unitTestAttr.Category;
 						if (string.IsNullOrEmpty(category))
 						{
 							category = "General";
 						}
 
-						string unitTestFullName = $"{unitTest.Category}.{name}";
-						unitTestCategories.AddOrInsert(category, unitTestFullName);
-						SmashMod.settings.unitTests.TryAdd(unitTestFullName, false);
-						unitTests.Add(unitTestFullName, new UnitTestAction()
+						string unitTestFullName = $"{category}.{name}";
+						SmashSettings.unitTests.TryAdd(unitTestFullName, false);
+						UnitTestAction unitTest = new UnitTestAction()
 						{
 							FullName = unitTestFullName,
 							DisplayName = name,
-							GameState = unitTest.GameState,
+							Category = category,
+							GameState = unitTestAttr.GameState,
 							Action = () => method.Invoke(null, new object[] { })
-						});
+						};
+						unitTests.Add(unitTestFullName, unitTest);
+						unitTestRadioButtons.Add(new Toggle(unitTest.FullName, unitTest.DisplayName, unitTest.Category,
+							() => SmashSettings.unitTests.TryGetValue(unitTest.FullName, false),
+							(value) => SmashSettings.unitTests[unitTest.FullName] = value));
 					}
 				}
 			}
@@ -86,13 +99,13 @@ namespace SmashTools.Debugging
 		{
 			if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu, "Open Unit Testing menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
 			{
-				Find.WindowStack.Add(new Dialog_UnitTesting());
+				OpenMenu();
 			}
 		}
 
 		private static void PostLoadSetup()
 		{
-			foreach (var unitTestSaveData in SmashMod.settings.unitTests)
+			foreach (var unitTestSaveData in SmashSettings.unitTests)
 			{
 				if (unitTestSaveData.Value && unitTests.TryGetValue(unitTestSaveData.Key, out UnitTestAction unitTest))
 				{
@@ -131,12 +144,10 @@ namespace SmashTools.Debugging
 
 		internal struct UnitTestAction
 		{
-			public string DisplayName { get; set; }
-
 			public string FullName { get; set; }
-
+			public string DisplayName { get; set; }
+			public string Category { get; set; }
 			public Action Action { get; set; }
-
 			public GameState GameState { get; set; }
 		}
 	}

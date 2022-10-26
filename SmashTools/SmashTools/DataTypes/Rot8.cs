@@ -363,7 +363,25 @@ namespace SmashTools
 			{
 				return 0;
 			}
-			return Mathf.Abs(rot.AsIntClockwise - AsIntClockwise).ClampAndWrap(North.AsIntClockwise, South.AsIntClockwise);
+			if (rot == this)
+			{
+				return 0;
+			}
+			int rotations = 0;
+			Rot8 clockwise = this;
+			Rot8 counterClockwise = this;
+			for (int i = 0; i < 4; i++)
+			{
+				rotations++;
+				clockwise = clockwise.Rotated(RotationDirection.Clockwise);
+				counterClockwise = counterClockwise.Rotated(RotationDirection.Counterclockwise);
+				if (clockwise == rot || counterClockwise == rot)
+				{
+					return rotations;
+				}
+			}
+			Log.Error($"Could not match rot {rot} with {this}. Difference excluding rotation direction should not be > 4.");
+			return 4;
 		}
 
 		public void Rotate(RotationDirection rotDir, bool diagonals = true)

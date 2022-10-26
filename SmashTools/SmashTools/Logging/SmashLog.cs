@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 using HarmonyLib;
@@ -37,6 +38,24 @@ namespace SmashTools
 			RegisterRichTextBracket("mod", new Color(0, 0.5f, 0.5f));
 			RegisterRichTextBracket("attribute", new Color(1, 0.4f, 0.4f));
 			RegisterRichTextBracket("xml", new Color(0.25f, 0.75f, 0.95f));
+		}
+
+		public static void ValidateMethodCalling(MethodInfo method)
+		{
+			ProjectSetup.Harmony.Patch(method,
+				prefix: new HarmonyMethod(typeof(SmashLog), nameof(SmashLog.StartingMethodCall)),
+				postfix: new HarmonyMethod(typeof(SmashLog), nameof(SmashLog.EndingMethodCall)));
+		}
+
+		private static void StartingMethodCall()
+		{
+			Log.Message($"Starting method call.\nStackTrace={StackTraceUtility.ExtractStackTrace()}");
+		}
+
+		private static void EndingMethodCall()
+		{
+			Log.Clear();
+			Log.Message($"Completed method call.\nStackTrace={StackTraceUtility.ExtractStackTrace()}\n");
 		}
 
 		public static void RegisterSuppressionCode(string code)

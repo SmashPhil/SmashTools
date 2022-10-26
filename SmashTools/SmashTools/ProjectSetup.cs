@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -9,7 +10,6 @@ using Verse;
 using RimWorld;
 using RimWorld.Planet;
 using SmashTools.Xml;
-using SmashTools.Debugging;
 
 namespace SmashTools
 {
@@ -19,84 +19,89 @@ namespace SmashTools
 
 		public const bool ExportXmlDoc = false;
 
+		public static Harmony Harmony { get; private set; }
+
 		public ProjectSetup(ModContentPack content) : base(content)
 		{
 			RegisterParseableStructs();
 
-			Harmony harmony = new Harmony("smashphil.smashtools");
+			Harmony = new Harmony("smashphil.smashtools");
 
-			harmony.Patch(original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
+			Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributesOnDef)));
-			harmony.Patch(original: AccessTools.Method(typeof(DirectXmlToObject), "GetFieldInfoForType"),
+			Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlToObject), "GetFieldInfoForType"),
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributes)));
 
 			if (ExportXmlDoc)
 			{
 #pragma warning disable CS0162 // Unreachable code detected
-				harmony.Patch(original: AccessTools.Method(typeof(LoadedModManager), nameof(LoadedModManager.ParseAndProcessXML)),
+				Harmony.Patch(original: AccessTools.Method(typeof(LoadedModManager), nameof(LoadedModManager.ParseAndProcessXML)),
 					postfix: new HarmonyMethod(typeof(XmlParseHelper),
 					nameof(XmlParseHelper.ExportCombinedXmlDocument)));
 #pragma warning restore CS0162 // Unreachable code detected
 			}
 
-			harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
+			Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
 
-			harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
+			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearAllMapComps)));
-			harmony.Patch(original: AccessTools.Method(typeof(MapGenerator), nameof(MapGenerator.GenerateContentsIntoMap)),
+			Harmony.Patch(original: AccessTools.Method(typeof(MapGenerator), nameof(MapGenerator.GenerateContentsIntoMap)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.MapGenerated)));
-			harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
+			Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearMapComps), new Type[] { typeof(Map) }));
-			harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
+			Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.RegisterMapComps)));
-			harmony.Patch(original: AccessTools.Method(typeof(World), "FillComponents"),
+			Harmony.Patch(original: AccessTools.Method(typeof(World), "FillComponents"),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ConstructWorldComponents)));
-			harmony.Patch(original: AccessTools.Method(typeof(Game), "FillComponents"),
+			Harmony.Patch(original: AccessTools.Method(typeof(Game), "FillComponents"),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ConstructGameComponents)));
 
-			harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
+			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
 				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
 				nameof(PawnOverlayRenderer.GetBodyPos)));
-			harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.BodyAngle)),
+			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.BodyAngle)),
 				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
 				nameof(PawnOverlayRenderer.BodyAngle)));
-			harmony.Patch(original: AccessTools.Method(typeof(PawnUtility), nameof(PawnUtility.GetPosture)),
+			Harmony.Patch(original: AccessTools.Method(typeof(PawnUtility), nameof(PawnUtility.GetPosture)),
 				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
 				nameof(PawnOverlayRenderer.PawnOverlayerPosture)));
-			harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.LayingFacing)),
+			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.LayingFacing)),
 				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
 				nameof(PawnOverlayRenderer.LayingFacing)));
 
-			harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
+			Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.DrawDebugWindowButton)));
-			harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.StartedNewGame)),
+			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.StartedNewGame)),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecuteNewGameTesting)));
-			harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.LoadedGame)),
+			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.LoadedGame)),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecutePostLoadTesting)));
-			harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
+			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecuteOnStartupTesting)));
 
-			harmony.Patch(original: AccessTools.Method(typeof(MainTabWindow_Inspect), nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),
+			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI)),
+				prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
+				nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
+			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI)),
+				prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
+				nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
+
+			Harmony.Patch(original: AccessTools.Method(typeof(MainTabWindow_Inspect), nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),
 				prefix: new HarmonyMethod(typeof(ProjectSetup),
 				nameof(InspectablePaneButtons)));
-
-			harmony.Patch(original: AccessTools.Method(typeof(StaticConstructorOnStartupUtility), nameof(StaticConstructorOnStartupUtility.ReportProbablyMissingAttributes)),
-				transpiler: new HarmonyMethod(typeof(ProjectSetup),
-				nameof(IgnoreWarningsOnStaticClassTranspiler)));
 
 			StaticConstructorOnModInit();
 		}
@@ -124,7 +129,7 @@ namespace SmashTools
 				}
 				catch (Exception ex)
 				{
-					SmashLog.Error($"Exception thrown running constructor of type <type>{type}</type>. Ex=\"{ex.Message}\"");
+					SmashLog.Error($"Exception thrown running constructor of type <type>{type}</type>. Ex=\"{ex}\"");
 				}
 			}
 		}
@@ -143,32 +148,6 @@ namespace SmashTools
 				return false;
 			}
 			return true;
-		}
-
-		private static IEnumerable<CodeInstruction> IgnoreWarningsOnStaticClassTranspiler(IEnumerable<CodeInstruction> instructions)
-		{
-			List<CodeInstruction> instructionList = instructions.ToList();
-
-			for (int i = 0; i < instructionList.Count; i++)
-			{
-				CodeInstruction instruction = instructionList[i];
-
-				if (instruction.Calls(AccessTools.Method(typeof(GenAttribute), nameof(GenAttribute.HasAttribute), generics: new Type[] { typeof(StaticConstructorOnStartup) })))
-				{
-					yield return instruction;	//Call | GenAttribute.HasAttribute<StaticConstructorOnStartup>()
-					instruction = instructionList[++i];
-					
-					yield return new CodeInstruction(opcode: OpCodes.Ldloc_2);
-					yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(ProjectSetup), nameof(SuppressMainThreadWarning)));
-				}
-
-				yield return instruction;
-			}
-		}
-
-		private static bool SuppressMainThreadWarning(bool hasStaticCtorAttribute, Type type)
-		{
-			return hasStaticCtorAttribute || type.HasAttribute<IsMainThreadAttribute>();
 		}
 	}
 }

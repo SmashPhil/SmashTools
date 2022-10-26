@@ -88,5 +88,15 @@ namespace SmashTools
 			}
 			return theta;
 		}
+
+		public static bool InRange(this FloatRange range, float value)
+		{
+			return value >= range.min && value <= range.max;
+		}
+
+		public static bool InRange(this IntRange range, int value)
+		{
+			return value >= range.min && value <= range.max;
+		}
 	}
 }

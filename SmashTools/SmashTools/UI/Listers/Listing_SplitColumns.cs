@@ -102,22 +102,33 @@ namespace SmashTools
 
 		public void Header(string header, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
 		{
-			Color highlight = ListingExtension.BannerColor;
-			var textSize = Text.Font;
+			GUIState.Push();
+
 			Text.Font = fontSize;
 
 			Rect rect = GetRect(Text.CalcHeight(header, ColumnWidth));
-			GUI.color = highlight;
+
+			GUI.color = ListingExtension.BannerColor;
 			GUI.DrawTexture(rect, BaseContent.WhiteTex);
 			GUI.color = ListingExtension.TextColor;
 			
-			var anchorTmp = Text.Anchor;
 			Text.Anchor = anchor;
 			Widgets.Label(rect, header);
-			Text.Font = textSize;   
-			Text.Anchor = anchorTmp;
 
 			Gap(16);
+			GUIState.Pop();
+		}
+
+		public bool Button(string label, string highlightTag = null)
+		{
+			Rect rect = GetRect(30f);
+			bool result = Widgets.ButtonText(rect, label, true, true, true);
+			if (highlightTag != null)
+			{
+				UIHighlighter.HighlightOpportunity(rect, highlightTag);
+			}
+			Gap(verticalSpacing);
+			return result;
 		}
 
 		public void CheckboxLabeled(string label, ref bool checkState, string tooltip, string disabledTooltip, bool locked)
@@ -148,6 +159,7 @@ namespace SmashTools
 		public void IntegerBox(string label, ref int value, string tooltip, string disabledTooltip, int min = int.MinValue, int max = int.MaxValue)
 		{
 			Shift();
+			GUIState.Push();
 			Rect rect = GetSplitRect(Text.LineHeight);
 			float centerY = rect.y - rect.height / 2;
 			float length = rect.width * 0.45f;
@@ -157,8 +169,7 @@ namespace SmashTools
 			Color color = GUI.color;
 			if (!disabledTooltip.NullOrEmpty())
 			{
-				GUI.color = UIElements.InactiveColor;
-				GUI.enabled = false;
+				GUIState.Disable();
 				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
@@ -175,26 +186,24 @@ namespace SmashTools
 			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
 			string buffer = value.ToString();
 			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
-
 			Text.CurTextFieldStyle.alignment = align;
-			GUI.color = color;
-			GUI.enabled = true;
+
+			GUIState.Pop();
 		}
 
 		public void FloatBox(string label, ref float value, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue)
 		{
 			Shift();
+			GUIState.Push();
 			Rect rect = GetSplitRect(Text.LineHeight);
 			float centerY = rect.y - rect.height / 2;
 			float length = rect.width * 0.45f;
 			Rect rectLeft = new Rect(rect.x, centerY, length, rect.height);
 			Rect rectRight = new Rect(rect.x + (rect.width - length), centerY, length, rect.height);
 
-			Color color = GUI.color;
 			if (!disabledTooltip.NullOrEmpty())
 			{
-				GUI.color = UIElements.InactiveColor;
-				GUI.enabled = false;
+				GUIState.Disable();
 				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
@@ -207,21 +216,22 @@ namespace SmashTools
 			}
 			Widgets.Label(rectLeft, label);
 
-			var align = Text.CurTextFieldStyle.alignment;
+			TextAnchor align = Text.CurTextFieldStyle.alignment;
 			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
 			string buffer = value.ToString();
 
 			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
 
 			Text.CurTextFieldStyle.alignment = align;
-			GUI.color = color;
-			GUI.enabled = true;
+
+			GUIState.Pop();
 		}
 
 		public void SliderPercentLabeled(string label, ref float value, string tooltip, string disabledTooltip, string endSymbol, float min, float max, int decimalPlaces = 2, 
 			float endValue = -1f, string endValueDisplay = "", bool translate = false)
 		{
 			Shift();
+			GUIState.Push();
 			Rect rect = GetSplitRect(24f);
 			string format = $"{Math.Round(value * 100, decimalPlaces)}" + endSymbol;
 			if (!endValueDisplay.NullOrEmpty() && endValue > 0)
@@ -235,11 +245,9 @@ namespace SmashTools
 					}
 				}
 			}
-			Color color = GUI.color;
 			if (!disabledTooltip.NullOrEmpty())
 			{
-				GUI.color = UIElements.InactiveColor;
-				GUI.enabled = false;
+				GUIState.Disable();
 				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
@@ -256,14 +264,14 @@ namespace SmashTools
 			{
 				value2 = endValue;
 			}
-			GUI.enabled = true;
-			GUI.color = color;
+			GUIState.Pop();
 		}
 
 		public void SliderLabeled(string label, ref float value, string tooltip, string disabledTooltip, string endSymbol, float min, float max, int decimalPlaces = 2, 
 			float endValue = -1f, float increment = 0, string endValueDisplay = "", bool translate = false)
 		{
 			Shift();
+			GUIState.Push();
 			Rect rect = GetSplitRect(24f);
 			string format = $"{Math.Round(value, decimalPlaces)}" + endSymbol;
 			if (!endValueDisplay.NullOrEmpty())
@@ -280,8 +288,7 @@ namespace SmashTools
 			Color color = GUI.color;
 			if (!disabledTooltip.NullOrEmpty())
 			{
-				GUI.color = UIElements.InactiveColor;
-				GUI.enabled = false;
+				GUIState.Disable();
 				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
@@ -303,14 +310,14 @@ namespace SmashTools
 			{
 				value2 = endValue;
 			}
-			GUI.color = color;
-			GUI.enabled = true;
+			GUIState.Pop();
 		}
 
 		public void SliderLabeled(string label, ref int value, string tooltip, string disabledTooltip, string endSymbol, int min, int max, 
 			int endValue = -1, string maxValueDisplay = "", string minValueDisplay = "", bool translate = false)
 		{
 			Shift();
+			GUIState.Push();
 			Rect rect = GetSplitRect(24f);
 			string format = string.Format("{0}" + endSymbol, value);
 			if (!maxValueDisplay.NullOrEmpty())
@@ -335,11 +342,9 @@ namespace SmashTools
 					}
 				}
 			}
-			Color color = GUI.color;
 			if (!disabledTooltip.NullOrEmpty())
 			{
-				GUI.color = UIElements.InactiveColor;
-				GUI.enabled = false;
+				GUIState.Disable();
 				TooltipHandler.TipRegion(rect, disabledTooltip);
 			}
 			else if (!tooltip.NullOrEmpty())
@@ -356,13 +361,13 @@ namespace SmashTools
 			{
 				value2 = endValue;
 			}
-			GUI.color = color;
-			GUI.enabled = true;
+			GUIState.Pop();
 		}
 
 		public void EnumSliderLabeled(string label, ref int value, string tooltip, string disabledTooltip, Type enumType, bool translate = false)
 		{
 			Shift();
+			GUIState.Push();
 			try
 			{
 				int[] enumValues = Enum.GetValues(enumType).Cast<int>().ToArray();
@@ -375,11 +380,9 @@ namespace SmashTools
 				{
 					format = format.Translate();
 				}
-				Color color = GUI.color;
 				if (!disabledTooltip.NullOrEmpty())
 				{
-					GUI.color = UIElements.InactiveColor;
-					GUI.enabled = false;
+					GUIState.Disable();
 					TooltipHandler.TipRegion(rect, disabledTooltip);
 				}
 				else if (!tooltip.NullOrEmpty())
@@ -391,14 +394,50 @@ namespace SmashTools
 					TooltipHandler.TipRegion(rect, tooltip);
 				}
 				value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
-				GUI.color = color;
-				GUI.enabled = true;
 			}
 			catch(Exception ex)
 			{
 				Log.Error($"Unable to convert to {enumType}. Exception={ex.Message}");
 				return;
 			}
+			GUIState.Pop();
+		}
+
+		public void Vector2Box(string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			value = Vector2Box(label, value, tooltip, labelProportion);
+		}
+
+		public Vector2 Vector2Box(string label, Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			Shift();
+			GUIState.Push();
+
+			Rect rect = GetSplitRect(24);
+			value = UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
+
+			GUIState.Pop();
+
+			return value;
+		}
+
+		public void Vector3Box(string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			value = Vector3Box(label, value, tooltip, labelProportion);
+		}
+
+		public Vector3 Vector3Box(string label, Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			Shift();
+			GUIState.Push();
+
+			Rect rect = GetSplitRect(24);
+
+			value = UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
+
+			GUIState.Pop();
+
+			return value;
 		}
 
 		public void FillableBarLabeled(float fillPercent, string label, Texture2D fillTex, Texture2D addedFillTex, Texture2D innerTex, Texture2D outlineTex, float? actualValue = null, float addedValue = 0f, float bgFillPercent = 0f, float[] thresholds = null)

@@ -8,26 +8,17 @@ namespace SmashTools
 {
 	public class SmashSettings : IExposable
 	{
-		public Dictionary<string, bool> unitTests = new Dictionary<string, bool>();
+		public static Dictionary<string, bool> unitTests = new Dictionary<string, bool>();
+		public static QuickStartOption quickStartOption = QuickStartOption.None;
+		public static string quickStartFile;
 
 		public static string FullPath => Path.Combine(GenFilePaths.ConfigFolderPath, "SmashTools.xml");
 
-		public void EnableUnitTest(string fullName, bool checkOn)
-		{
-			if (!unitTests.NullOrEmpty())
-			{
-				if (!unitTests.ContainsKey(fullName))
-				{
-					unitTests.Add(fullName, false);
-				}
-				unitTests = unitTests.ToDictionary(p => p.Key, p => false);
-				unitTests[fullName] = checkOn;
-			}
-		}
-
 		public void ExposeData()
 		{
-			Scribe_Collections.Look(ref unitTests, "unitTests", LookMode.Value, LookMode.Value);
+			Scribe_Values.Look(ref quickStartOption, nameof(quickStartOption), QuickStartOption.None);
+			Scribe_Values.Look(ref quickStartFile, nameof(quickStartFile));
+			Scribe_Collections.Look(ref unitTests, nameof(unitTests), LookMode.Value, LookMode.Value);
 		}
 	}
 

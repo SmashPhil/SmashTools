@@ -25,6 +25,22 @@ namespace SmashTools
 		}
 
 		/// <summary>
+		/// Random item from those that fit conditions
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerable"></param>
+		/// <param name="predicate"></param>
+		/// <param name="fallback"></param>
+		public static T RandomOrFallback<T>(this IEnumerable<T> enumerable, Predicate<T> predicate = null, T fallback = default(T))
+		{
+			if (enumerable.Where(item => predicate is null || predicate(item)).TryRandomElement(out T result))
+			{
+				return result;
+			}
+			return fallback;
+		}
+
+		/// <summary>
 		/// .Any extension method but takes into account null collections do not contain the object. 
 		/// Does not throw error on null collections which is more applicable to this project.
 		/// </summary>
@@ -35,6 +51,22 @@ namespace SmashTools
 		public static bool NotNullAndAny<T>(this IEnumerable<T> enumerable, Predicate<T> predicate = null)
 		{
 			return enumerable != null && (predicate is null ? enumerable.Any() : enumerable.Any(e => predicate(e)));
+		}
+
+		/// <summary>
+		/// Uncached Count check with conditional predicate
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="list"></param>
+		/// <param name="predicate"></param>
+		public static int CountWhere<T>(this IEnumerable<T> list, Predicate<T> predicate)
+		{
+			int count = 0;
+			foreach (T item in list)
+			{
+				if (predicate(item)) { count++; }
+			}
+			return count;
 		}
 
 		/// <summary>

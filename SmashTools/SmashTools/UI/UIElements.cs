@@ -15,6 +15,8 @@ namespace SmashTools
 
 		public static readonly Color InactiveColor = new Color(0.37f, 0.37f, 0.37f, 0.8f);
 
+		private static readonly Texture2D RadioButOffTex = ContentFinder<Texture2D>.Get("UI/Widgets/RadioButOff", true);
+
 		public static string ToHex(this Color c) => $"#{ColorUtility.ToHtmlStringRGB(c)}";
 
 		public static void CheckboxDraw(float x, float y, bool active, bool disabled, float size = 24f, Texture2D texChecked = null, Texture2D texUnchecked = null)
@@ -43,7 +45,7 @@ namespace SmashTools
 		public static bool CheckboxLabeled(Rect rect, string label, ref bool checkOn, bool disabled = false, Texture2D texChecked = null, Texture2D texUnchecked = null, bool placeCheckboxNearText = false)
 		{
 			bool clicked = false;
-			TextAnchor anchor = Text.Anchor;
+			GUIState.Push();
 			Text.Anchor = TextAnchor.MiddleLeft;
 			if (placeCheckboxNearText)
 			{
@@ -64,9 +66,158 @@ namespace SmashTools
 				}
 			}
 			CheckboxDraw(rect.x + rect.width - 24f, rect.y, checkOn, disabled, 20, null, null);
-			Text.Anchor = anchor;
-
+			GUIState.Pop();
 			return clicked;
+		}
+
+		public static bool ReverseRadioButton(Rect rect, string label, bool enabled)
+		{
+			GUIState.Push();
+			Text.Anchor = TextAnchor.MiddleLeft;
+			bool flag = Widgets.ButtonInvisible(rect, true);
+			if (flag && !enabled)
+			{
+				SoundDefOf.Tick_Tiny.PlayOneShotOnCamera(null);
+			}
+			Rect labelRect = new Rect(rect.x + 28f, rect.y, rect.width - 24, rect.height);
+			Widgets.Label(labelRect, label);
+			RadioButtonDraw(rect.x, rect.y + rect.height / 2f - 12f, enabled);
+			GUIState.Pop();
+			return flag;
+		}
+
+		public static void RadioButtonDraw(float x, float y, bool chosen)
+		{
+			GUIState.Push();
+			GUI.color = Color.white;
+			Texture2D image;
+			if (chosen)
+			{
+				image = Widgets.RadioButOnTex;
+			}
+			else
+			{
+				image = RadioButOffTex;
+			}
+			GUI.DrawTexture(new Rect(x, y, 24f, 24f), image);
+			GUIState.Pop();
+		}
+
+		public static void Vector2Box(Rect rect, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		{
+			value = Vector2Box(rect, label, value, tooltip, labelProportion, buffer);
+		}
+
+		public static Vector2 Vector2Box(Rect rect, string label, Vector2 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		{
+			GUIState.Push();
+			float x = value.x;
+			float y = value.y;
+
+			if (!tooltip.NullOrEmpty())
+			{
+				TooltipHandler.TipRegion(rect, tooltip);
+			}
+
+			Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
+			Widgets.Label(labelRect, label);
+
+			Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
+			Rect[] rects = inputRect.Split(2, buffer);
+
+			NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+			NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+			value.x = x;
+			value.y = y;
+			GUIState.Pop();
+
+			return value;
+		}
+
+		public static void Vector3Box(Rect rect, string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		{
+			value = Vector3Box(rect, label, value, tooltip, labelProportion, buffer);
+		}
+
+		public static Vector3 Vector3Box(Rect rect, string label, Vector3 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		{
+			GUIState.Push();
+			float x = value.x;
+			float y = value.y;
+			float z = value.z;
+			if (!tooltip.NullOrEmpty())
+			{
+				TooltipHandler.TipRegion(rect, tooltip);
+			}
+
+			Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
+			Widgets.Label(labelRect, label);
+
+			Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
+			Rect[] rects = inputRect.Split(3, buffer);
+
+			NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+			NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+			NumericBox(rects[2], ref z, "z", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+			value.x = x;
+			value.y = y;
+			value.z = z;
+
+			GUIState.Pop();
+			return value;
+		}
+
+		public static void NumericBox<T>(Rect rect, ref T value, string label, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
+		{
+			GUIState.Push();
+			float proportion = Mathf.Clamp01(labelProportion);
+			bool disabled = !disabledTooltip.NullOrEmpty();
+			float centerY = rect.y + (rect.height - Text.LineHeight) / 2;
+			float leftLength = rect.width * proportion;
+			float rightLength = rect.width * (1 - proportion);
+			Rect rectLeft = new Rect(rect.x, centerY, leftLength, rect.height);
+			Rect rectRight = new Rect(rect.x + rect.width - rightLength, centerY, rightLength, Text.LineHeight);
+
+			bool mouseOver = Mouse.IsOver(rect);
+			if (disabled)
+			{
+				GUIState.Disable();
+				TooltipHandler.TipRegion(rect, disabledTooltip);
+			}
+			else if (!tooltip.NullOrEmpty())
+			{
+				if (mouseOver)
+				{
+					Widgets.DrawHighlight(rect);
+				}
+				TooltipHandler.TipRegion(rect, tooltip);
+			}
+			if (!disabled && mouseOver)
+			{
+				if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
+				{
+					//Event.current.Use();
+					//List<FloatMenuOption> options = new List<FloatMenuOption>();
+					//options.Add(new FloatMenuOption("ResetButton".Translate(), delegate ()
+					//{
+					//	ActionOnSettingsInputAttribute.InvokeIfApplicable(field.FieldInfo);
+					//	VehicleMod.settings.vehicles.fieldSettings[def.defName].Remove(field);
+					//}));
+					//FloatMenu floatMenu = new FloatMenu(options)
+					//{
+					//	vanishIfMouseDistant = true
+					//};
+					//Find.WindowStack.Add(floatMenu);
+				}
+			}
+			Widgets.Label(rectLeft, label);
+
+			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
+			string buffer = value.ToString();
+			
+			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+
+			GUIState.Pop();
 		}
 
 		public static string HexField(string label, Rect rect, string text)
@@ -78,27 +229,20 @@ namespace SmashTools
 
 		public static void DrawLabel(Rect rect, string label, Color highlight, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
 		{
-			var orgColor = GUI.color;
-			var textSize = Text.Font;
+			GUIState.Push();
 			Text.Font = fontSize;
 			GUI.color = highlight;
 			GUI.DrawTexture(rect, BaseContent.WhiteTex);
 			GUI.color = textColor;
 
-			var anchorTmp = Text.Anchor;
-			Text.Anchor = anchor;
 			Widgets.Label(rect, label);
-			Text.Font = textSize;
-			Text.Anchor = anchorTmp;
-			GUI.color = orgColor;
+			GUIState.Pop();
 		}
 
 		public static bool ClickableLabel(Rect rect, string label, Color mouseOver, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft, Color? clickColor = null)
 		{
-			var color = GUI.color;
-			var textSize = Text.Font;
+			GUIState.Push();
 			Text.Font = fontSize;
-			var textAnchor = Text.Anchor;
 			if (Mouse.IsOver(rect))
 			{
 				GUI.color = mouseOver;
@@ -114,9 +258,7 @@ namespace SmashTools
 			}
 			Widgets.Label(rect, label);
 
-			GUI.color = color;
-			Text.Font = textSize;
-			Text.Anchor = textAnchor;
+			GUIState.Pop();
 
 			return Widgets.ButtonInvisible(rect);
 		}

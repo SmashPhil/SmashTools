@@ -31,6 +31,42 @@ namespace SmashTools
 
 		public static readonly Texture2D LightHighlight = SolidColorMaterials.NewSolidColorTexture(LightHighlightColor);
 
+		public static void CheckboxLabeledWithMessage(this Listing_Standard lister, string label, Func<bool, Message> messageGetter, ref bool checkOn, string tooltip = null)
+		{
+			bool before = checkOn;
+			lister.CheckboxLabeled(label, ref checkOn, tooltip);
+			if (checkOn != before)
+			{
+				Message message = messageGetter(checkOn);
+				if (message != null)
+				{
+					Messages.Message(message, false);
+				}
+			}
+		}
+
+		public static bool ReverseRadioButton(this Listing_Standard lister, string label, bool enabled, string tooltip = null, float? tooltipDelay = null)
+		{
+			float lineHeight = Text.LineHeight;
+			Rect rect = lister.GetRect(lineHeight, 1f);
+			if (lister.BoundingRectCached != null && !rect.Overlaps(lister.BoundingRectCached.Value))
+			{
+				return false;
+			}
+			if (!tooltip.NullOrEmpty())
+			{
+				if (Mouse.IsOver(rect))
+				{
+					Widgets.DrawHighlight(rect);
+				}
+				TipSignal tip = tooltipDelay != null ? new TipSignal(tooltip, tooltipDelay.Value) : new TipSignal(tooltip);
+				TooltipHandler.TipRegion(rect, tip);
+			}
+			bool result = UIElements.ReverseRadioButton(rect, label, enabled);
+			lister.Gap(lister.verticalSpacing);
+			return result;
+		}
+
 		public static void IntegerBox(this Listing lister, string text, string tooltip, ref int value, float labelLength, float padding, int min = int.MinValue, int max = int.MaxValue)
 		{
 			Rect rect = lister.GetRect(Text.LineHeight);
@@ -176,57 +212,56 @@ namespace SmashTools
 			splitLister?.Gap(2);
 		}
 
-		public static bool Button(this Listing lister, string label, Rect rect, Color customColor, bool background = true, bool active = true)
+		public static void Expander(this Listing lister, string label, ref bool expanded)
 		{
-			var anchor = Text.Anchor;
-			Color color = GUI.color;
-			
-			if (background)
+			GUIState.Push();
 			{
-				Texture2D atlas = ButtonBGAtlas;
-				if (Mouse.IsOver(rect))
-				{
-					atlas = ButtonBGAtlasMouseover;
-					if (Input.GetMouseButton(0))
-					{
-						atlas = ButtonBGAtlasClick;
-					}
-				}
-				Widgets.DrawAtlas(rect, atlas);
+				Rect rect = lister.GetRect(24);
+
 			}
-			else
-			{
-				GUI.color = customColor;
-				if (Mouse.IsOver(rect))
-				{
-					GUI.color = Color.cyan;
-				}
-			}
-			if (background)
-			{
-				Text.Anchor = TextAnchor.MiddleCenter;
-			}
-			else
-			{
-				Text.Anchor = TextAnchor.MiddleLeft;
-			}
-			bool wordWrap = Text.WordWrap;
-			if (rect.height < Text.LineHeight * 2f)
-			{
-				Text.WordWrap = false;
-			}
-			Widgets.Label(rect, label);
-			Text.Anchor = anchor;
-			GUI.color = color;
-			Text.WordWrap = wordWrap;
-			lister.Gap(2f);
-			return Widgets.ButtonInvisible(rect, false);
+			GUIState.Pop();
+		}
+
+		public static void Vector2Box(this Listing lister, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			value = lister.Vector2Box(label, value, tooltip, labelProportion);
+		}
+
+		public static Vector2 Vector2Box(this Listing lister, string label, Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			GUIState.Push();
+
+			Rect rect = lister.GetRect(24);
+
+			UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
+
+			GUIState.Pop();
+
+			return value;
+		}
+
+		public static void Vector3Box(this Listing lister, string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			value = lister.Vector3Box(label, value, tooltip, labelProportion);
+		}
+
+		public static Vector3 Vector3Box(this Listing lister, string label, Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		{
+			GUIState.Push();
+
+			Rect rect = lister.GetRect(24);
+
+			UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
+
+			GUIState.Pop();
+
+			return value;
 		}
 
 		public static bool ListItemSelectable(this Listing lister, string header, Color hoverColor, bool selected = false, bool active = true, string disabledTooltip = null)
 		{
-			var anchor = Text.Anchor;
-			Color color = GUI.color;
+			GUIState.Push();
+			
 			Rect rect = lister.GetRect(20f);
 
 			if (selected)
@@ -251,8 +286,7 @@ namespace SmashTools
 			Text.Anchor = TextAnchor.MiddleLeft;
 			Widgets.Label(rect, header);
 
-			Text.Anchor = anchor;
-			GUI.color = color;
+			GUIState.Pop();
 
 			if (active && Widgets.ButtonInvisible(rect, true))
 			{
