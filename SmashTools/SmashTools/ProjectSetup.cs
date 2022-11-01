@@ -41,9 +41,6 @@ namespace SmashTools
 			Harmony.Patch(original: AccessTools.Method(typeof(LoadedModManager), nameof(LoadedModManager.ParseAndProcessXML)),
 				prefix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ParseAndProcessXmlMayRequire)));
-			//Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlCrossRefLoader), nameof(DirectXmlCrossRefLoader.RegisterObjectWantsCrossRef)),
-			//	prefix: new HarmonyMethod(typeof(XmlParseHelper),
-			//	nameof(XmlParseHelper.RegisterObjectWantsCrossRefMayRequire)));
 
 			if (ExportXmlDoc)
 			{

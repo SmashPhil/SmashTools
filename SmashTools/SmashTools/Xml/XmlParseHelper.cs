@@ -315,11 +315,6 @@ namespace SmashTools.Xml
 			return false;
 		}
 
-		public static bool RegisterObjectWantsCrossRefMayRequire(object wanter, string fieldName, XmlNode parentNode, string mayRequireMod = null, string mayRequireAnyMod = null, Type overrideFieldType = null)
-		{
-			return true;
-		}
-
 		private static bool CanLoadWithModList<T>(XmlNode xmlNode, Action<XmlAttribute, XmlAttribute> mayRequireCallback = null)
 		{
 			XmlAttribute mayRequireAttribute = xmlNode.Attributes["MayRequire"];
