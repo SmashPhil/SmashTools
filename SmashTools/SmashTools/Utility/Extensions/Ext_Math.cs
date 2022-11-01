@@ -11,7 +11,7 @@ namespace SmashTools
 	public static class Ext_Math
 	{
 		//Up to n=16
-		private static float[] factorials = new float[]
+		private static readonly float[] factorials = new float[]
 		{
 			1,
 			1,
@@ -45,6 +45,26 @@ namespace SmashTools
 			float t1 = Mathf.Pow(t, i); //t_i
 			float t2 = Mathf.Pow(1 - t, n - i); //t_n-i
 			return Binomial(n, i) * t1 * t2;
+		}
+
+		/// <summary>
+		/// De Casteljau's Algorithm
+		/// </summary>
+		/// <remarks>See https://en.wikipedia.org/wiki/De_Casteljau%27s_algorithm for reference.</remarks>
+		/// <param name="r"></param>
+		/// <param name="i"></param>
+		/// <param name="t"
+		public static Vector2 DeCasteljau(List<CurvePoint> points, float t)
+		{
+			//Only set up for p-count = 4
+			Vector2 p0 = Vector2.Lerp(points[0], points[1], t);
+			Vector2 p1 = Vector2.Lerp(points[1], points[2], t);
+			Vector2 p2 = Vector2.Lerp(points[2], points[3], t);
+
+			Vector2 r0 = Vector2.Lerp(p0, p1, t);
+			Vector2 r1 = Vector2.Lerp(p1, p2, t);
+
+			return Vector2.Lerp(r0, r1, t);
 		}
 
 		/// <summary>

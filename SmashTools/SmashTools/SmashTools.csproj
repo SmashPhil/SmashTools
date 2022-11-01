@@ -293,6 +293,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attributes\GraphEditableAttribute.cs" />
     <Compile Include="Attributes\LoadedEarlyAttribute.cs" />
     <Compile Include="Attributes\MustImplementAttribute.cs" />
     <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
@@ -301,7 +302,6 @@
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
     <Compile Include="DataTypes\Graphing\BezierCurve.cs" />
-    <Compile Include="DataTypes\Graphing\Curve.cs" />
     <Compile Include="DataTypes\Graphing\LinearCurve.cs" />
     <Compile Include="DataTypes\UIContainers\Toggle.cs" />
     <Compile Include="Debugging\GameState.cs" />

@@ -10,19 +10,21 @@ namespace SmashTools
 	{
 		protected List<CurvePoint> plotPoints;
 
-		public Dialog_Graph(Graph.Function function, FloatRange range, List<CurvePoint> plotPoints = null)
+		public Dialog_Graph(Graph.Function function, FloatRange range, List<CurvePoint> plotPoints = null, bool vectorEvaluation = false)
 		{
 			Function = function;
 			XRange = range;
 			YRange = range;
+			VectorEvaluation = vectorEvaluation;
 			this.plotPoints = plotPoints;
 		}
 
-		public Dialog_Graph(Graph.Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null)
+		public Dialog_Graph(Graph.Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null, bool vectorEvaluation = false)
 		{
 			Function = function;
 			XRange = xRange;
 			YRange = yRange;
+			VectorEvaluation = vectorEvaluation;
 			this.plotPoints = plotPoints;
 		}
 
@@ -32,7 +34,11 @@ namespace SmashTools
 		
 		public Graph.Function Function { get; protected set; }
 
+		public bool VectorEvaluation { get; protected set; }
+
 		public virtual List<CurvePoint> CurvePoints => plotPoints;
+
+		public virtual bool Editable => false;
 
 		public override Vector2 InitialSize
 		{
@@ -47,7 +53,7 @@ namespace SmashTools
 		{
 			Widgets.DrawMenuSection(inRect);
 			Rect rect = inRect.ContractedBy(45);
-			Graph.DrawGraph(rect, Function, XRange, YRange, CurvePoints);
+			Graph.DrawGraph(rect, Function, XRange, YRange, CurvePoints, simplified: !VectorEvaluation, editable: Editable);
 		}
 	}
 }

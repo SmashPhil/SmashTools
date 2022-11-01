@@ -87,7 +87,6 @@ namespace SmashTools.Xml
 			{
 				Log.Error($"Exception thrown while trying to apply registered attributes to field {token}. Exception={ex.Message}");
 			}
-			
 		}
 
 		/// <summary>
@@ -170,6 +169,181 @@ namespace SmashTools.Xml
 			string filePath = Path.Combine(Application.dataPath, "CombinedXmlDoc.xml");
 			xmlDoc.Save(filePath);
 			Application.OpenURL(filePath);
+		}
+
+		/// <summary>
+		/// <see cref="ModContentPack.LoadPatches"/>
+		/// </summary>
+		/// <param name="__instance"></param>
+		/// <param name="___patches"></param>
+		/// <param name="___loadedAnyPatches"></param>
+		public static bool PatchOperationsMayRequire(ModContentPack __instance, ref List<PatchOperation> ___patches, ref bool ___loadedAnyPatches)
+		{
+			___patches = new List<PatchOperation>();
+			___loadedAnyPatches = false;
+			List<LoadableXmlAsset> list = DirectXmlLoader.XmlAssetsInModFolder(__instance, "Patches/", null).ToList();
+			for (int i = 0; i < list.Count; i++)
+			{
+				XmlElement documentElement = list[i].xmlDoc.DocumentElement;
+				if (documentElement.Name != "Patch")
+				{
+					Log.Error(string.Format("Unexpected document element in patch XML; got {0}, expected 'Patch'", documentElement.Name));
+				}
+				else
+				{
+					foreach (XmlNode xmlNode in documentElement.ChildNodes)
+					{
+						if (xmlNode.NodeType == XmlNodeType.Element)
+						{
+							if (xmlNode.Name != "Operation")
+							{
+								Log.Error(string.Format("Unexpected element in patch XML; got {0}, expected 'Operation'", xmlNode.Name));
+							}
+							else
+							{
+								if (CanLoadWithModList<PatchOperation>(xmlNode))
+								{
+									PatchOperation patchOperation = DirectXmlToObject.ObjectFromXml<PatchOperation>(xmlNode, false);
+									patchOperation.sourceFile = list[i].FullFilePath;
+									___patches.Add(patchOperation);
+									___loadedAnyPatches = true;
+								}
+								else
+								{
+									Log.Warning($"Skipping XmlNode from MayRequire. Node = {xmlNode.InnerText}");
+								}
+							}
+						}
+					}
+				}
+			}
+			return false;
+		}
+
+		/// <summary>
+		/// <see cref="LoadedModManager.ParseAndProcessXML(XmlDocument, Dictionary{XmlNode, LoadableXmlAsset})"/>
+		/// </summary>
+		/// <param name="xmlDoc"></param>
+		/// <param name="assetlookup"></param>
+		/// <param name="___runningMods"></param>
+		/// <param name="___patchedDefs"></param>
+		public static bool ParseAndProcessXmlMayRequire(XmlDocument xmlDoc, Dictionary<XmlNode, LoadableXmlAsset> assetlookup, List<ModContentPack> ___runningMods, ref List<Def> ___patchedDefs)
+		{
+			XmlNodeList childNodes = xmlDoc.DocumentElement.ChildNodes;
+			List<XmlNode> list = new List<XmlNode>();
+			foreach (XmlNode xmlNode in childNodes)
+			{
+				list.Add(xmlNode);
+			}
+
+			//DeepProfiler.Start("Loading asset nodes " + list.Count);
+			try
+			{
+				for (int i = 0; i < list.Count; i++)
+				{
+					if (list[i].NodeType == XmlNodeType.Element)
+					{
+						LoadableXmlAsset loadableXmlAsset;
+						//DeepProfiler.Start("assetlookup.TryGetValue");
+						try
+						{
+							assetlookup.TryGetValue(list[i], out loadableXmlAsset);
+						}
+						finally
+						{
+							//DeepProfiler.End();
+						}
+						//DeepProfiler.Start("XmlInheritance.TryRegister");
+						try
+						{
+							XmlInheritance.TryRegister(list[i], loadableXmlAsset?.mod);
+						}
+						finally
+						{
+							//DeepProfiler.End();
+						}
+					}
+				}
+			}
+			finally
+			{
+				//DeepProfiler.End();
+			}
+			//DeepProfiler.Start("XmlInheritance.Resolve()");
+			try
+			{
+				XmlInheritance.Resolve();
+			}
+			finally
+			{
+				//DeepProfiler.End();
+			}
+
+			//What is this? Decompiler garbage? It shows up in both my decompilers
+			___runningMods.FirstOrDefault(); 
+
+			//DeepProfiler.Start("Loading defs for " + list.Count + " nodes");
+			try
+			{
+				foreach (XmlNode xmlNode in list)
+				{
+					if (CanLoadWithModList<Def>(xmlNode))
+					{
+						LoadableXmlAsset loadableXmlAsset = assetlookup.TryGetValue(xmlNode, null);
+						if (DirectXmlLoader.DefFromNode(xmlNode, loadableXmlAsset) is Def def)
+						{
+							if (loadableXmlAsset?.mod is ModContentPack modContentPack)
+							{
+								modContentPack.AddDef(def, loadableXmlAsset.name);
+							}
+							else
+							{
+								___patchedDefs.Add(def);
+							}
+						}
+					}
+					else
+					{
+						Log.Warning($"Skipping def load. XmlNode = {xmlNode.InnerText}.");
+					}
+				}
+			}
+			finally
+			{
+				DeepProfiler.End();
+			}
+			return false;
+		}
+
+		public static bool RegisterObjectWantsCrossRefMayRequire(object wanter, string fieldName, XmlNode parentNode, string mayRequireMod = null, string mayRequireAnyMod = null, Type overrideFieldType = null)
+		{
+			return true;
+		}
+
+		private static bool CanLoadWithModList<T>(XmlNode xmlNode, Action<XmlAttribute, XmlAttribute> mayRequireCallback = null)
+		{
+			XmlAttribute mayRequireAttribute = xmlNode.Attributes["MayRequire"];
+			XmlAttribute mayRequireAnyOfAttribute = xmlNode.Attributes["MayRequireAnyOf"];
+			if (GenTypes.IsDef(typeof(T)) && mayRequireCallback != null)
+			{
+				mayRequireCallback(mayRequireAttribute, mayRequireAnyOfAttribute);
+				return true;
+			}
+			if (mayRequireAttribute != null && !mayRequireAttribute.Value.NullOrEmpty())
+			{
+				bool hasActiveMods = ModsConfig.AreAllActive(mayRequireAttribute.Value);
+				if (!hasActiveMods && DirectXmlCrossRefLoader.MistypedMayRequire(mayRequireAttribute.Value))
+				{
+					Log.Error($"Faulty MayRequire: {mayRequireAttribute.Value}");
+					return false;
+				}
+				return hasActiveMods;
+			}
+			else if (mayRequireAnyOfAttribute != null && !mayRequireAnyOfAttribute.Value.NullOrEmpty())
+			{
+				return ModsConfig.IsAnyActiveOrEmpty(mayRequireAnyOfAttribute.Value.Split(','), trimNames: true);
+			}
+			return true;
 		}
 	}
 }

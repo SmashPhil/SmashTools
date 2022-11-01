@@ -99,6 +99,11 @@ namespace SmashTools
 			return false;
 		}
 
+		public static IntVec3 ThingPositionFromRect(this CellRect cellRect)
+		{
+			return new IntVec3(cellRect.minX + (cellRect.Width - 1) / 2, 0, cellRect.minZ + (cellRect.Height - 1) / 2);
+		}
+
 		/// <summary>
 		/// Get occupied cells of pawn with hitbox larger than 1x1
 		/// </summary>
@@ -106,32 +111,31 @@ namespace SmashTools
 		/// <param name="centerPoint"></param>
 		/// <param name="direction"></param>
 		/// <returns></returns>
-		public static List<IntVec3> PawnOccupiedCells(this Pawn pawn, IntVec3 centerPoint, Rot4 direction)
+		public static List<IntVec3> PawnOccupiedCells(this Pawn pawn, IntVec3 centerPoint, Rot4 rot)
 		{
-			int sizeX;
-			int sizeZ;
-			switch (direction.AsInt)
+			IntVec2 size;
+			switch (rot.AsInt)
 			{
 				case 0:
-					sizeX = pawn.def.Size.x;
-					sizeZ = pawn.def.Size.z;
+					size.x = pawn.def.Size.x;
+					size.z = pawn.def.Size.z;
 					break;
 				case 1:
-					sizeX = pawn.def.Size.z;
-					sizeZ = pawn.def.Size.x;
+					size.x = pawn.def.Size.z;
+					size.z = pawn.def.Size.x;
 					break;
 				case 2:
-					sizeX = pawn.def.Size.x;
-					sizeZ = pawn.def.Size.z;
+					size.x = pawn.def.Size.x;
+					size.z = pawn.def.Size.z;
 					break;
 				case 3:
-					sizeX = pawn.def.Size.z;
-					sizeZ = pawn.def.Size.x;
+					size.x = pawn.def.Size.z;
+					size.z = pawn.def.Size.x;
 					break;
 				default:
-					throw new NotImplementedException("MoreThan4Rotations");
+					throw new NotImplementedException("More than 4 rotations in Rot4 struct.");
 			}
-			return CellRect.CenteredOn(centerPoint, sizeX, sizeZ).Cells.ToList();
+			return GenAdj.OccupiedRect(centerPoint, rot, size).Cells.ToList();
 		}
 
 		/// <summary>

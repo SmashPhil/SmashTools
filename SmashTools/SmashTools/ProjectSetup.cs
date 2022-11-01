@@ -16,6 +16,7 @@ namespace SmashTools
 	public class ProjectSetup : Mod
 	{
 		public const string ProjectLabel = "[SmashTools]";
+		public const string HarmonyId = "SmashPhil.SmashTools";
 
 		public const bool ExportXmlDoc = false;
 
@@ -25,7 +26,7 @@ namespace SmashTools
 		{
 			RegisterParseableStructs();
 
-			Harmony = new Harmony("smashphil.smashtools");
+			Harmony = new Harmony(HarmonyId);
 
 			Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
@@ -33,6 +34,16 @@ namespace SmashTools
 			Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlToObject), "GetFieldInfoForType"),
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributes)));
+
+			Harmony.Patch(original: AccessTools.Method(typeof(ModContentPack), "LoadPatches"),
+				prefix: new HarmonyMethod(typeof(XmlParseHelper),
+				nameof(XmlParseHelper.PatchOperationsMayRequire)));
+			Harmony.Patch(original: AccessTools.Method(typeof(LoadedModManager), nameof(LoadedModManager.ParseAndProcessXML)),
+				prefix: new HarmonyMethod(typeof(XmlParseHelper),
+				nameof(XmlParseHelper.ParseAndProcessXmlMayRequire)));
+			//Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlCrossRefLoader), nameof(DirectXmlCrossRefLoader.RegisterObjectWantsCrossRef)),
+			//	prefix: new HarmonyMethod(typeof(XmlParseHelper),
+			//	nameof(XmlParseHelper.RegisterObjectWantsCrossRefMayRequire)));
 
 			if (ExportXmlDoc)
 			{

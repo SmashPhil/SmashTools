@@ -8,10 +8,22 @@ namespace SmashTools
 {
 	public class Dialog_GraphEditor : Dialog_Graph
 	{
+		/// <summary>
+		/// For all animations, t is the time ratio between 0 and max ticks.
+		/// Bounds: 0 <= t <= 1
+		/// </summary>
+		public const float DefaultMinX = 0;
+		public const float DefaultMaxX = 1;
+
+		public const float CoordinatesListButtonSize = 24;
+
 		private Graph.GraphType graphType;
-		private Curve curve;
+		private LinearCurve curve;
 
-		public Dialog_GraphEditor() : base(null, new FloatRange(0, 5), new List<CurvePoint>())
+		private Vector2 scrollPos;
+		private Thing animationTarget;
+
+		public Dialog_GraphEditor() : base(null, new FloatRange(DefaultMinX, DefaultMaxX), new List<CurvePoint>())
 		{
 			doCloseX = true;
 			forcePause = true;
@@ -19,7 +31,7 @@ namespace SmashTools
 			ReinstantiateCurve();
 		}
 
-		public Dialog_GraphEditor(Graph.Function function, FloatRange range) : base(function, range, new List<CurvePoint>())
+		public Dialog_GraphEditor(Graph.Function function, FloatRange range, bool vectorEvaluation = false) : base(function, range, new List<CurvePoint>(), vectorEvaluation)
 		{
 			doCloseX = true;
 			forcePause = true;
@@ -27,15 +39,26 @@ namespace SmashTools
 			ReinstantiateCurve();
 		}
 
-		public Dialog_GraphEditor(Graph.Function function, FloatRange range, List<CurvePoint> plotPoints) : base(function, range, plotPoints)
+		public Dialog_GraphEditor(Graph.Function function, FloatRange range, List<CurvePoint> plotPoints, bool vectorEvaluation = false) : base(function, range, plotPoints, vectorEvaluation)
 		{
 			doCloseX = true;
 			forcePause = true;
 			GraphType = Graph.GraphType.Linear;
+			ReinstantiateCurve();
+		}
+
+		public Dialog_GraphEditor(Thing animationTarget = null, bool vectorEvaluation = false) : base(null, new FloatRange(DefaultMinX, DefaultMaxX), plotPoints: new List<CurvePoint>(), vectorEvaluation: vectorEvaluation)
+		{
+			doCloseX = true;
+			forcePause = true;
+			GraphType = Graph.GraphType.Linear;
+			this.animationTarget = animationTarget;
 			ReinstantiateCurve();
 		}
 
 		public override List<CurvePoint> CurvePoints => curve.points;
+
+		public override bool Editable => true;
 
 		public override Vector2 InitialSize
 		{
@@ -72,10 +95,23 @@ namespace SmashTools
 			}
 		}
 
+		public Graph.GraphType CurveToGraphType(Type type)
+		{
+			if (type == typeof(LinearCurve))
+			{
+				return Graph.GraphType.Linear;
+			}
+			if (type == typeof(BezierCurve))
+			{
+				return Graph.GraphType.Bezier;
+			}
+			throw new NotImplementedException("GraphType");
+		}
+
 		public void ReinstantiateCurve()
 		{
-			curve = (Curve)Activator.CreateInstance(CurveType, curve?.points ?? new List<CurvePoint>());
-			Function = new Graph.Function(curve.Evaluate);
+			curve = (LinearCurve)Activator.CreateInstance(CurveType, curve?.points ?? new List<CurvePoint>());
+			Function = new Graph.Function(curve.Function);
 		}
 
 		public override void DoWindowContents(Rect inRect)
@@ -99,6 +135,11 @@ namespace SmashTools
 					//floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Freeform.ToString(), () => graphType = Graph.GraphType.Freeform));
 					Find.WindowStack.Add(new FloatMenu(floatMenuOptions));
 				}
+				Rect evaluationTypeRect = new Rect(inputRect.x + inputRect.width - graphTypeRect.width - 5, graphTypeRect.y, graphTypeRect.width, graphTypeRect.height);
+				if (Widgets.ButtonText(evaluationTypeRect, VectorEvaluation ? "Vector" : "Simplified"))
+				{
+					VectorEvaluation = !VectorEvaluation;
+				}
 
 				string formula = graphType switch
 				{
@@ -119,17 +160,19 @@ namespace SmashTools
 				float xMax = XRange.max;
 				Rect xRangeRect = new Rect(inputRect.x, graphSizeRect.yMax + 10, inputRect.width / 3, 30);
 				
-				UIElements.NumericBox(xRangeRect, ref xMin, "xMin", string.Empty, string.Empty, float.MinValue, float.MaxValue);
+				//UIElements.NumericBox(xRangeRect, ref xMin, "xMin", string.Empty, string.Empty, float.MinValue, float.MaxValue);
 				xRangeRect.x += xRangeRect.width;
-				UIElements.NumericBox(xRangeRect, ref xMax, "xMax", string.Empty, string.Empty, float.MinValue, float.MaxValue);
+				//UIElements.NumericBox(xRangeRect, ref xMax, "xMax", string.Empty, string.Empty, float.MinValue, float.MaxValue);
 				
 
 				float yMin = YRange.min;
 				float yMax = YRange.max;
-				Rect yRangeRect = new Rect(inputRect.x, xRangeRect.yMax + 10, inputRect.width / 3, 30);
+				//NOTE - If x axis becomes editable again, swap graphSizeRect.yMax to xRangeRect.yMax
+				Rect yRangeRect = new Rect(inputRect.x, graphSizeRect.yMax + 10, inputRect.width / 3, 30);
 				UIElements.NumericBox(yRangeRect, ref yMin, "yMin", string.Empty, string.Empty, float.MinValue, float.MaxValue);
 				yRangeRect.x += yRangeRect.width;
 				UIElements.NumericBox(yRangeRect, ref yMax, "yMax", string.Empty, string.Empty, float.MinValue, float.MaxValue);
+
 
 				if (xMax - xMin < 1)
 				{
@@ -149,35 +192,94 @@ namespace SmashTools
 				}
 
 				(float xMin, float xMax, float yMin, float yMax) bounds = GetPlotBounds();
-				xMin = Mathf.Min(xMin, bounds.xMin);
-				xMax = Mathf.Max(xMin, bounds.xMax);
-				yMin = Mathf.Min(xMin, bounds.yMin);
-				yMax = Mathf.Max(xMin, bounds.yMax);
+				//xMin = Mathf.Min(xMin, bounds.xMin);
+				//xMax = Mathf.Max(xMin, bounds.xMax);
+				//yMin = Mathf.Min(xMin, bounds.yMin);
+				//yMax = Mathf.Max(xMin, bounds.yMax);
 
 				XRange = new FloatRange(xMin, xMax);
 				YRange = new FloatRange(yMin, yMax);
 
-				Rect coordinatesLabelRect = new Rect(inputRect.x, yRangeRect.yMax + 5, inputRect.width, 30);
+				Rect coordinatesLabelRect = new Rect(inputRect.x, yRangeRect.yMax + 5, inputRect.width, Text.CalcHeight("Coordinates", inputRect.width));
 				Widgets.Label(coordinatesLabelRect, "Coordinates");
 
-				Rect coordinatesListRect = new Rect(inputRect.x, coordinatesLabelRect.yMax + 5, inputRect.width / 2, 30);
-				if (!curve.points.NullOrEmpty())
+				Rect coordinateOutRect = new Rect(inputRect.x, coordinatesLabelRect.yMax + 5, inputRect.width, inputRect.height / 2);
+				float curvePointsMenuHeight = (curve.PointsCount + 1) * CoordinatesListButtonSize * 2 - 10;
+				//16 for width of scrollbar
+				Rect coordinateViewRect = new Rect(coordinateOutRect.x, coordinateOutRect.y, coordinateOutRect.width - 16, curvePointsMenuHeight);
+				Widgets.DrawMenuSection(coordinateOutRect);
+				Widgets.BeginScrollView(coordinateOutRect, ref scrollPos, coordinateViewRect);
 				{
-					for (int i = 0; i < curve.points.Count; i++)
+					Rect coordinatesListRect = new Rect(coordinateViewRect.x, coordinateViewRect.y, coordinateViewRect.width, CoordinatesListButtonSize * 2).ContractedBy(5);
+					if (!curve.points.NullOrEmpty())
 					{
-						CurvePoint coord = curve.points[i];
-						Vector2 vector = UIElements.Vector2Box(coordinatesListRect, $"p{i}", coord, labelProportion: 0.1f);
-						curve.points[i] = new CurvePoint(vector);
-						coordinatesListRect.y += coordinatesListRect.height;
+						GUIState.Push();
+						{
+							int indexToRemove = -1;
+							for (int i = 0; i < curve.PointsCount; i++)
+							{
+								UIHighlighter.HighlightOpportunity(coordinatesListRect, $"GraphEditor_CurvePoint_{i}");
+								Rect buttonArrowRect = new Rect(coordinatesListRect)
+								{
+									width = CoordinatesListButtonSize,
+									height = coordinatesListRect.height / 2
+								};
+
+								if (i == 0) GUIState.Disable();
+								if (Widgets.ButtonImage(buttonArrowRect, TexButton.ReorderUp, GUI.enabled ? Color.white : UIElements.InactiveColor, GUI.enabled ? GenUI.MouseoverColor : UIElements.InactiveColor, doMouseoverSound: GUI.enabled) && GUI.enabled)
+								{
+									curve.points.Swap(i, i - 1);
+								}
+								GUIState.Enable();
+
+								buttonArrowRect.y += buttonArrowRect.height;
+
+								if (i == curve.PointsCount - 1) GUIState.Disable();
+								if (Widgets.ButtonImage(buttonArrowRect, TexButton.ReorderDown, GUI.enabled ? Color.white : UIElements.InactiveColor, GUI.enabled ? GenUI.MouseoverColor : UIElements.InactiveColor, doMouseoverSound: GUI.enabled) && GUI.enabled)
+								{
+									curve.points.Swap(i, i + 1);
+								}
+								GUIState.Enable();
+
+								CurvePoint coord = curve.points[i];
+								Rect vectorRect = new Rect(coordinatesListRect)
+								{
+									x = coordinatesListRect.x + buttonArrowRect.width + 10,
+									width = (coordinatesListRect.width - CoordinatesListButtonSize) / 7
+								};
+								float x = UIElements.NumericBox(vectorRect, coord.x, "X", string.Empty, string.Empty, labelProportion: 0.25f);
+								vectorRect.x += vectorRect.width + 5;
+								float y = UIElements.NumericBox(vectorRect, coord.y, "Y", string.Empty, string.Empty, labelProportion: 0.25f);
+								curve.points[i] = new CurvePoint(x.RoundTo(0.01f), y.RoundTo(0.01f));
+
+								Rect deleteButtonRect = new Rect(coordinatesListRect.width - CoordinatesListButtonSize, coordinatesListRect.y + (coordinatesListRect.height - CoordinatesListButtonSize) / 2, CoordinatesListButtonSize, CoordinatesListButtonSize);
+								if (Widgets.ButtonImage(deleteButtonRect, TexButton.Minus))
+								{
+									indexToRemove = i;
+								}
+
+								coordinatesListRect.y += coordinatesListRect.height;
+							}
+							if (indexToRemove >= 0)
+							{
+								curve.points.RemoveAt(indexToRemove);
+							}
+						}
+						GUIState.Pop();
+					}
+
+					Rect addCoordinateRect = new Rect(coordinatesListRect.x, coordinatesListRect.y + (coordinatesListRect.height - CoordinatesListButtonSize) / 2, CoordinatesListButtonSize, CoordinatesListButtonSize);
+					if (Widgets.ButtonImage(addCoordinateRect, TexButton.Plus))
+					{
+						CurvePoint curvePoint = curve.points.NullOrEmpty() ? new CurvePoint(0, 0) : new CurvePoint(XRange.Average, YRange.Average);
+						curve.Add(curvePoint);
 					}
 				}
+				Widgets.EndScrollView();
 
-				Rect addCoordinateRect = new Rect(inputRect.x, coordinatesListRect.yMax + 5, 90, 30);
-				if (Widgets.ButtonText(addCoordinateRect, "Add Point"))
-				{
-					CurvePoint curvePoint = curve.points.NullOrEmpty() ? new CurvePoint(0, 0) : new CurvePoint(XRange.Average, YRange.Average);
-					curve.Add(curvePoint);
-				}
+				float cameraViewerHeight = inputRect.height - coordinateOutRect.yMax;
+				Rect cameraViewerRect = new Rect(coordinateOutRect.x, coordinateOutRect.yMax + 5, coordinateOutRect.width, cameraViewerHeight - 5);
+				DrawPreviewWindow(cameraViewerRect);
 
 				Rect graphRect = new Rect(inRect.width - inRect.height, 0, inRect.height, inRect.height);
 				base.DoWindowContents(graphRect);
@@ -187,6 +289,19 @@ namespace SmashTools
 				Log.Error($"Exception thrown while in graph editor. Exception = {ex}");
 			}
 			GUIState.Pop();
+		}
+
+		private void DrawPreviewWindow(Rect rect)
+		{
+			Widgets.DrawMenuSection(rect);
+			if (animationTarget is null)
+			{
+				UIElements.Header(rect, "Preview Window Disabled", ListingExtension.BannerColor, anchor: TextAnchor.MiddleCenter);
+			}
+			else
+			{
+
+			}
 		}
 
 		public (float minX, float maxX, float minY, float maxY) GetPlotBounds()

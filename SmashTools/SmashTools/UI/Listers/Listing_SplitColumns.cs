@@ -103,19 +103,11 @@ namespace SmashTools
 		public void Header(string header, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
 		{
 			GUIState.Push();
-
-			Text.Font = fontSize;
-
-			Rect rect = GetRect(Text.CalcHeight(header, ColumnWidth));
-
-			GUI.color = ListingExtension.BannerColor;
-			GUI.DrawTexture(rect, BaseContent.WhiteTex);
-			GUI.color = ListingExtension.TextColor;
-			
-			Text.Anchor = anchor;
-			Widgets.Label(rect, header);
-
-			Gap(16);
+			{
+				Rect rect = GetRect(Text.CalcHeight(header, ColumnWidth));
+				UIElements.Header(rect, header, ListingExtension.BannerColor, fontSize: fontSize, anchor: anchor);
+				Gap(16);
+			}
 			GUIState.Pop();
 		}
 

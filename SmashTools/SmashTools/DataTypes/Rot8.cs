@@ -453,6 +453,7 @@ namespace SmashTools
 				5 => Rot4.East,
 				6 => Rot4.West,
 				7 => Rot4.West,
+				200 => Rot4.Invalid,
 				_ => throw new Exception("Rot8 must be between (0, 7) int value")
 			};
 		}

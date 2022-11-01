@@ -8,8 +8,10 @@ namespace SmashTools
 {
 	public class PatchOperationAddOrReplace : PatchOperationPathed
 	{
+#pragma warning disable IDE0044 // Add readonly modifier
 		private XmlContainer value;
 		private Order order = Order.Append;
+#pragma warning restore IDE0044 // Add readonly modifier
 
 		protected override bool ApplyWorker(XmlDocument xml)
 		{

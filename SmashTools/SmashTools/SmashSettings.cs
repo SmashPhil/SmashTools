@@ -8,7 +8,7 @@ namespace SmashTools
 {
 	public class SmashSettings : IExposable
 	{
-		public static Dictionary<string, bool> unitTests = new Dictionary<string, bool>();
+		public static string unitTest;
 		public static QuickStartOption quickStartOption = QuickStartOption.None;
 		public static string quickStartFile;
 
@@ -18,7 +18,7 @@ namespace SmashTools
 		{
 			Scribe_Values.Look(ref quickStartOption, nameof(quickStartOption), QuickStartOption.None);
 			Scribe_Values.Look(ref quickStartFile, nameof(quickStartFile));
-			Scribe_Collections.Look(ref unitTests, nameof(unitTests), LookMode.Value, LookMode.Value);
+			Scribe_Values.Look(ref unitTest, nameof(unitTest));
 		}
 	}
 

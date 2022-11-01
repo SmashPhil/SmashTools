@@ -7,7 +7,7 @@ using Verse;
 
 namespace SmashTools
 {
-	public class BezierCurve : Curve
+	public class BezierCurve : LinearCurve
 	{
 		public BezierCurve() : base()
 		{
@@ -17,15 +17,15 @@ namespace SmashTools
 		{
 		}
 
-		public static float BezierFunction(List<CurvePoint> controlPoints, float t)
+		public static Vector2 BezierFunction(List<CurvePoint> controlPoints, float t)
 		{
 			if (t <= 0)
 			{
-				return controlPoints.FirstOrDefault().y;
+				return controlPoints.FirstOrDefault();
 			}
 			if (t >= 1)
 			{
-				return controlPoints.LastOrDefault().y;
+				return controlPoints.LastOrDefault();
 			}
 			int n = controlPoints.Count - 1;
 			if (n > 16)
@@ -33,33 +33,44 @@ namespace SmashTools
 				Debug.LogError("Max number of control points is 16, factorials are precalculated.");
 				n = 16;
 			}
+
 			Vector2 lerp = Vector2.zero;
 			for (int i = 0; i < controlPoints.Count; i++)
 			{
 				lerp += Ext_Math.Bernstein(n, i, t) * controlPoints[i].Loc;
 			}
-			return lerp.y;
+			return lerp;
 		}
 
-		public override float Evaluate(float x)
+		public override Vector2 Function(float x)
 		{
-			if (points is null || points.Count < 2)
+			if (points.Count < 3)
 			{
-				return 0;
+				//No control points -> linear curve
+				return base.Function(x);
 			}
 			if (LeftBound.x == x)
 			{
-				return LeftBound.y;
+				return LeftBound;
 			}
 			else if (RightBound.x == x)
 			{
-				return RightBound.y;
-			}
-			else if (LeftBound.x < x && RightBound.x > x)
-			{
-				
+				return RightBound;
 			}
 			float t = (x - LeftBound.x) / (RightBound.x - LeftBound.x);
+			return BezierFunction(points, t);
+		}
+
+		public override Vector2 EvaluateT(float t)
+		{
+			if (t <= 0)
+			{
+				return LeftBound;
+			}
+			if (t >= 1)
+			{
+				return RightBound;
+			}
 			return BezierFunction(points, t);
 		}
 	}

@@ -9,9 +9,9 @@ namespace SmashTools
 	[StaticConstructorOnStartup]
 	public static class UnitTesting
 	{
-		internal static readonly Dictionary<GameState, List<Action>> postLoadActions = new Dictionary<GameState, List<Action>>();
-		internal static readonly Dictionary<string, UnitTestAction> unitTests = new Dictionary<string, UnitTestAction>();
-		internal static readonly List<Toggle> unitTestRadioButtons = new List<Toggle>();
+		internal static Dictionary<GameState, List<Action>> postLoadActions = new Dictionary<GameState, List<Action>>();
+		internal static Dictionary<string, UnitTestAction> unitTests = new Dictionary<string, UnitTestAction>();
+		internal static List<Toggle> unitTestRadioButtons = new List<Toggle>();
 
 		internal static bool NoUnitTest { get; private set; }
 		internal static bool Enabled { get; private set; }
@@ -56,8 +56,12 @@ namespace SmashTools
 			}
 			unitTests.Clear();
 			unitTestRadioButtons.Clear();
-			NoUnitTest = !SmashSettings.unitTests.Any(kvp => kvp.Value);
-			unitTestRadioButtons.Add(new Toggle("NoUnitTest", "None", string.Empty, () => NoUnitTest, (value) => NoUnitTest = value));
+			unitTestRadioButtons.Add(new Toggle("NoUnitTest", "None", string.Empty, () => NoUnitTest || SmashSettings.unitTest.NullOrEmpty(), delegate (bool value)
+			{
+				NoUnitTest = value;
+				SmashSettings.unitTest = string.Empty;
+			}));
+			NoUnitTest = true;
 			List<MethodInfo> methods = new List<MethodInfo>();
 			foreach (Type type in GenTypes.AllTypes)
 			{
@@ -76,8 +80,7 @@ namespace SmashTools
 							category = "General";
 						}
 
-						string unitTestFullName = $"{category}.{name}";
-						SmashSettings.unitTests.TryAdd(unitTestFullName, false);
+						string unitTestFullName = $"{category}.{name}".Replace(" ", "");
 						UnitTestAction unitTest = new UnitTestAction()
 						{
 							FullName = unitTestFullName,
@@ -86,13 +89,29 @@ namespace SmashTools
 							GameState = unitTestAttr.GameState,
 							Action = () => method.Invoke(null, new object[] { })
 						};
-						unitTests.Add(unitTestFullName, unitTest);
+
+						if (unitTestFullName == SmashSettings.unitTest)
+						{
+							NoUnitTest = false;
+						}
+
+						unitTests.Add(unitTest.FullName, unitTest);
 						unitTestRadioButtons.Add(new Toggle(unitTest.FullName, unitTest.DisplayName, unitTest.Category,
-							() => SmashSettings.unitTests.TryGetValue(unitTest.FullName, false),
-							(value) => SmashSettings.unitTests[unitTest.FullName] = value));
+							stateGetter: delegate ()
+							{
+								return SmashSettings.unitTest == unitTest.FullName;
+							},
+							stateSetter: delegate (bool value)
+							{
+								if (value)
+								{
+									SmashSettings.unitTest = unitTest.FullName;
+								}
+							}));
 					}
 				}
 			}
+			unitTestRadioButtons = unitTestRadioButtons.OrderBy(toggle => toggle.DisplayName).ToList();
 		}
 
 		public static void DrawDebugWindowButton(WidgetRow ___widgetRow)
@@ -105,12 +124,9 @@ namespace SmashTools
 
 		private static void PostLoadSetup()
 		{
-			foreach (var unitTestSaveData in SmashSettings.unitTests)
+			if (!SmashSettings.unitTest.NullOrEmpty() && unitTests.TryGetValue(SmashSettings.unitTest, out UnitTestAction unitTest))
 			{
-				if (unitTestSaveData.Value && unitTests.TryGetValue(unitTestSaveData.Key, out UnitTestAction unitTest))
-				{
-					postLoadActions[unitTest.GameState].Add(unitTest.Action);
-				}
+				postLoadActions[unitTest.GameState].Add(unitTest.Action);
 			}
 		}
 

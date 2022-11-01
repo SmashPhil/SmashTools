@@ -19,6 +19,21 @@ namespace SmashTools
 
 		public static string ToHex(this Color c) => $"#{ColorUtility.ToHtmlStringRGB(c)}";
 
+		public static void Header(Rect rect, string header, Color highlight, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
+		{
+			GUIState.Push();
+			{
+				GUI.color = highlight;
+				GUI.DrawTexture(rect, BaseContent.WhiteTex);
+
+				GUIState.Reset();
+
+				Text.Anchor = anchor;
+				Widgets.Label(rect, header);
+			}
+			GUIState.Pop();
+		}
+
 		public static void CheckboxDraw(float x, float y, bool active, bool disabled, float size = 24f, Texture2D texChecked = null, Texture2D texUnchecked = null)
 		{
 			Color color = GUI.color;
@@ -120,7 +135,10 @@ namespace SmashTools
 			}
 
 			Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
-			Widgets.Label(labelRect, label);
+			if (!label.NullOrEmpty())
+			{
+				Widgets.Label(labelRect, label);
+			}
 
 			Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
 			Rect[] rects = inputRect.Split(2, buffer);
@@ -168,6 +186,11 @@ namespace SmashTools
 		}
 
 		public static void NumericBox<T>(Rect rect, ref T value, string label, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
+		{
+			value = NumericBox(rect, value, label, tooltip, disabledTooltip, min: min, max: max, labelProportion: labelProportion);
+		}
+
+		public static T NumericBox<T>(Rect rect, T value, string label, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
 		{
 			GUIState.Push();
 			float proportion = Mathf.Clamp01(labelProportion);
@@ -218,6 +241,8 @@ namespace SmashTools
 			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
 
 			GUIState.Pop();
+
+			return value;
 		}
 
 		public static string HexField(string label, Rect rect, string text)

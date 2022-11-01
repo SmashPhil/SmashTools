@@ -13,8 +13,6 @@ namespace SmashTools
 	[StaticConstructorOnStartup]
 	public static class ListingExtension
 	{
-		public static readonly Color TextColor = Color.white;
-
 		public static readonly Color HighlightColor = new Color(0.1f, 0.1f, 0.1f, 0.5f);
 
 		public static readonly Color BannerColor = new Color(0f, 0f, 0f, 0.25f);
@@ -195,31 +193,11 @@ namespace SmashTools
 			Listing_SplitColumns splitLister = lister as Listing_SplitColumns;
 
 			splitLister?.NextRow(rowGap);
-			var textSize = Text.Font;
-			Text.Font = fontSize;
 
 			Rect rect = lister.GetRect(Text.CalcHeight(header, lister.ColumnWidth));
-			GUI.color = highlight;
-			GUI.DrawTexture(rect, BaseContent.WhiteTex);
-			GUI.color = TextColor;
-			
-			var anchorTmp = Text.Anchor;
-			Text.Anchor = anchor;
-			Widgets.Label(rect, header);
-			Text.Font = textSize;   
-			Text.Anchor = anchorTmp;
+			UIElements.Header(rect, header, highlight, fontSize: fontSize, anchor: anchor);
 
 			splitLister?.Gap(2);
-		}
-
-		public static void Expander(this Listing lister, string label, ref bool expanded)
-		{
-			GUIState.Push();
-			{
-				Rect rect = lister.GetRect(24);
-
-			}
-			GUIState.Pop();
 		}
 
 		public static void Vector2Box(this Listing lister, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.5f)

@@ -57,6 +57,21 @@ namespace SmashTools
 		}
 
 		/// <summary>
+		/// Swap 2 elements in list
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="list"></param>
+		/// <param name="index1"></param>
+		/// <param name="index2"></param>
+		public static IList<T> Swap<T>(this IList<T> list, int index1, int index2)
+		{
+			T tmpItem = list[index1];
+			list[index1] = list[index2];
+			list[index2] = tmpItem;
+			return list;
+		}
+
+		/// <summary>
 		/// Split list on item T and shift to front
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
