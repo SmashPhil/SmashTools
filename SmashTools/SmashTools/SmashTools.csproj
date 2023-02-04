@@ -336,6 +336,7 @@
     <Compile Include="Performance\AsyncAction.cs" />
     <Compile Include="Performance\CoroutineManager.cs" />
     <Compile Include="Performance\DedicatedThread.cs" />
+    <Compile Include="Performance\ProfilerWatch.cs" />
     <Compile Include="Performance\TaskManager.cs" />
     <Compile Include="Performance\ThreadManager.cs" />
     <Compile Include="Rendering\CameraView.cs" />

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Verse;
 
 namespace SmashTools.Performance
@@ -27,10 +28,13 @@ namespace SmashTools.Performance
 
 		private bool ShouldExit { get; set; } = false;
 
+		private bool Empty { get; set; }
+
 		public void Queue(AsyncAction action)
 		{
 			lock (queueLock)
 			{
+				Empty = false;
 				queue.Enqueue(action);
 			}
 		}
@@ -41,6 +45,7 @@ namespace SmashTools.Performance
 			{
 				queue.Clear();
 			}
+			Empty = false; //Allow to reach outer loop for exit condition
 			ShouldExit = true;
 		}
 
@@ -48,24 +53,28 @@ namespace SmashTools.Performance
 		{
 			while (!ShouldExit)
 			{
+				AsyncAction asyncAction = null;
 				lock (queueLock)
 				{
 					if (queue.Count > 0)
 					{
-						AsyncAction asyncAction = queue.Dequeue();
-						if (asyncAction.IsValid)
-						{
-							try
-							{
-								asyncAction.Invoke();
-							}
-							catch (Exception ex)
-							{
-								Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
-							}
-						}
+						asyncAction = queue.Dequeue();
+						Empty = queue.Count == 0;
 					}
 				}
+
+				if (asyncAction != null && asyncAction.IsValid)
+				{
+					try
+					{
+						asyncAction.Invoke();
+					}
+					catch (Exception ex)
+					{
+						Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
+					}
+				}
+				while (Empty) Thread.Sleep(1);
 			}
 		}
 	}
