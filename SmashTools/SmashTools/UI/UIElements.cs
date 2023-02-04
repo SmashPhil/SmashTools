@@ -13,9 +13,16 @@ namespace SmashTools
 	{
 		public static readonly Regex ValidInputRegex = new Regex(@"^(\#[A-Fa-f0-9]{0,7}$)");
 
-		public static readonly Color InactiveColor = new Color(0.37f, 0.37f, 0.37f, 0.8f);
+		public static readonly Texture2D RadioButOffTex = ContentFinder<Texture2D>.Get("UI/Widgets/RadioButOff", true);
+		public static readonly Texture2D TargetLevelArrow = ContentFinder<Texture2D>.Get("UI/Misc/BarInstantMarkerRotated");
 
-		private static readonly Texture2D RadioButOffTex = ContentFinder<Texture2D>.Get("UI/Widgets/RadioButOff", true);
+		public static readonly Color InactiveColor = new Color(0.37f, 0.37f, 0.37f, 0.8f);
+		public static readonly Color MenuSectionBGBorderColor = new ColorInt(135, 135, 135).ToColor;
+		public static readonly Color RangeControlTextColor = new Color(0.6f, 0.6f, 0.6f);
+
+		private static int sliderDraggingID;
+
+		private static float lastDragSliderSoundTime = -1f;
 
 		public static string ToHex(this Color c) => $"#{ColorUtility.ToHtmlStringRGB(c)}";
 
@@ -57,46 +64,58 @@ namespace SmashTools
 			}
 		}
 
-		public static bool CheckboxLabeled(Rect rect, string label, ref bool checkOn, bool disabled = false, Texture2D texChecked = null, Texture2D texUnchecked = null, bool placeCheckboxNearText = false)
+		public static bool CheckboxLabeled(Rect rect, string label, bool checkOn, bool disabled = false, Texture2D texChecked = null, Texture2D texUnchecked = null, TextAnchor labelAnchor = TextAnchor.MiddleLeft)
+		{
+			bool value = checkOn;
+			CheckboxLabeled(rect, label, ref value, disabled: disabled, texChecked: texChecked, texUnchecked: texUnchecked, labelAnchor: labelAnchor);
+			return value;
+		}
+
+		public static bool CheckboxLabeled(Rect rect, string label, ref bool checkOn, bool disabled = false, Texture2D texChecked = null, Texture2D texUnchecked = null, TextAnchor labelAnchor = TextAnchor.MiddleLeft)
 		{
 			bool clicked = false;
 			GUIState.Push();
-			Text.Anchor = TextAnchor.MiddleLeft;
-			if (placeCheckboxNearText)
 			{
-				rect.width = Mathf.Min(rect.width, Text.CalcSize(label).x + 24f + 10f);
-			}
-			Widgets.Label(rect, label);
-			if (!disabled && Widgets.ButtonInvisible(rect, true))
-			{
-				checkOn = !checkOn;
-				clicked = true;
-				if (checkOn)
+				Text.Anchor = labelAnchor;
+				Rect labelRect = new Rect(rect)
 				{
-					SoundDefOf.Checkbox_TurnedOn.PlayOneShotOnCamera(null);
-				}
-				else
+					width = rect.width - 24
+				};
+				Widgets.Label(labelRect, label);
+				if (!disabled && Widgets.ButtonInvisible(rect, true))
 				{
-					SoundDefOf.Checkbox_TurnedOff.PlayOneShotOnCamera(null);
+					checkOn = !checkOn;
+					clicked = true;
+					if (checkOn)
+					{
+						SoundDefOf.Checkbox_TurnedOn.PlayOneShotOnCamera(null);
+					}
+					else
+					{
+						SoundDefOf.Checkbox_TurnedOff.PlayOneShotOnCamera(null);
+					}
 				}
+				CheckboxDraw(rect.x + rect.width - 24f, rect.y, checkOn, disabled, 20, null, null);
 			}
-			CheckboxDraw(rect.x + rect.width - 24f, rect.y, checkOn, disabled, 20, null, null);
 			GUIState.Pop();
 			return clicked;
 		}
 
 		public static bool ReverseRadioButton(Rect rect, string label, bool enabled)
 		{
+			bool flag;
 			GUIState.Push();
-			Text.Anchor = TextAnchor.MiddleLeft;
-			bool flag = Widgets.ButtonInvisible(rect, true);
-			if (flag && !enabled)
 			{
-				SoundDefOf.Tick_Tiny.PlayOneShotOnCamera(null);
+				Text.Anchor = TextAnchor.MiddleLeft;
+				flag = Widgets.ButtonInvisible(rect, true);
+				if (flag && !enabled)
+				{
+					SoundDefOf.Tick_Tiny.PlayOneShotOnCamera(null);
+				}
+				Rect labelRect = new Rect(rect.x + 28f, rect.y, rect.width - 24, rect.height);
+				Widgets.Label(labelRect, label);
+				RadioButtonDraw(rect.x, rect.y + rect.height / 2f - 12f, enabled);
 			}
-			Rect labelRect = new Rect(rect.x + 28f, rect.y, rect.width - 24, rect.height);
-			Widgets.Label(labelRect, label);
-			RadioButtonDraw(rect.x, rect.y + rect.height / 2f - 12f, enabled);
 			GUIState.Pop();
 			return flag;
 		}
@@ -104,17 +123,19 @@ namespace SmashTools
 		public static void RadioButtonDraw(float x, float y, bool chosen)
 		{
 			GUIState.Push();
-			GUI.color = Color.white;
-			Texture2D image;
-			if (chosen)
 			{
-				image = Widgets.RadioButOnTex;
+				GUI.color = Color.white;
+				Texture2D image;
+				if (chosen)
+				{
+					image = Widgets.RadioButOnTex;
+				}
+				else
+				{
+					image = RadioButOffTex;
+				}
+				GUI.DrawTexture(new Rect(x, y, 24f, 24f), image);
 			}
-			else
-			{
-				image = RadioButOffTex;
-			}
-			GUI.DrawTexture(new Rect(x, y, 24f, 24f), image);
 			GUIState.Pop();
 		}
 
@@ -126,29 +147,30 @@ namespace SmashTools
 		public static Vector2 Vector2Box(Rect rect, string label, Vector2 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
 		{
 			GUIState.Push();
-			float x = value.x;
-			float y = value.y;
-
-			if (!tooltip.NullOrEmpty())
 			{
-				TooltipHandler.TipRegion(rect, tooltip);
+				float x = value.x;
+				float y = value.y;
+
+				if (!tooltip.NullOrEmpty())
+				{
+					TooltipHandler.TipRegion(rect, tooltip);
+				}
+
+				Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
+				if (!label.NullOrEmpty())
+				{
+					Widgets.Label(labelRect, label);
+				}
+
+				Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
+				Rect[] rects = inputRect.Split(2, buffer);
+
+				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+				value.x = x;
+				value.y = y;
 			}
-
-			Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
-			if (!label.NullOrEmpty())
-			{
-				Widgets.Label(labelRect, label);
-			}
-
-			Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
-			Rect[] rects = inputRect.Split(2, buffer);
-
-			NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-			NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-			value.x = x;
-			value.y = y;
 			GUIState.Pop();
-
 			return value;
 		}
 
@@ -160,27 +182,28 @@ namespace SmashTools
 		public static Vector3 Vector3Box(Rect rect, string label, Vector3 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
 		{
 			GUIState.Push();
-			float x = value.x;
-			float y = value.y;
-			float z = value.z;
-			if (!tooltip.NullOrEmpty())
 			{
-				TooltipHandler.TipRegion(rect, tooltip);
+				float x = value.x;
+				float y = value.y;
+				float z = value.z;
+				if (!tooltip.NullOrEmpty())
+				{
+					TooltipHandler.TipRegion(rect, tooltip);
+				}
+
+				Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
+				Widgets.Label(labelRect, label);
+
+				Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
+				Rect[] rects = inputRect.Split(3, buffer);
+
+				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+				NumericBox(rects[2], ref z, "z", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+				value.x = x;
+				value.y = y;
+				value.z = z;
 			}
-
-			Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
-			Widgets.Label(labelRect, label);
-
-			Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
-			Rect[] rects = inputRect.Split(3, buffer);
-
-			NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-			NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-			NumericBox(rects[2], ref z, "z", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-			value.x = x;
-			value.y = y;
-			value.z = z;
-
 			GUIState.Pop();
 			return value;
 		}
@@ -193,53 +216,54 @@ namespace SmashTools
 		public static T NumericBox<T>(Rect rect, T value, string label, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
 		{
 			GUIState.Push();
-			float proportion = Mathf.Clamp01(labelProportion);
-			bool disabled = !disabledTooltip.NullOrEmpty();
-			float centerY = rect.y + (rect.height - Text.LineHeight) / 2;
-			float leftLength = rect.width * proportion;
-			float rightLength = rect.width * (1 - proportion);
-			Rect rectLeft = new Rect(rect.x, centerY, leftLength, rect.height);
-			Rect rectRight = new Rect(rect.x + rect.width - rightLength, centerY, rightLength, Text.LineHeight);
+			{
+				float proportion = Mathf.Clamp01(labelProportion);
+				bool disabled = !disabledTooltip.NullOrEmpty();
+				float centerY = rect.y + (rect.height - Text.LineHeight) / 2;
+				float leftLength = rect.width * proportion;
+				float rightLength = rect.width * (1 - proportion);
+				Rect rectLeft = new Rect(rect.x, centerY, leftLength, rect.height);
+				Rect rectRight = new Rect(rect.x + rect.width - rightLength, centerY, rightLength, Text.LineHeight);
 
-			bool mouseOver = Mouse.IsOver(rect);
-			if (disabled)
-			{
-				GUIState.Disable();
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
-			else if (!tooltip.NullOrEmpty())
-			{
-				if (mouseOver)
+				bool mouseOver = Mouse.IsOver(rect);
+				if (disabled)
 				{
-					Widgets.DrawHighlight(rect);
+					GUIState.Disable();
+					TooltipHandler.TipRegion(rect, disabledTooltip);
 				}
-				TooltipHandler.TipRegion(rect, tooltip);
-			}
-			if (!disabled && mouseOver)
-			{
-				if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
+				else if (!tooltip.NullOrEmpty())
 				{
-					//Event.current.Use();
-					//List<FloatMenuOption> options = new List<FloatMenuOption>();
-					//options.Add(new FloatMenuOption("ResetButton".Translate(), delegate ()
-					//{
-					//	ActionOnSettingsInputAttribute.InvokeIfApplicable(field.FieldInfo);
-					//	VehicleMod.settings.vehicles.fieldSettings[def.defName].Remove(field);
-					//}));
-					//FloatMenu floatMenu = new FloatMenu(options)
-					//{
-					//	vanishIfMouseDistant = true
-					//};
-					//Find.WindowStack.Add(floatMenu);
+					if (mouseOver)
+					{
+						Widgets.DrawHighlight(rect);
+					}
+					TooltipHandler.TipRegion(rect, tooltip);
 				}
+				if (!disabled && mouseOver)
+				{
+					if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
+					{
+						//Event.current.Use();
+						//List<FloatMenuOption> options = new List<FloatMenuOption>();
+						//options.Add(new FloatMenuOption("ResetButton".Translate(), delegate ()
+						//{
+						//	ActionOnSettingsInputAttribute.InvokeIfApplicable(field.FieldInfo);
+						//	VehicleMod.settings.vehicles.fieldSettings[def.defName].Remove(field);
+						//}));
+						//FloatMenu floatMenu = new FloatMenu(options)
+						//{
+						//	vanishIfMouseDistant = true
+						//};
+						//Find.WindowStack.Add(floatMenu);
+					}
+				}
+				Widgets.Label(rectLeft, label);
+
+				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
+				string buffer = value.ToString();
+
+				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
 			}
-			Widgets.Label(rectLeft, label);
-
-			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
-			string buffer = value.ToString();
-			
-			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
-
 			GUIState.Pop();
 
 			return value;
@@ -255,34 +279,38 @@ namespace SmashTools
 		public static void DrawLabel(Rect rect, string label, Color highlight, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
 		{
 			GUIState.Push();
-			Text.Font = fontSize;
-			GUI.color = highlight;
-			GUI.DrawTexture(rect, BaseContent.WhiteTex);
-			GUI.color = textColor;
+			{
+				Text.Font = fontSize;
+				GUI.color = highlight;
+				GUI.DrawTexture(rect, BaseContent.WhiteTex);
+				GUI.color = textColor;
 
-			Widgets.Label(rect, label);
+				Widgets.Label(rect, label);
+			}
 			GUIState.Pop();
 		}
 
 		public static bool ClickableLabel(Rect rect, string label, Color mouseOver, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft, Color? clickColor = null)
 		{
 			GUIState.Push();
-			Text.Font = fontSize;
-			if (Mouse.IsOver(rect))
 			{
-				GUI.color = mouseOver;
-				if (Input.GetMouseButton(0))
+				Text.Font = fontSize;
+				Text.Anchor = anchor;
+				if (Mouse.IsOver(rect))
 				{
-					clickColor ??= Color.grey;
-					GUI.color = clickColor.Value;
+					GUI.color = mouseOver;
+					if (Input.GetMouseButton(0))
+					{
+						clickColor ??= Color.grey;
+						GUI.color = clickColor.Value;
+					}
 				}
+				else
+				{
+					GUI.color = textColor;
+				}
+				Widgets.Label(rect, label);
 			}
-			else
-			{
-				GUI.color = textColor;
-			}
-			Widgets.Label(rect, label);
-
 			GUIState.Pop();
 
 			return Widgets.ButtonInvisible(rect);
@@ -290,6 +318,9 @@ namespace SmashTools
 
 		public static void SliderLabeled(Rect rect, string label, string tooltip, string endSymbol, ref float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
 		{
+			Rect fullRect = rect;
+			rect.y += rect.height / 2;
+			rect.height /= 2;
 			string format = $"{Math.Round(value * multiplier, decimalPlaces)}" + endSymbol;
 			if (!maxValueDisplay.NullOrEmpty() && endValue > 0)
 			{
@@ -298,15 +329,39 @@ namespace SmashTools
 					format = maxValueDisplay;
 				}
 			}
+			if (Mouse.IsOver(fullRect))
+			{
+				Widgets.DrawHighlight(fullRect);
+			}
 			if (!tooltip.NullOrEmpty())
 			{
-				TooltipHandler.TipRegion(rect, tooltip);
+				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
-			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+			value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 			if (endValue > 0 && value >= max)
 			{
 				value = endValue;
 			}
+		}
+
+		public static void DrawLineHorizontal(float x, float y, float length, Color color)
+		{
+			GUIState.Push();
+			{
+				GUI.color = color;
+				GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.WhiteTex);
+			}
+			GUIState.Pop();
+		}
+
+		public static void DrawLineVertical(float x, float y, float length, Color color)
+		{
+			GUIState.Push();
+			{
+				GUI.color = color;
+				GUI.DrawTexture(new Rect(x, y, 1f, length), BaseContent.WhiteTex);
+			}
+			GUIState.Pop();
 		}
 
 		public static void DrawLineHorizontalGrey(float x, float y, float length)
@@ -317,6 +372,71 @@ namespace SmashTools
 		public static void DrawLineVerticalGrey(float x, float y, float length)
 		{
 			GUI.DrawTexture(new Rect(x, y, 1f, length), BaseContent.GreyTex);
+		}
+
+		public static float HorizontalSlider_Arrow(Rect rect, float value, float min, float max, float roundTo = 0, float handleScale = 20, Texture2D railAtlas = null)
+		{
+			int screenPointHashCode = UI.GUIToScreenPoint(new Vector2(rect.x, rect.y)).GetHashCode();
+			screenPointHashCode = Gen.HashCombine(Gen.HashCombine(Gen.HashCombine(Gen.HashCombine(screenPointHashCode, max), min), rect.height), rect.width);
+
+			float valueChange = value;
+
+			GUIState.Push();
+			{
+				Rect sliderRect = new Rect(rect);
+				sliderRect.xMin += 6f;
+				sliderRect.xMax -= 6f;
+
+				Rect atlasRect = new Rect(sliderRect.x, sliderRect.y + 2f, sliderRect.width, 8f);
+				if (railAtlas)
+				{
+					GUI.color = RangeControlTextColor;
+					Widgets.DrawAtlas(atlasRect, railAtlas);
+				}
+
+				GUI.color = Color.white;
+
+				float x = Mathf.Clamp(sliderRect.x - 6f + sliderRect.width * Mathf.InverseLerp(min, max, valueChange), sliderRect.xMin - 6f, sliderRect.xMax - 6f);
+				GUI.DrawTexture(new Rect(x, atlasRect.center.y - 6f, handleScale, handleScale), TargetLevelArrow);
+
+				if (Event.current.type == EventType.MouseDown && Mouse.IsOver(rect) && sliderDraggingID != screenPointHashCode)
+				{
+					sliderDraggingID = screenPointHashCode;
+					SoundDefOf.DragSlider.PlayOneShotOnCamera(null);
+					Event.current.Use();
+				}
+				if (sliderDraggingID == screenPointHashCode && UnityGUIBugsFixer.MouseDrag(0))
+				{
+					valueChange = Mathf.Clamp((Event.current.mousePosition.x - sliderRect.x) / sliderRect.width * (max - min) + min, min, max);
+					if (Event.current.type == EventType.MouseDrag)
+					{
+						Event.current.Use();
+					}
+				}
+				if (roundTo > 0f)
+				{
+					valueChange = valueChange.RoundTo(roundTo);
+				}
+				if (value != valueChange)
+				{
+					CheckPlayDragSliderSound();
+				}
+			}
+			GUIState.Pop();
+
+			return valueChange;
+		}
+
+		/// <summary>
+		/// Copied from Widgets.CheckPlayDragSliderSound since it is private
+		/// </summary>
+		private static void CheckPlayDragSliderSound()
+		{
+			if (Time.realtimeSinceStartup > lastDragSliderSoundTime + 0.075f)
+			{
+				SoundDefOf.DragSlider.PlayOneShotOnCamera(null);
+				lastDragSliderSoundTime = Time.realtimeSinceStartup;
+			}
 		}
 
 		public static void LabelStyled(Rect rect, string label, GUIStyle style)
@@ -443,6 +563,16 @@ namespace SmashTools
 			return result;
 		}
 
+		public static void FillableBar(Rect rect, float fillPercent, Texture2D fillTex, Texture2D bgTex, float innerContractedBy = 0)
+		{
+			GUI.DrawTexture(rect, bgTex);
+			rect = rect.ContractedBy(innerContractedBy);
+
+			Rect fullBarRect = rect;
+			fullBarRect.width *= fillPercent;
+			GUI.DrawTexture(fullBarRect, fillTex);
+		}
+
 		public static void FillableBarLabeled(Rect rect, float fillPercent, string label, Texture2D fillTex, Texture2D addedFillTex, Texture2D innerTex, Texture2D outlineTex, float? actualValue = null, float addedValue = 0f, float bgFillPercent = 0f)
 		{
 			if (fillPercent < 0f)
@@ -493,13 +623,13 @@ namespace SmashTools
 			fullBarRect.width *= fillPercent;
 			GUI.DrawTexture(fullBarRect, fillTex);
 
-			if(bgFillPercent != 0)
+			if (bgFillPercent != 0)
 			{
-				if(bgFillPercent < 0)
+				if (bgFillPercent < 0)
 				{
 					Rect rectBG = rect;
 
-					if(fillPercent + bgFillPercent < 0)
+					if (fillPercent + bgFillPercent < 0)
 					{
 						rectBG.width *= fillPercent;
 						rectBG.x = fullBarRect.x;

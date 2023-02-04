@@ -10,6 +10,9 @@ namespace SmashTools
 {
 	public static class Ext_Math
 	{
+		//Precalculated √2
+		public static readonly float Sqrt2 = Mathf.Sqrt(2);
+
 		//Up to n=16
 		private static readonly float[] factorials = new float[]
 		{
@@ -56,7 +59,7 @@ namespace SmashTools
 		/// <param name="t"
 		public static Vector2 DeCasteljau(List<CurvePoint> points, float t)
 		{
-			//Only set up for p-count = 4
+			//Only setup for p-count = 4
 			Vector2 p0 = Vector2.Lerp(points[0], points[1], t);
 			Vector2 p1 = Vector2.Lerp(points[1], points[2], t);
 			Vector2 p2 = Vector2.Lerp(points[2], points[3], t);
@@ -65,6 +68,16 @@ namespace SmashTools
 			Vector2 r1 = Vector2.Lerp(p1, p2, t);
 
 			return Vector2.Lerp(r0, r1, t);
+		}
+
+		/// <summary>
+		/// Sign for boolean condition
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns>True = 1, False = -1</returns>
+		public static int Sign(bool value)
+		{
+			return value ? 1 : -1;
 		}
 
 		/// <summary>
@@ -136,6 +149,34 @@ namespace SmashTools
 		public static long Pow(this int val, int exp)
 		{
 			return (long)Math.Pow(val, exp);
+		}
+
+		/// <summary>
+		/// Take amount from a value bounded by 0, returning the amount remaining in the value
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="take"></param>
+		/// <param name="remaining"></param>
+		public static int Take(this int value, int take, out int remaining)
+		{
+			remaining = 0;
+			if (take >= value)
+			{
+				return value;
+			}
+			remaining = value - take;
+			return take;
+		}
+
+		/// <summary>
+		/// Inverse value. Useful for tick methods that increase from <paramref name="min"/> to <paramref name="max"/> for animation curves.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="min"></param>
+		/// <param name="max"></param>
+		public static int Inverse(this int value, int min, int max)
+		{
+			return max - value + min;
 		}
 
 		/// <summary>

@@ -121,15 +121,19 @@ namespace SmashTools
 			GUI.color = color;
 		}
 
+		public static float SliderLabeled(this Listing lister, string label, string tooltip, string endSymbol, float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
+		{
+			SliderLabeled(lister, label, tooltip, endSymbol, ref value, min, max, multiplier: multiplier, decimalPlaces: decimalPlaces, endValue: endValue, maxValueDisplay: maxValueDisplay);
+			return value;
+		}
+
 		public static void SliderLabeled(this Listing lister, string label, string tooltip, string endSymbol, ref float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
 		{
 			lister.Gap(12f);
 			Rect rect = lister.GetRect(24f);
-			float highlightAdjust = label.NullOrEmpty() ? 18 : Text.CalcSize(label).y;
-			Rect fullRect = new Rect(rect)
-			{
-				y = rect.y - highlightAdjust / 2 - 3
-			};
+			Rect fullRect = rect;
+			rect.y += rect.height / 2;
+
 			string format = $"{Math.Round(value * multiplier, decimalPlaces)}" + endSymbol;
 			if (!maxValueDisplay.NullOrEmpty() && endValue > 0)
 			{
@@ -157,11 +161,9 @@ namespace SmashTools
 		{
 			lister.Gap(12f);
 			Rect rect = lister.GetRect(24f);
-			float highlightAdjust = label.NullOrEmpty() ? 18 : Text.CalcSize(label).y;
-			Rect fullRect = new Rect(rect)
-			{
-				y = rect.y - highlightAdjust / 2 - 3
-			};
+			Rect fullRect = new Rect(rect);
+			rect.y += rect.height / 2;
+
 			string format = string.Format("{0}" + endSymbol, value);
 			if (!maxValueDisplay.NullOrEmpty())
 			{
@@ -208,13 +210,11 @@ namespace SmashTools
 		public static Vector2 Vector2Box(this Listing lister, string label, Vector2 value, string tooltip = null, float labelProportion = 0.5f)
 		{
 			GUIState.Push();
-
-			Rect rect = lister.GetRect(24);
-
-			UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
-
+			{
+				Rect rect = lister.GetRect(24);
+				UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
+			}
 			GUIState.Pop();
-
 			return value;
 		}
 
@@ -226,44 +226,41 @@ namespace SmashTools
 		public static Vector3 Vector3Box(this Listing lister, string label, Vector3 value, string tooltip = null, float labelProportion = 0.5f)
 		{
 			GUIState.Push();
-
-			Rect rect = lister.GetRect(24);
-
-			UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
-
+			{
+				Rect rect = lister.GetRect(24);
+				UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
+			}
 			GUIState.Pop();
-
 			return value;
 		}
 
 		public static bool ListItemSelectable(this Listing lister, string header, Color hoverColor, bool selected = false, bool active = true, string disabledTooltip = null)
 		{
-			GUIState.Push();
-			
 			Rect rect = lister.GetRect(20f);
-
-			if (selected)
+			GUIState.Push();
 			{
-				Widgets.DrawBoxSolid(rect, HighlightColor);
-			}
+				if (selected)
+				{
+					Widgets.DrawBoxSolid(rect, HighlightColor);
+				}
 
-			GUI.color = Color.white;
-			if (!active)
-			{
-				GUI.color = Color.grey;
-			}
-			else if (Mouse.IsOver(rect))
-			{
-				GUI.color = hoverColor;
-			}
-			if (!disabledTooltip.NullOrEmpty())
-			{
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
+				GUI.color = Color.white;
+				if (!active)
+				{
+					GUI.color = Color.grey;
+				}
+				else if (Mouse.IsOver(rect))
+				{
+					GUI.color = hoverColor;
+				}
+				if (!disabledTooltip.NullOrEmpty())
+				{
+					TooltipHandler.TipRegion(rect, disabledTooltip);
+				}
 
-			Text.Anchor = TextAnchor.MiddleLeft;
-			Widgets.Label(rect, header);
-
+				Text.Anchor = TextAnchor.MiddleLeft;
+				Widgets.Label(rect, header);
+			}
 			GUIState.Pop();
 
 			if (active && Widgets.ButtonInvisible(rect, true))

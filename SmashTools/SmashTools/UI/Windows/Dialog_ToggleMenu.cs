@@ -48,8 +48,13 @@ namespace SmashTools
 					lister.Header(category, ListingExtension.BannerColor, GameFont.Medium, TextAnchor.MiddleCenter);
 				}
 				bool checkOn = toggle.Active;
+				if (toggle.Disabled)
+				{
+					GUIState.Disable();
+				}
 				lister.CheckboxLabeled(toggle.DisplayName, ref checkOn);
-				if (toggle.Active != checkOn)
+				GUIState.Enable();
+				if (!toggle.Disabled && toggle.Active != checkOn)
 				{
 					toggle.OnToggle(checkOn);
 				}
@@ -60,20 +65,20 @@ namespace SmashTools
 		public override void DoWindowContents(Rect rect)
 		{
 			GUIState.Push();
-			
-			Text.Anchor = TextAnchor.UpperCenter;
-			Text.Font = GameFont.Medium;
-			Widgets.Label(rect, label);
-			rect.y += 30;
+			{
+				Text.Anchor = TextAnchor.UpperCenter;
+				Text.Font = GameFont.Medium;
+				Widgets.Label(rect, label);
+				rect.y += 30;
 
-			GUIState.Reset();
+				GUIState.Reset();
 
-			lister.Begin(rect);
-
-			DrawToggle();
-
-			lister.End();
-
+				lister.Begin(rect);
+				{
+					DrawToggle();
+				}
+				lister.End();
+			}
 			GUIState.Pop();
 		}
 	}

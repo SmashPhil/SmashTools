@@ -24,11 +24,16 @@ namespace SmashTools
 					category = radioButton.Category;
 					lister.Header(category, ListingExtension.BannerColor, GameFont.Medium, TextAnchor.MiddleCenter);
 				}
-				bool value = lister.RadioButton(radioButton.DisplayName, radioButton.Active);
-				if (value)
+				if (radioButton.Disabled)
 				{
-					state.toggled = true;
+					GUIState.Disable();
+				}
+				bool value = lister.RadioButton(radioButton.DisplayName, radioButton.Active);
+				GUIState.Enable();
+				if (!radioButton.Disabled && value)
+				{
 					state.activeIndex = i;
+					state.toggled = true;
 				}
 				else if (radioButton.Active && state.activeIndex < 0)
 				{

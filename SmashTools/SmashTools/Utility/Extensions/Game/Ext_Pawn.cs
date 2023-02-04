@@ -200,7 +200,6 @@ namespace SmashTools
 		/// <param name="x"></param>
 		/// <param name="z"></param>
 		/// <param name="angle"></param>
-		/// <returns></returns>
 		public static Vector3 DrawPosTransformed(this Pawn pawn, Vector2 offset, float angle = 0)
 		{
 			float x = offset.x;
@@ -286,28 +285,13 @@ namespace SmashTools
 			bracketLocs[2] = new Vector3(worldPos.x + num4, y, worldPos.z + num5);
 			bracketLocs[3] = new Vector3(worldPos.x - num4, y, worldPos.z + num5);
 
-			switch (pawnAngle)
+			for (int i = 0; i < 4; i++)
 			{
-				case 45f:
-					for (int i = 0; i < 4; i++)
-					{
-						float xPos = bracketLocs[i].x - worldPos.x;
-						float yPos = bracketLocs[i].z - worldPos.z;
-						Pair<float, float> newPos = Ext_Math.RotatePointClockwise(xPos, yPos, 45f);
-						bracketLocs[i].x = newPos.First + worldPos.x;
-						bracketLocs[i].z = newPos.Second + worldPos.z;
-					}
-					break;
-				case -45:
-					for (int i = 0; i < 4; i++)
-					{
-						float xPos = bracketLocs[i].x - worldPos.x;
-						float yPos = bracketLocs[i].z - worldPos.z;
-						Pair<float, float> newPos = Ext_Math.RotatePointCounterClockwise(xPos, yPos, 45f);
-						bracketLocs[i].x = newPos.First + worldPos.x;
-						bracketLocs[i].z = newPos.Second + worldPos.z;
-					}
-					break;
+				float xPos = bracketLocs[i].x - worldPos.x;
+				float yPos = bracketLocs[i].z - worldPos.z;
+				Pair<float, float> newPos = Ext_Math.RotatePointClockwise(xPos, yPos, pawnAngle);
+				bracketLocs[i].x = newPos.First + worldPos.x;
+				bracketLocs[i].z = newPos.Second + worldPos.z;
 			}
 		}
 	}

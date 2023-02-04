@@ -16,6 +16,7 @@ namespace SmashTools
 		protected int columns = 2;
 		protected int curColumn;
 		public bool shiftRectScrollbar;
+		public float columnGap = 4;
 
 		public Listing_SplitColumns(GameFont font)
 		{
@@ -35,6 +36,7 @@ namespace SmashTools
 			{
 				rect.width -= 10;
 			}
+			GUIState.Push();
 			base.Begin(rect);
 			Text.Font = font;
 			curColumn = 0;
@@ -55,6 +57,7 @@ namespace SmashTools
 
 		public override void End()
 		{
+			GUIState.Pop();
 			base.End();
 		}
 
@@ -78,7 +81,7 @@ namespace SmashTools
 		public Rect GetSplitRect(float height)
 		{
 			NewColumnIfNeeded(height);
-			Rect result = new Rect(curX + 2, curY, ColumnWidth / (columns + (columns * columns * ColumnSplitWidth)) - 4, height);
+			Rect result = new Rect(curX + 2, curY, ColumnWidth / (columns + (columns * columns * ColumnSplitWidth)) - columnGap, height);
 			return result;
 		}
 
@@ -102,120 +105,144 @@ namespace SmashTools
 
 		public void Header(string header, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
 		{
+			Shift();
 			GUIState.Push();
+			try
 			{
-				Rect rect = GetRect(Text.CalcHeight(header, ColumnWidth));
+				Rect rect = GetSplitRect(Text.CalcHeight(header, ColumnWidth));
 				UIElements.Header(rect, header, ListingExtension.BannerColor, fontSize: fontSize, anchor: anchor);
-				Gap(16);
 			}
-			GUIState.Pop();
+			finally
+			{
+				GUIState.Pop();
+			}
 		}
 
-		public bool Button(string label, string highlightTag = null)
-		{
-			Rect rect = GetRect(30f);
-			bool result = Widgets.ButtonText(rect, label, true, true, true);
-			if (highlightTag != null)
-			{
-				UIHighlighter.HighlightOpportunity(rect, highlightTag);
-			}
-			Gap(verticalSpacing);
-			return result;
-		}
-
-		public void CheckboxLabeled(string label, ref bool checkState, string tooltip, string disabledTooltip, bool locked)
-		{
-			Shift();
-			Rect rect = GetSplitRect(Text.LineHeight);
-			rect.y -= rect.height / 2;
-			bool disabled = !disabledTooltip.NullOrEmpty();
-			if (disabled)
-			{
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
-			else if (!tooltip.NullOrEmpty())
-			{
-				if (Mouse.IsOver(rect))
-				{
-					Widgets.DrawHighlight(rect);
-				}
-				TooltipHandler.TipRegion(rect, tooltip);
-			}
-			if (locked)
-			{
-				checkState = false;
-			}
-			UIElements.CheckboxLabeled(rect, label, ref checkState, disabled, null, null, false);
-		}
-
-		public void IntegerBox(string label, ref int value, string tooltip, string disabledTooltip, int min = int.MinValue, int max = int.MaxValue)
+		public bool Button(string label, float height = 24f, string highlightTag = null)
 		{
 			Shift();
 			GUIState.Push();
-			Rect rect = GetSplitRect(Text.LineHeight);
-			float centerY = rect.y - rect.height / 2;
-			float length = rect.width * 0.45f;
-			Rect rectLeft = new Rect(rect.x, centerY, length, rect.height);
-			Rect rectRight = new Rect(rect.x + (rect.width - length), centerY, length, rect.height);
-
-			Color color = GUI.color;
-			if (!disabledTooltip.NullOrEmpty())
+			try
 			{
-				GUIState.Disable();
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
-			else if (!tooltip.NullOrEmpty())
-			{
-				if (Mouse.IsOver(rect))
+				Rect rect = GetSplitRect(height);
+				bool result = Widgets.ButtonText(rect, label);
+				if (highlightTag != null)
 				{
-					Widgets.DrawHighlight(rect);
+					UIHighlighter.HighlightOpportunity(rect, highlightTag);
 				}
-				TooltipHandler.TipRegion(rect, tooltip);
+				return result;
 			}
-			Widgets.Label(rectLeft, label);
-
-			var align = Text.CurTextFieldStyle.alignment;
-			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
-			string buffer = value.ToString();
-			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
-			Text.CurTextFieldStyle.alignment = align;
-
-			GUIState.Pop();
+			finally
+			{
+				GUIState.Pop();
+			}
 		}
 
-		public void FloatBox(string label, ref float value, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue)
+		public void CheckboxLabeled(string label, ref bool checkState, string tooltip, string disabledTooltip, bool locked, float? lineHeight = null)
 		{
 			Shift();
 			GUIState.Push();
-			Rect rect = GetSplitRect(Text.LineHeight);
-			float centerY = rect.y - rect.height / 2;
-			float length = rect.width * 0.45f;
-			Rect rectLeft = new Rect(rect.x, centerY, length, rect.height);
-			Rect rectRight = new Rect(rect.x + (rect.width - length), centerY, length, rect.height);
-
-			if (!disabledTooltip.NullOrEmpty())
+			try
 			{
-				GUIState.Disable();
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
-			else if (!tooltip.NullOrEmpty())
-			{
-				if (Mouse.IsOver(rect))
+				float height = lineHeight ?? Text.LineHeight;
+				Rect rect = GetSplitRect(height);
+				bool disabled = !disabledTooltip.NullOrEmpty();
+				if (disabled)
 				{
-					Widgets.DrawHighlight(rect);
+					TooltipHandler.TipRegion(rect, disabledTooltip);
 				}
-				TooltipHandler.TipRegion(rect, tooltip);
+				else if (!tooltip.NullOrEmpty())
+				{
+					if (Mouse.IsOver(rect))
+					{
+						Widgets.DrawHighlight(rect);
+					}
+					TooltipHandler.TipRegion(rect, tooltip);
+				}
+				if (locked)
+				{
+					checkState = false;
+				}
+				GUIState.Reset();
+				UIElements.CheckboxLabeled(rect, label, ref checkState, disabled);
 			}
-			Widgets.Label(rectLeft, label);
+			finally
+			{
+				GUIState.Pop();
+			}
+		}
 
-			TextAnchor align = Text.CurTextFieldStyle.alignment;
-			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
-			string buffer = value.ToString();
+		public void IntegerBox(string label, ref int value, string tooltip, string disabledTooltip, int min = int.MinValue, int max = int.MaxValue, float? lineHeight = null)
+		{
+			Shift();
+			GUIState.Push();
+			try
+			{
+				float height = lineHeight ?? Text.LineHeight;
+				Rect rect = GetSplitRect(height);
+				float centerY = rect.y - rect.height / 2;
+				float length = rect.width * 0.45f;
+				Rect rectLeft = new Rect(rect.x, centerY, length, rect.height);
+				Rect rectRight = new Rect(rect.x + (rect.width - length), centerY, length, rect.height);
 
-			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+				if (!disabledTooltip.NullOrEmpty())
+				{
+					GUIState.Disable();
+					TooltipHandler.TipRegion(rect, disabledTooltip);
+				}
+				else if (!tooltip.NullOrEmpty())
+				{
+					if (Mouse.IsOver(rect))
+					{
+						Widgets.DrawHighlight(rect);
+					}
+					TooltipHandler.TipRegion(rect, tooltip);
+				}
+				GUIState.Reset();
+				Widgets.Label(rectLeft, label);
 
-			Text.CurTextFieldStyle.alignment = align;
+				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
+				string buffer = value.ToString();
+				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+			}
+			finally
+			{
+				GUIState.Pop();
+			}
+		}
 
+		public void FloatBox(string label, ref float value, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float? lineHeight = null)
+		{
+			Shift();
+			GUIState.Push();
+			{
+				float height = lineHeight ?? Text.LineHeight;
+				Rect rect = GetSplitRect(height);
+				float centerY = rect.y - rect.height / 2;
+				float length = rect.width * 0.45f;
+				Rect rectLeft = new Rect(rect.x, centerY, length, rect.height);
+				Rect rectRight = new Rect(rect.x + (rect.width - length), centerY, length, rect.height);
+
+				if (!disabledTooltip.NullOrEmpty())
+				{
+					GUIState.Disable();
+					TooltipHandler.TipRegion(rect, disabledTooltip);
+				}
+				else if (!tooltip.NullOrEmpty())
+				{
+					if (Mouse.IsOver(rect))
+					{
+						Widgets.DrawHighlight(rect);
+					}
+					TooltipHandler.TipRegion(rect, tooltip);
+				}
+				GUIState.Reset();
+				Widgets.Label(rectLeft, label);
+
+				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
+				string buffer = value.ToString();
+				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+			}
 			GUIState.Pop();
 		}
 
@@ -224,153 +251,19 @@ namespace SmashTools
 		{
 			Shift();
 			GUIState.Push();
-			Rect rect = GetSplitRect(24f);
-			string format = $"{Math.Round(value * 100, decimalPlaces)}" + endSymbol;
-			if (!endValueDisplay.NullOrEmpty() && endValue > 0)
 			{
-				if (value >= endValue)
-				{
-					format = endValueDisplay;
-					if (translate)
-					{
-						format = format.Translate();
-					}
-				}
-			}
-			if (!disabledTooltip.NullOrEmpty())
-			{
-				GUIState.Disable();
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
-			else if (!tooltip.NullOrEmpty())
-			{
-				if (Mouse.IsOver(rect))
-				{
-					Widgets.DrawHighlight(rect);
-				}
-				TooltipHandler.TipRegion(rect, tooltip);
-			}
-			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
-			float value2 = value;
-			if (endValue > 0 && value2 >= max)
-			{
-				value2 = endValue;
-			}
-			GUIState.Pop();
-		}
-
-		public void SliderLabeled(string label, ref float value, string tooltip, string disabledTooltip, string endSymbol, float min, float max, int decimalPlaces = 2, 
-			float endValue = -1f, float increment = 0, string endValueDisplay = "", bool translate = false)
-		{
-			Shift();
-			GUIState.Push();
-			Rect rect = GetSplitRect(24f);
-			string format = $"{Math.Round(value, decimalPlaces)}" + endSymbol;
-			if (!endValueDisplay.NullOrEmpty())
-			{
-				if (value >= max)
-				{
-					format = endValueDisplay;
-					if (translate)
-					{
-						format = format.Translate();
-					}
-				}
-			}
-			Color color = GUI.color;
-			if (!disabledTooltip.NullOrEmpty())
-			{
-				GUIState.Disable();
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
-			else if (!tooltip.NullOrEmpty())
-			{
-				if (Mouse.IsOver(rect))
-				{
-					Widgets.DrawHighlight(rect);
-				}
-				TooltipHandler.TipRegion(rect, tooltip);
-			}
-			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
-			float value2 = value;
-			if (increment > 0)
-			{
-				value = value.RoundTo(increment);
-				value2 = value2.RoundTo(increment);
-			}
-			if (endValue > 0 && value2 >= max)
-			{
-				value2 = endValue;
-			}
-			GUIState.Pop();
-		}
-
-		public void SliderLabeled(string label, ref int value, string tooltip, string disabledTooltip, string endSymbol, int min, int max, 
-			int endValue = -1, string maxValueDisplay = "", string minValueDisplay = "", bool translate = false)
-		{
-			Shift();
-			GUIState.Push();
-			Rect rect = GetSplitRect(24f);
-			string format = string.Format("{0}" + endSymbol, value);
-			if (!maxValueDisplay.NullOrEmpty())
-			{
-				if (value == max)
-				{
-					format = maxValueDisplay;
-					if (translate)
-					{
-						format = format.Translate();
-					}
-				}
-			}
-			if (!minValueDisplay.NullOrEmpty())
-			{
-				if (value == min)
-				{
-					format = minValueDisplay;
-					if (translate)
-					{
-						format = format.Translate();
-					}
-				}
-			}
-			if (!disabledTooltip.NullOrEmpty())
-			{
-				GUIState.Disable();
-				TooltipHandler.TipRegion(rect, disabledTooltip);
-			}
-			else if (!tooltip.NullOrEmpty())
-			{
-				if (Mouse.IsOver(rect))
-				{
-					Widgets.DrawHighlight(rect);
-				}
-				TooltipHandler.TipRegion(rect, tooltip);
-			}
-			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
-			int value2 = value;
-			if (value2 >= max && endValue > 0)
-			{
-				value2 = endValue;
-			}
-			GUIState.Pop();
-		}
-
-		public void EnumSliderLabeled(string label, ref int value, string tooltip, string disabledTooltip, Type enumType, bool translate = false)
-		{
-			Shift();
-			GUIState.Push();
-			try
-			{
-				int[] enumValues = Enum.GetValues(enumType).Cast<int>().ToArray();
-				string[] enumNames = Enum.GetNames(enumType);
-				int min = enumValues[0];
-				int max = enumValues.Last();
 				Rect rect = GetSplitRect(24f);
-				string format = Enum.GetName(enumType, value);
-				if (translate)
+				string format = $"{Math.Round(value * 100, decimalPlaces)}" + endSymbol;
+				if (!endValueDisplay.NullOrEmpty() && endValue > 0)
 				{
-					format = format.Translate();
+					if (value >= endValue)
+					{
+						format = endValueDisplay;
+						if (translate)
+						{
+							format = format.Translate();
+						}
+					}
 				}
 				if (!disabledTooltip.NullOrEmpty())
 				{
@@ -385,12 +278,177 @@ namespace SmashTools
 					}
 					TooltipHandler.TipRegion(rect, tooltip);
 				}
-				value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				GUIState.Reset();
+				value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				float value2 = value;
+				if (endValue > 0 && value2 >= max)
+				{
+					value2 = endValue;
+				}
 			}
-			catch(Exception ex)
+			GUIState.Pop();
+		}
+
+		public float SliderLabeled(string label, float value, string tooltip, string disabledTooltip, string endSymbol, float min, float max, int decimalPlaces = 2,
+			float endValue = -1f, float increment = 0, string endValueDisplay = "", bool translate = false)
+		{
+			SliderLabeled(label, ref value, tooltip, disabledTooltip, endSymbol, min, max, decimalPlaces, endValue: endValue, increment: increment, endValueDisplay: endValueDisplay, translate: translate);
+			return value;
+		}
+
+		public void SliderLabeled(string label, ref float value, string tooltip, string disabledTooltip, string endSymbol, float min, float max, int decimalPlaces = 2, 
+			float endValue = -1f, float increment = 0, string endValueDisplay = "", bool translate = false)
+		{
+			Shift();
+			GUIState.Push();
 			{
-				Log.Error($"Unable to convert to {enumType}. Exception={ex.Message}");
-				return;
+				Rect rect = GetSplitRect(24f);
+				Rect fullRect = rect;
+				rect.y += rect.height / 2;
+				string format = $"{Math.Round(value, decimalPlaces)}" + endSymbol;
+				if (!endValueDisplay.NullOrEmpty())
+				{
+					if (value >= max)
+					{
+						format = endValueDisplay;
+						if (translate)
+						{
+							format = format.Translate();
+						}
+					}
+				}
+				if (!disabledTooltip.NullOrEmpty())
+				{
+					GUIState.Disable();
+					TooltipHandler.TipRegion(fullRect, disabledTooltip);
+				}
+				else if (!tooltip.NullOrEmpty())
+				{
+					if (Mouse.IsOver(fullRect))
+					{
+						Widgets.DrawHighlight(fullRect);
+					}
+					TooltipHandler.TipRegion(fullRect, tooltip);
+				}
+				GUIState.Reset();
+				value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				float value2 = value;
+				if (increment > 0)
+				{
+					value = value.RoundTo(increment);
+					value2 = value2.RoundTo(increment);
+				}
+				if (endValue > 0 && value2 >= max)
+				{
+					value2 = endValue;
+				}
+			}
+			GUIState.Pop();
+		}
+
+		public int SliderLabeled(string label, int value, string tooltip, string disabledTooltip, string endSymbol, int min, int max,
+			int endValue = -1, string maxValueDisplay = "", string minValueDisplay = "", bool translate = false)
+		{
+			SliderLabeled(label, ref value, tooltip, disabledTooltip, endSymbol, min, max, endValue: endValue, maxValueDisplay: maxValueDisplay, minValueDisplay: minValueDisplay, translate: translate);
+			return value;
+		}
+
+		public void SliderLabeled(string label, ref int value, string tooltip, string disabledTooltip, string endSymbol, int min, int max, 
+			int endValue = -1, string maxValueDisplay = "", string minValueDisplay = "", bool translate = false)
+		{
+			Shift();
+			GUIState.Push();
+			{
+				Rect rect = GetSplitRect(24f);
+				Rect fullRect = rect;
+				rect.y += rect.height / 2;
+				string format = string.Format("{0}" + endSymbol, value);
+				if (!maxValueDisplay.NullOrEmpty())
+				{
+					if (value == max)
+					{
+						format = maxValueDisplay;
+						if (translate)
+						{
+							format = format.Translate();
+						}
+					}
+				}
+				if (!minValueDisplay.NullOrEmpty())
+				{
+					if (value == min)
+					{
+						format = minValueDisplay;
+						if (translate)
+						{
+							format = format.Translate();
+						}
+					}
+				}
+				if (!disabledTooltip.NullOrEmpty())
+				{
+					GUIState.Disable();
+					TooltipHandler.TipRegion(fullRect, disabledTooltip);
+				}
+				else if (!tooltip.NullOrEmpty())
+				{
+					if (Mouse.IsOver(fullRect))
+					{
+						Widgets.DrawHighlight(fullRect);
+					}
+					TooltipHandler.TipRegion(fullRect, tooltip);
+				}
+				GUIState.Reset();
+				value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				int value2 = value;
+				if (value2 >= max && endValue > 0)
+				{
+					value2 = endValue;
+				}
+			}
+			GUIState.Pop();
+		}
+
+		public void EnumSliderLabeled(string label, ref int value, string tooltip, string disabledTooltip, Type enumType, bool translate = false)
+		{
+			Shift();
+			GUIState.Push();
+			{
+				try
+				{
+					int[] enumValues = Enum.GetValues(enumType).Cast<int>().ToArray();
+					string[] enumNames = Enum.GetNames(enumType);
+					int min = enumValues[0];
+					int max = enumValues.Last();
+					Rect rect = GetSplitRect(24f);
+					Rect fullRect = rect;
+					rect.y += rect.height / 2;
+					string format = Enum.GetName(enumType, value);
+					if (translate)
+					{
+						format = format.Translate();
+					}
+					if (!disabledTooltip.NullOrEmpty())
+					{
+						GUIState.Disable();
+						TooltipHandler.TipRegion(fullRect, disabledTooltip);
+					}
+					else if (!tooltip.NullOrEmpty())
+					{
+						if (Mouse.IsOver(fullRect))
+						{
+							Widgets.DrawHighlight(fullRect);
+						}
+						TooltipHandler.TipRegion(fullRect, tooltip);
+					}
+					GUIState.Reset();
+					value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				}
+				catch (Exception ex)
+				{
+					Log.Error($"Unable to convert to {enumType}. Exception={ex.Message}");
+					return;
+				}
 			}
 			GUIState.Pop();
 		}
@@ -404,10 +462,10 @@ namespace SmashTools
 		{
 			Shift();
 			GUIState.Push();
-
-			Rect rect = GetSplitRect(24);
-			value = UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
-
+			{
+				Rect rect = GetSplitRect(24);
+				value = UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
+			}
 			GUIState.Pop();
 
 			return value;
@@ -422,13 +480,11 @@ namespace SmashTools
 		{
 			Shift();
 			GUIState.Push();
-
-			Rect rect = GetSplitRect(24);
-
-			value = UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
-
+			{
+				Rect rect = GetSplitRect(24);
+				value = UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
+			}
 			GUIState.Pop();
-
 			return value;
 		}
 
@@ -445,36 +501,34 @@ namespace SmashTools
 			Shift();
 			if (fillTex != null && addedFillTex != null)
 			{
-				var anchor = Text.Anchor;
-				Text.Anchor = TextAnchor.MiddleCenter;
-				Rect rect = GetSplitRect(24);
-				UIElements.FillableBarHollowed(rect, fillPercent, bgFillPercent, fillTex, addedFillTex, innerTex, outlineTex);
-			
-				Rect rectLabel = rect;
-				rectLabel.x += 5f;
-
-				GUIStyle style = new GUIStyle(Text.CurFontStyle);
-
-				UIElements.LabelOutlineStyled(rectLabel, label, style, Color.black);
-				if (thresholds != null)
+				GUIState.Push();
 				{
-					foreach (float threshold in thresholds)
+					Text.Anchor = TextAnchor.MiddleCenter;
+					Rect rect = GetSplitRect(24);
+					UIElements.FillableBarHollowed(rect, fillPercent, bgFillPercent, fillTex, addedFillTex, innerTex, outlineTex);
+					Rect rectLabel = rect;
+					rectLabel.x += 5f;
+					GUIStyle style = new GUIStyle(Text.CurFontStyle);
+					UIElements.LabelOutlineStyled(rectLabel, label, style, Color.black);
+					if (thresholds != null)
 					{
-						UIElements.DrawBarThreshold(rect, threshold, fillPercent);
+						foreach (float threshold in thresholds)
+						{
+							UIElements.DrawBarThreshold(rect, threshold, fillPercent);
+						}
+					}
+
+					if (actualValue != null)
+					{
+						Rect valueRect = rect;
+						valueRect.width /= 2;
+						valueRect.x = rectLabel.x + rectLabel.width / 2 - 6f;
+						style.alignment = TextAnchor.MiddleRight;
+						string value = string.Format("{1} {0}", actualValue.ToString(), addedValue != 0 ? "(" + (addedValue > 0 ? "+" : "") + addedValue.ToString() + ")" : "");
+						UIElements.LabelOutlineStyled(valueRect, value, style, Color.black);
 					}
 				}
-
-				if(actualValue != null)
-				{
-					Rect valueRect = rect;
-					valueRect.width /= 2;
-					valueRect.x = rectLabel.x + rectLabel.width / 2 - 6f;
-					style.alignment = TextAnchor.MiddleRight;
-
-					string value = string.Format("{1} {0}", actualValue.ToString(), addedValue != 0 ? "(" + (addedValue > 0 ? "+" : "") +  addedValue.ToString() + ")" : "");
-					UIElements.LabelOutlineStyled(valueRect, value, style, Color.black);
-				}
-				Text.Anchor = anchor;
+				GUIState.Pop();
 			}
 		}
 

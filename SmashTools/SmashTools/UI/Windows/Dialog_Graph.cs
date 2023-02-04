@@ -8,7 +8,7 @@ namespace SmashTools
 {
 	public class Dialog_Graph : Window
 	{
-		protected List<CurvePoint> plotPoints;
+		private List<CurvePoint> plotPoints;
 
 		public Dialog_Graph(Graph.Function function, FloatRange range, List<CurvePoint> plotPoints = null, bool vectorEvaluation = false)
 		{
@@ -38,7 +38,9 @@ namespace SmashTools
 
 		public virtual List<CurvePoint> CurvePoints => plotPoints;
 
-		public virtual bool Editable => false;
+		protected virtual bool Editable => false;
+
+		protected virtual bool DrawCoordLabels => true;
 
 		public override Vector2 InitialSize
 		{
@@ -51,9 +53,14 @@ namespace SmashTools
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			Widgets.DrawMenuSection(inRect);
-			Rect rect = inRect.ContractedBy(45);
-			Graph.DrawGraph(rect, Function, XRange, YRange, CurvePoints, simplified: !VectorEvaluation, editable: Editable);
+			DrawGraph(inRect);
+		}
+
+		protected virtual void DrawGraph(Rect rect)
+		{
+			Widgets.DrawMenuSection(rect);
+			Rect graphRect = rect.ContractedBy(45);
+			Graph.DrawGraph(graphRect, Function, XRange, YRange, CurvePoints, simplified: !VectorEvaluation, editable: Editable, drawCoordLabels: DrawCoordLabels);
 		}
 	}
 }

@@ -9,11 +9,14 @@ namespace SmashTools
 	{
 		static ForceMethodImplementation()
 		{
-			foreach (Type type in GenTypes.AllTypesWithAttribute<MustImplementAttribute>().Where(t => !t.IsAbstract))
+			if (Prefs.DevMode)
 			{
-				if (!MustImplementAttribute.MethodImplemented(type, out string name))
+				foreach (Type type in GenTypes.AllTypesWithAttribute<MustImplementAttribute>().Where(t => !t.IsAbstract))
 				{
-					SmashLog.Error($"Method <method>{name}</method> not implemented for <type>{type}</type>");
+					if (!MustImplementAttribute.MethodImplemented(type, out string name))
+					{
+						SmashLog.Error($"Method <method>{name}</method> not implemented for <type>{type}</type>");
+					}
 				}
 			}
 		}

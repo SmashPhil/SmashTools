@@ -9,5 +9,10 @@ namespace SmashTools
 	[AttributeUsage(AttributeTargets.Field)]
 	public class GraphEditableAttribute : Attribute
 	{
+		public string Prefix { get; set; }
+
+		public string Category { get; set; }
+
+		public bool FunctionOfT { get; set; }
 	}
 }

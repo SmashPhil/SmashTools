@@ -1,11 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
+using System.Text;
 using UnityEngine;
 using Verse;
+using Verse.Sound;
+using RimWorld;
+using SmashTools.Xml;
 
 namespace SmashTools
 {
+	[StaticConstructorOnStartup]
 	public class Dialog_GraphEditor : Dialog_Graph
 	{
 		/// <summary>
@@ -14,14 +20,42 @@ namespace SmashTools
 		/// </summary>
 		public const float DefaultMinX = 0;
 		public const float DefaultMaxX = 1;
-
 		public const float CoordinatesListButtonSize = 24;
+		public const float PercentCameraBoxWidth = 0.4f;
+
+		public const float PlaybackBarHeight = 3;
+		public const float PlaybackRectHeight = 25;
+		public const float PlaybackHandleSize = 12;
+
+		public const float PlayButtonFadeTime = 1.5f;
+
+		public static readonly FloatRange ZoomRange = new FloatRange(2, 16);
+
+		private static readonly string filePath = Path.Combine(Application.persistentDataPath, "GraphEditorExport.xml");
+		private static readonly Texture2D[] viewerButtonTextures = new Texture2D[3]
+		{
+			ContentFinder<Texture2D>.Get("SmashTools/VideoPause", false) ?? ContentFinder<Texture2D>.Get("UI/TimeControls/TimeSpeedButton_Pause", true),
+			ContentFinder<Texture2D>.Get("SmashTools/VideoPlay", false) ?? ContentFinder<Texture2D>.Get("UI/TimeControls/TimeSpeedButton_Normal", true),
+			ContentFinder<Texture2D>.Get("SmashTools/VideoSkiptoNext", false) ?? ContentFinder<Texture2D>.Get("UI/TimeControls/TimeSpeedButton_Fast", true),
+		};
+
+		private static readonly Texture2D dragHandleIcon = ContentFinder<Texture2D>.Get("SmashTools/ViewHandle", false) ?? ContentFinder<Texture2D>.Get("UI/Icons/LifeStage/Adult", true);
 
 		private Graph.GraphType graphType;
 		private LinearCurve curve;
 
+		private IAnimationTarget animationTarget;
+		private List<AnimatorObject> animators;
+		private AnimatorObject curAnimator;
+		private bool drawCoordLabels = true;
+
 		private Vector2 scrollPos;
-		private Thing animationTarget;
+		public static AnimationSettings animationSettings = new AnimationSettings();
+		private Listing_SplitColumns lister = new Listing_SplitColumns();
+		private List<IAnimationTarget> animationTargets = new List<IAnimationTarget>();
+
+		private static bool dragging = false;
+		private static float timeFading = 0;
 
 		public Dialog_GraphEditor() : base(null, new FloatRange(DefaultMinX, DefaultMaxX), new List<CurvePoint>())
 		{
@@ -29,6 +63,7 @@ namespace SmashTools
 			forcePause = true;
 			GraphType = Graph.GraphType.Linear;
 			ReinstantiateCurve();
+			ValidateLimits(true);
 		}
 
 		public Dialog_GraphEditor(Graph.Function function, FloatRange range, bool vectorEvaluation = false) : base(function, range, new List<CurvePoint>(), vectorEvaluation)
@@ -37,6 +72,7 @@ namespace SmashTools
 			forcePause = true;
 			GraphType = Graph.GraphType.Linear;
 			ReinstantiateCurve();
+			ValidateLimits(true);
 		}
 
 		public Dialog_GraphEditor(Graph.Function function, FloatRange range, List<CurvePoint> plotPoints, bool vectorEvaluation = false) : base(function, range, plotPoints, vectorEvaluation)
@@ -45,20 +81,28 @@ namespace SmashTools
 			forcePause = true;
 			GraphType = Graph.GraphType.Linear;
 			ReinstantiateCurve();
+			ValidateLimits(true);
 		}
 
-		public Dialog_GraphEditor(Thing animationTarget = null, bool vectorEvaluation = false) : base(null, new FloatRange(DefaultMinX, DefaultMaxX), plotPoints: new List<CurvePoint>(), vectorEvaluation: vectorEvaluation)
+		public Dialog_GraphEditor(IAnimationTarget animationTarget = null, bool vectorEvaluation = false) : base(null, new FloatRange(DefaultMinX, DefaultMaxX), plotPoints: new List<CurvePoint>(), vectorEvaluation: vectorEvaluation)
 		{
 			doCloseX = true;
 			forcePause = true;
 			GraphType = Graph.GraphType.Linear;
 			this.animationTarget = animationTarget;
 			ReinstantiateCurve();
+			ValidateLimits(true);
 		}
 
 		public override List<CurvePoint> CurvePoints => curve.points;
 
-		public override bool Editable => true;
+		protected override bool Editable => true;
+
+		protected override bool DrawCoordLabels => drawCoordLabels;
+
+		public bool DisableCameraView => animationTarget == null;
+
+		public bool LogReport { get; set; } = false;
 
 		public override Vector2 InitialSize
 		{
@@ -79,6 +123,7 @@ namespace SmashTools
 			{
 				graphType = value;
 				ReinstantiateCurve();
+				ValidateLimits(true);
 			}
 		}
 
@@ -90,9 +135,108 @@ namespace SmashTools
 				{
 					Graph.GraphType.Linear => typeof(LinearCurve),
 					Graph.GraphType.Bezier => typeof(BezierCurve),
+					Graph.GraphType.Staircase => typeof(StaircaseCurve),
 					_ => null
 				};
 			}
+		}
+
+		public override void PostOpen()
+		{
+			base.PostOpen();
+			if (!Find.Maps.NullOrEmpty())
+			{
+				animationTargets = Find.Maps.SelectMany(map => map.spawnedThings.Where(thing => thing is IAnimationTarget)).Cast<IAnimationTarget>().ToList();
+			}
+			if (!DisableCameraView && AnimationManager.Reserve(animationTarget, AnimationTick))
+			{
+				TryStartCamera(animationTarget);
+			}
+		}
+
+		public override void PostClose()
+		{
+			base.PostClose();
+			CameraView.Close();
+			AnimationManager.Release();
+		}
+
+		private void TryStartCamera(IAnimationTarget animationTarget)
+		{
+			if (CameraView.InUse)
+			{
+				CameraView.Close();
+			}
+			this.animationTarget = animationTarget;
+			if (this.animationTarget != null)
+			{
+				RecacheAnimationTargetCurves();
+				CameraJumper.TryJump(animationTarget.Thing, mode: CameraJumper.MovementMode.Cut);
+				CameraView.Start(orthographicSize: animationSettings.orthographicSize);
+				Find.Selector.ClearSelection();
+				AnimationManager.Reset();
+				AnimationManager.SetDriver(null);
+			}
+		}
+
+		public void RecacheAnimationTargetCurves()
+		{
+			StringBuilder stringBuilder = LogReport ? new StringBuilder() : null;
+			animators = animationTarget?.GetAnimators(stringBuilder).OrderBy(animObject => animObject.DisplayName).ToList();
+			if (stringBuilder != null) Log.Message($"----- Report: -----\n{stringBuilder}");
+		}
+
+		public void ValidateLimits(bool hardSet = false)
+		{
+			if (curve != null && !curve.points.NullOrEmpty())
+			{
+				float xMinCurve = curve.points.Min(cp => cp.x);
+				float xMaxCurve = curve.points.Max(cp => cp.x);
+				float xMin = hardSet ? xMinCurve : Mathf.Min(XRange.min, xMinCurve); //Take original value into account if not fully resetting
+				float xMax = hardSet ? xMaxCurve : Mathf.Max(XRange.max, xMaxCurve);
+				XRange = new FloatRange(xMin, xMax);
+
+				float yMinCurve = curve.points.Min(cp => cp.y);
+				float yMaxCurve = curve.points.Max(cp => cp.y);
+				float yMin = hardSet ? yMinCurve : Mathf.Min(YRange.min, yMinCurve); //Take original value into account if not fully resetting
+				float yMax = hardSet ? yMaxCurve : Mathf.Max(YRange.max, yMaxCurve);
+				YRange = new FloatRange(yMin, yMax);
+			}
+			else
+			{
+				XRange = new FloatRange(0, 1);
+				YRange = new FloatRange(0, 1);
+			}
+		}
+
+		private void SelectAnimator(AnimatorObject animatorObject)
+		{
+			curAnimator = animatorObject;
+			if (animatorObject != null)
+			{
+				curve = animatorObject.Curve;
+				GraphType = CurveToGraphType(curve.GetType());
+				Function = curve.Function;
+			}
+			else
+			{
+				GraphType = Graph.GraphType.Linear;
+				curve = null;
+				XRange = new FloatRange(0, 1);
+				YRange = new FloatRange(0, 1);
+				ReinstantiateCurve();
+			}
+			ValidateLimits(true);
+		}
+
+		private void SelectAnimationDriver(AnimationDriver animationDriver)
+		{
+			if (AnimationManager.CurrentDriver != null && AnimationManager.CurrentDriver != animationDriver)
+			{
+				AnimationManager.Reset();
+			}
+			AnimationManager.SetDriver(animationDriver);
+			SelectAnimator(null);
 		}
 
 		public Graph.GraphType CurveToGraphType(Type type)
@@ -105,216 +249,589 @@ namespace SmashTools
 			{
 				return Graph.GraphType.Bezier;
 			}
+			if (type == typeof(StaircaseCurve))
+			{
+				return Graph.GraphType.Staircase;
+			}
 			throw new NotImplementedException("GraphType");
 		}
 
 		public void ReinstantiateCurve()
 		{
 			curve = (LinearCurve)Activator.CreateInstance(CurveType, curve?.points ?? new List<CurvePoint>());
-			Function = new Graph.Function(curve.Function);
+			Function = curve.Function;
+		}
+
+		public override void WindowUpdate()
+		{
+			base.WindowUpdate();
+			if (!DisableCameraView)
+			{
+				if (animationSettings.drawCellGrid)
+				{
+					CameraView.DrawMapGridInView();
+				}
+				(Vector3 drawPos, float rotation) = animationTarget.DrawData;
+				if (AnimationManager.CurrentDriver != null)
+				{
+					(drawPos, _) = AnimationManager.CurrentDriver.Draw(drawPos, rotation);
+				}
+				CameraView.Update(drawPos);
+			}
+			AnimationManager.Update();
+		}
+
+		public void AnimationTick()
+		{
+			if (AnimationManager.CurrentDriver != null)
+			{
+				if (AnimationManager.TicksPassed >= AnimationManager.CurrentDriver.AnimationLength)
+				{
+					AnimationManager.Reset();
+					AnimationManager.Paused = !animationSettings.loop;
+				}
+				else
+				{
+					AnimationManager.CurrentDriver.Tick(AnimationManager.TicksPassed);
+				}
+			}
 		}
 
 		public override void DoWindowContents(Rect inRect)
 		{
+			AnimationManager.OnGUI();
+
 			Rect inputRect = new Rect(inRect)
 			{
 				width = InitialSize.x - InitialSize.y - 10
 			};
-
+			
 			GUIState.Push();
-			try
 			{
-				Widgets.DrawMenuSection(inputRect);
-				inputRect = inputRect.ContractedBy(10);
-				Rect graphTypeRect = new Rect(inputRect.x, inputRect.y, 120, 30);
-				if (Widgets.ButtonText(graphTypeRect, graphType.ToString()))
+				try
 				{
-					List<FloatMenuOption> floatMenuOptions = new List<FloatMenuOption>();
-					floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Linear.ToString(), () => GraphType = Graph.GraphType.Linear));
-					floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Bezier.ToString(), () => GraphType = Graph.GraphType.Bezier));
-					//floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Freeform.ToString(), () => graphType = Graph.GraphType.Freeform));
-					Find.WindowStack.Add(new FloatMenu(floatMenuOptions));
-				}
-				Rect evaluationTypeRect = new Rect(inputRect.x + inputRect.width - graphTypeRect.width - 5, graphTypeRect.y, graphTypeRect.width, graphTypeRect.height);
-				if (Widgets.ButtonText(evaluationTypeRect, VectorEvaluation ? "Vector" : "Simplified"))
-				{
-					VectorEvaluation = !VectorEvaluation;
-				}
-
-				string formula = graphType switch
-				{
-					Graph.GraphType.Linear => "y = mx + b",
-					Graph.GraphType.Bezier => "Σ{n:i=0} nC_i((1-t)^(n-i))(t^i)(P_i)",
-					_ => string.Empty
-				};
-				Vector2 textSize = Text.CalcSize(formula);
-				Rect formulaRect = new Rect(inputRect.x + inputRect.width - textSize.x, inputRect.y, textSize.x, textSize.y);
-				//Widgets.Label(formulaRect, formula);
-
-				Text.Font = GameFont.Medium;
-				Rect graphSizeRect = new Rect(inputRect.x, formulaRect.yMax + 10, inputRect.width / 3, 30);
-				Widgets.Label(graphSizeRect, "Axis Limits");
-				GUIState.Reset();
-
-				float xMin = XRange.min;
-				float xMax = XRange.max;
-				Rect xRangeRect = new Rect(inputRect.x, graphSizeRect.yMax + 10, inputRect.width / 3, 30);
-				
-				//UIElements.NumericBox(xRangeRect, ref xMin, "xMin", string.Empty, string.Empty, float.MinValue, float.MaxValue);
-				xRangeRect.x += xRangeRect.width;
-				//UIElements.NumericBox(xRangeRect, ref xMax, "xMax", string.Empty, string.Empty, float.MinValue, float.MaxValue);
-				
-
-				float yMin = YRange.min;
-				float yMax = YRange.max;
-				//NOTE - If x axis becomes editable again, swap graphSizeRect.yMax to xRangeRect.yMax
-				Rect yRangeRect = new Rect(inputRect.x, graphSizeRect.yMax + 10, inputRect.width / 3, 30);
-				UIElements.NumericBox(yRangeRect, ref yMin, "yMin", string.Empty, string.Empty, float.MinValue, float.MaxValue);
-				yRangeRect.x += yRangeRect.width;
-				UIElements.NumericBox(yRangeRect, ref yMax, "yMax", string.Empty, string.Empty, float.MinValue, float.MaxValue);
-
-
-				if (xMax - xMin < 1)
-				{
-					xMax = xMin + 1;
-				}
-				if (xMin - xMax > -1)
-				{
-					xMin = xMax - 1;
-				}
-				if (yMax - yMin < 1)
-				{
-					yMax = yMin + 1;
-				}
-				if (yMin - yMax > -1)
-				{
-					yMin = yMax - 1;
-				}
-
-				(float xMin, float xMax, float yMin, float yMax) bounds = GetPlotBounds();
-				//xMin = Mathf.Min(xMin, bounds.xMin);
-				//xMax = Mathf.Max(xMin, bounds.xMax);
-				//yMin = Mathf.Min(xMin, bounds.yMin);
-				//yMax = Mathf.Max(xMin, bounds.yMax);
-
-				XRange = new FloatRange(xMin, xMax);
-				YRange = new FloatRange(yMin, yMax);
-
-				Rect coordinatesLabelRect = new Rect(inputRect.x, yRangeRect.yMax + 5, inputRect.width, Text.CalcHeight("Coordinates", inputRect.width));
-				Widgets.Label(coordinatesLabelRect, "Coordinates");
-
-				Rect coordinateOutRect = new Rect(inputRect.x, coordinatesLabelRect.yMax + 5, inputRect.width, inputRect.height / 2);
-				float curvePointsMenuHeight = (curve.PointsCount + 1) * CoordinatesListButtonSize * 2 - 10;
-				//16 for width of scrollbar
-				Rect coordinateViewRect = new Rect(coordinateOutRect.x, coordinateOutRect.y, coordinateOutRect.width - 16, curvePointsMenuHeight);
-				Widgets.DrawMenuSection(coordinateOutRect);
-				Widgets.BeginScrollView(coordinateOutRect, ref scrollPos, coordinateViewRect);
-				{
-					Rect coordinatesListRect = new Rect(coordinateViewRect.x, coordinateViewRect.y, coordinateViewRect.width, CoordinatesListButtonSize * 2).ContractedBy(5);
-					if (!curve.points.NullOrEmpty())
+					GUIState.Push();
 					{
-						GUIState.Push();
+						Text.Font = GameFont.Small;
+
+						Widgets.DrawMenuSection(inputRect);
+						inputRect = inputRect.ContractedBy(10);
+						TopLevelButtons(inputRect,
+							(graphType.ToString(), SelectCurveType),
+							(VectorEvaluation ? "Vector" : "Simplified", () => VectorEvaluation = !VectorEvaluation),
+							("Save", () => SaveEdits()),
+							("Export Xml", ExportAnimationXml));
+
+						string formula = graphType switch
 						{
-							int indexToRemove = -1;
-							for (int i = 0; i < curve.PointsCount; i++)
+							Graph.GraphType.Linear => "y = mx + b",
+							Graph.GraphType.Bezier => "Σ{n:i=0} nC_i((1-t)^(n-i))(t^i)(P_i)",
+							_ => string.Empty
+						};
+						Vector2 textSize = Text.CalcSize(formula);
+						Rect formulaRect = new Rect(inputRect.x + inputRect.width - textSize.x, inputRect.y, textSize.x, textSize.y);
+						//Widgets.Label(formulaRect, formula);
+
+						Text.Font = GameFont.Medium;
+						Rect graphSizeRect = new Rect(inputRect.x, formulaRect.yMax + 10, inputRect.width / 3, 30);
+						Widgets.Label(graphSizeRect, "Axis Limits");
+						GUIState.Reset();
+
+						float xMin = XRange.min;
+						float xMax = XRange.max;
+						float yMin = YRange.min;
+						float yMax = YRange.max;
+
+						float axisInputWidth = inputRect.width / 6;
+						Rect xRangeRect = new Rect(inputRect.x, graphSizeRect.yMax + 3, axisInputWidth, 30);
+						UIElements.NumericBox(xRangeRect, ref xMin, "xMin", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion: 0.4f);
+						xRangeRect.x += xRangeRect.width + 5;
+						UIElements.NumericBox(xRangeRect, ref xMax, "xMax", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion: 0.4f);
+
+						Rect yRangeRect = new Rect(inputRect.x, xRangeRect.yMax + 3, axisInputWidth, 30);
+						UIElements.NumericBox(yRangeRect, ref yMin, "yMin", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion: 0.4f);
+						yRangeRect.x += yRangeRect.width + 5;
+						UIElements.NumericBox(yRangeRect, ref yMax, "yMax", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion: 0.4f);
+
+						string animationTargetLabel = animationTarget?.Thing.Label ?? "No Animator";
+						Rect animationTargetRect = new Rect(graphSizeRect.xMax, graphSizeRect.y, inputRect.width - graphSizeRect.width, graphSizeRect.height);
+						if (UIElements.ClickableLabel(animationTargetRect, animationTargetLabel, GenUI.MouseoverColor, Color.white, fontSize: GameFont.Medium, anchor: TextAnchor.MiddleRight))
+						{
+							if (!animationTargets.NullOrEmpty())
 							{
-								UIHighlighter.HighlightOpportunity(coordinatesListRect, $"GraphEditor_CurvePoint_{i}");
-								Rect buttonArrowRect = new Rect(coordinatesListRect)
+								List<FloatMenuOption> options = new List<FloatMenuOption>();
+								options.Add(new FloatMenuOption("None", () => TryStartCamera(null)));
+								foreach (IAnimationTarget animationTarget in animationTargets)
 								{
-									width = CoordinatesListButtonSize,
-									height = coordinatesListRect.height / 2
-								};
-
-								if (i == 0) GUIState.Disable();
-								if (Widgets.ButtonImage(buttonArrowRect, TexButton.ReorderUp, GUI.enabled ? Color.white : UIElements.InactiveColor, GUI.enabled ? GenUI.MouseoverColor : UIElements.InactiveColor, doMouseoverSound: GUI.enabled) && GUI.enabled)
-								{
-									curve.points.Swap(i, i - 1);
+									options.Add(new FloatMenuOption(animationTarget.Thing.Label, () => TryStartCamera(animationTarget)));
 								}
-								GUIState.Enable();
-
-								buttonArrowRect.y += buttonArrowRect.height;
-
-								if (i == curve.PointsCount - 1) GUIState.Disable();
-								if (Widgets.ButtonImage(buttonArrowRect, TexButton.ReorderDown, GUI.enabled ? Color.white : UIElements.InactiveColor, GUI.enabled ? GenUI.MouseoverColor : UIElements.InactiveColor, doMouseoverSound: GUI.enabled) && GUI.enabled)
-								{
-									curve.points.Swap(i, i + 1);
-								}
-								GUIState.Enable();
-
-								CurvePoint coord = curve.points[i];
-								Rect vectorRect = new Rect(coordinatesListRect)
-								{
-									x = coordinatesListRect.x + buttonArrowRect.width + 10,
-									width = (coordinatesListRect.width - CoordinatesListButtonSize) / 7
-								};
-								float x = UIElements.NumericBox(vectorRect, coord.x, "X", string.Empty, string.Empty, labelProportion: 0.25f);
-								vectorRect.x += vectorRect.width + 5;
-								float y = UIElements.NumericBox(vectorRect, coord.y, "Y", string.Empty, string.Empty, labelProportion: 0.25f);
-								curve.points[i] = new CurvePoint(x.RoundTo(0.01f), y.RoundTo(0.01f));
-
-								Rect deleteButtonRect = new Rect(coordinatesListRect.width - CoordinatesListButtonSize, coordinatesListRect.y + (coordinatesListRect.height - CoordinatesListButtonSize) / 2, CoordinatesListButtonSize, CoordinatesListButtonSize);
-								if (Widgets.ButtonImage(deleteButtonRect, TexButton.Minus))
-								{
-									indexToRemove = i;
-								}
-
-								coordinatesListRect.y += coordinatesListRect.height;
+								Find.WindowStack.Add(new FloatMenu(options));
 							}
-							if (indexToRemove >= 0)
+							else
 							{
-								curve.points.RemoveAt(indexToRemove);
+								Messages.Message("Map must be loaded with at least 1 IAnimationTarget spawned.", MessageTypeDefOf.RejectInput);
 							}
 						}
-						GUIState.Pop();
-					}
 
-					Rect addCoordinateRect = new Rect(coordinatesListRect.x, coordinatesListRect.y + (coordinatesListRect.height - CoordinatesListButtonSize) / 2, CoordinatesListButtonSize, CoordinatesListButtonSize);
-					if (Widgets.ButtonImage(addCoordinateRect, TexButton.Plus))
-					{
-						CurvePoint curvePoint = curve.points.NullOrEmpty() ? new CurvePoint(0, 0) : new CurvePoint(XRange.Average, YRange.Average);
-						curve.Add(curvePoint);
+						Rect drawLabelsRect = new Rect(inputRect.xMax - 250, xRangeRect.y, 250, 30);
+						if (animationTarget != null && !animators.NullOrEmpty())
+						{
+							if (Widgets.ButtonText(drawLabelsRect, AnimationManager.CurrentDriver?.Name ?? "Select Animation Driver"))
+							{
+								List<FloatMenuOption> options = new List<FloatMenuOption>();
+								options.Add(new FloatMenuOption("None", () => SelectAnimationDriver(null)));
+								foreach (AnimationDriver animationDriver in animationTarget.Animations)
+								{
+									options.Add(new FloatMenuOption($"{animationDriver.Name}", () => SelectAnimationDriver(animationDriver)));
+								}
+								Find.WindowStack.Add(new FloatMenu(options));
+							}
+							drawLabelsRect.y = yRangeRect.y;
+							if (Widgets.ButtonText(drawLabelsRect, curAnimator?.DisplayName ?? "None"))
+							{
+								List<FloatMenuOption> options = new List<FloatMenuOption>();
+								options.Add(new FloatMenuOption("None", () => SelectAnimator(null)));
+								if (AnimationManager.CurrentDriver != null)
+								{
+									foreach (AnimatorObject animatorObject in animators.Where(anim => !anim.category.NullOrEmpty() && anim.category.Split('.')[0] == AnimationManager.CurrentDriver.Name))
+									{
+										options.Add(new FloatMenuOption($"{animatorObject.DisplayName}", () => SelectAnimator(animatorObject)));
+									}
+								}
+								Find.WindowStack.Add(new FloatMenu(options));
+							}
+						}
+
+						if (xMin - xMax > -0.01f)
+						{
+							xMin = xMax - 0.01f;
+						}
+						if (xMax - xMin < 0.01f)
+						{
+							xMax = xMin + 0.01f;
+						}
+						if (yMin - yMax > -0.01f)
+						{
+							yMin = yMax - 0.01f;
+						}
+						if (yMax - yMin < 0.01f)
+						{
+							yMax = yMin + 0.01f;
+						}
+
+						ValidateLimits();
+
+						XRange = new FloatRange(xMin, xMax);
+						YRange = new FloatRange(yMin, yMax);
+
+						float textHeight = Text.CalcHeight("Coordinates", inputRect.width);
+						Rect coordinatesLabelRect = new Rect(inputRect.x, yRangeRect.yMax + 10, inputRect.width, textHeight);
+						Widgets.Label(coordinatesLabelRect, "Coordinates");
+
+						Rect curveFieldRect = new Rect(inputRect.x + inputRect.width - 250, coordinatesLabelRect.y, 250, 30);
+						UIElements.CheckboxLabeled(curveFieldRect, "Draw Coordinate Labels", ref drawCoordLabels);
+
+						Rect coordinateOutRect = new Rect(inputRect.x, coordinatesLabelRect.yMax + 5, inputRect.width, inputRect.height / 2);
+						float curvePointsMenuHeight = (curve.PointsCount + 1) * CoordinatesListButtonSize * 2 - 10;
+						//16 for width of scrollbar
+						Rect coordinateViewRect = new Rect(coordinateOutRect.x, coordinateOutRect.y, coordinateOutRect.width - 16, curvePointsMenuHeight);
+						Widgets.DrawMenuSection(coordinateOutRect);
+						Widgets.BeginScrollView(coordinateOutRect, ref scrollPos, coordinateViewRect);
+						{
+							Rect coordinatesListRect = new Rect(coordinateViewRect.x, coordinateViewRect.y, coordinateViewRect.width, CoordinatesListButtonSize * 2).ContractedBy(5);
+							if (!curve.points.NullOrEmpty())
+							{
+								GUIState.Push();
+								{
+									int indexToRemove = -1;
+									for (int i = 0; i < curve.PointsCount; i++)
+									{
+										UIHighlighter.HighlightOpportunity(coordinatesListRect, $"GraphEditor_CurvePoint_{i}");
+										Rect buttonArrowRect = new Rect(coordinatesListRect)
+										{
+											width = CoordinatesListButtonSize,
+											height = coordinatesListRect.height / 2
+										};
+
+										if (i == 0) GUIState.Disable();
+										if (Widgets.ButtonImage(buttonArrowRect, TexButton.ReorderUp, GUI.enabled ? Color.white : UIElements.InactiveColor, GUI.enabled ? GenUI.MouseoverColor : UIElements.InactiveColor, doMouseoverSound: GUI.enabled) && GUI.enabled)
+										{
+											curve.points.Swap(i, i - 1);
+										}
+										GUIState.Enable();
+
+										buttonArrowRect.y += buttonArrowRect.height;
+
+										if (i == curve.PointsCount - 1) GUIState.Disable();
+										if (Widgets.ButtonImage(buttonArrowRect, TexButton.ReorderDown, GUI.enabled ? Color.white : UIElements.InactiveColor, GUI.enabled ? GenUI.MouseoverColor : UIElements.InactiveColor, doMouseoverSound: GUI.enabled) && GUI.enabled)
+										{
+											curve.points.Swap(i, i + 1);
+										}
+										GUIState.Enable();
+
+										CurvePoint coord = curve.points[i];
+										Rect vectorRect = new Rect(coordinatesListRect)
+										{
+											x = coordinatesListRect.x + buttonArrowRect.width + 10,
+											width = (coordinatesListRect.width - CoordinatesListButtonSize) / 7
+										};
+										float x = UIElements.NumericBox(vectorRect, coord.x, "X", string.Empty, string.Empty, labelProportion: 0.25f);
+										vectorRect.x += vectorRect.width + 5;
+										float y = UIElements.NumericBox(vectorRect, coord.y, "Y", string.Empty, string.Empty, labelProportion: 0.25f);
+										curve.points[i] = new CurvePoint(x.RoundTo(0.01f), y.RoundTo(0.01f));
+
+										Rect deleteButtonRect = new Rect(coordinatesListRect.width - CoordinatesListButtonSize, coordinatesListRect.y + (coordinatesListRect.height - CoordinatesListButtonSize) / 2, CoordinatesListButtonSize, CoordinatesListButtonSize);
+										if (Widgets.ButtonImage(deleteButtonRect, TexButton.Minus))
+										{
+											indexToRemove = i;
+										}
+
+										coordinatesListRect.y += coordinatesListRect.height;
+									}
+									if (indexToRemove >= 0)
+									{
+										curve.points.RemoveAt(indexToRemove);
+									}
+								}
+								GUIState.Pop();
+							}
+
+							Rect addCoordinateRect = new Rect(coordinatesListRect.x, coordinatesListRect.y + (coordinatesListRect.height - CoordinatesListButtonSize) / 2, CoordinatesListButtonSize, CoordinatesListButtonSize);
+							if (Widgets.ButtonImage(addCoordinateRect, TexButton.Plus))
+							{
+								CurvePoint curvePoint = curve.points.NullOrEmpty() ? new CurvePoint(0, 0) : new CurvePoint(XRange.Average, YRange.Average);
+								curve.Add(curvePoint);
+							}
+						}
+						Widgets.EndScrollView();
+
+						float cameraViewerHeight = inputRect.height - coordinateOutRect.yMax;
+						Rect cameraViewerRect = new Rect(coordinateOutRect.x, coordinateOutRect.yMax + 5, coordinateOutRect.width, cameraViewerHeight - 5);
+						DrawPreviewWindow(cameraViewerRect);
+
+						Rect graphRect = new Rect(inRect.width - inRect.height, 0, inRect.height, inRect.height);
+						DrawGraph(graphRect);
 					}
 				}
-				Widgets.EndScrollView();
-
-				float cameraViewerHeight = inputRect.height - coordinateOutRect.yMax;
-				Rect cameraViewerRect = new Rect(coordinateOutRect.x, coordinateOutRect.yMax + 5, coordinateOutRect.width, cameraViewerHeight - 5);
-				DrawPreviewWindow(cameraViewerRect);
-
-				Rect graphRect = new Rect(inRect.width - inRect.height, 0, inRect.height, inRect.height);
-				base.DoWindowContents(graphRect);
-			}
-			catch (Exception ex)
-			{
-				Log.Error($"Exception thrown while in graph editor. Exception = {ex}");
+				catch (Exception ex)
+				{
+					Log.Error($"Exception thrown while in graph editor. Exception = {ex}");
+				}
+				finally
+				{
+					GUIState.Pop();
+				}
 			}
 			GUIState.Pop();
+		}
+
+		private void TopLevelButtons(Rect rect, params (string label, Action onClick)[] buttons)
+		{
+			float buttonWidth = rect.width / buttons.Length;// - (5f * (buttons.Length - 1));
+			Rect graphTypeRect = new Rect(rect.x, rect.y, buttonWidth, 30);
+			foreach ((string label, Action onClick) in buttons)
+			{
+				if (Widgets.ButtonText(graphTypeRect, label))
+				{
+					onClick();
+				}
+				graphTypeRect.x += buttonWidth;// + 5;
+			}
 		}
 
 		private void DrawPreviewWindow(Rect rect)
 		{
 			Widgets.DrawMenuSection(rect);
-			if (animationTarget is null)
+			rect = rect.ContractedBy(1);
+			string previewWindowString = "Preview Window Disabled";
+			bool disabledView = animationTarget is null;
+			bool darkenWindow = false;
+			if (!disabledView)
 			{
-				UIElements.Header(rect, "Preview Window Disabled", ListingExtension.BannerColor, anchor: TextAnchor.MiddleCenter);
-			}
-			else
-			{
+				try
+				{
+					float camRectSize = rect.height;// * PercentCameraBoxWidth;
+					Rect cameraRect = new Rect(rect.x + rect.width - camRectSize, rect.y, camRectSize, camRectSize);
 
+					disabledView = !CameraView.RenderAt(cameraRect);
+
+					if (!disabledView)
+					{
+						GUIState.Push();
+						{
+							UIElements.DrawLineVertical(cameraRect.x - 1, cameraRect.y, camRectSize, UIElements.MenuSectionBGBorderColor);
+							//UIElements.DrawLineHorizontal(cameraRect.x - 1, cameraRect.y + camRectSize + 1, camRectSize, UIElements.MenuSectionBGBorderColor);
+
+							Rect leftColumnRect = new Rect(rect.x, rect.y, rect.width - camRectSize - 1, camRectSize).ContractedBy(5);
+							lister.columnGap = 0;
+							lister.Begin(leftColumnRect, 1);
+							{
+								lister.Header("Settings", anchor: TextAnchor.MiddleCenter);
+
+								CameraView.OrthographicSize = lister.SliderLabeled("Orthographic Size", CameraView.OrthographicSize, "Camera Zoom", string.Empty, string.Empty, ZoomRange.min, ZoomRange.max, decimalPlaces: 1);
+								if (lister.Button($"Playback Speed: {AnimationManager.PlaybackSpeed}", highlightTag: "Speed multiplier on animation window"))
+								{
+									List<FloatMenuOption> options = new List<FloatMenuOption>();
+
+									foreach (float speed in AnimationManager.playbackSpeeds)
+									{
+										options.Add(new FloatMenuOption($"{speed}", () => AnimationManager.PlaybackSpeed = speed));
+									}
+
+									Find.WindowStack.Add(new FloatMenu(options));
+								}
+								
+								lister.Gap(4);
+
+								//lister.CheckboxLabeled("Pause Transition", ref animationSettings.pauseOnTransition, "Pause the viewer when transitioning between animation curves.", string.Empty, false);
+								lister.CheckboxLabeled("Loop", ref animationSettings.loop, "Loop the viewer when reaching the end of the animation.", string.Empty, false);
+								lister.CheckboxLabeled("Display Ticks", ref animationSettings.displayTicks, "Display the time remaining in ticks, rather than seconds.", string.Empty, false);
+								lister.CheckboxLabeled("Draw Cell Grid", ref animationSettings.drawCellGrid, "Draw lines along edges of the map's cells.", string.Empty, false);
+								//lister.Button("Curve", )
+							}
+							lister.End();
+
+							if (Mouse.IsOver(cameraRect))
+							{
+								CameraView.HandleZoom();
+
+								Widgets.DrawTextureFitted(cameraRect, UIData.TransparentBlackBG, 1);
+
+								float buttonSpacing = PlaybackRectHeight / 2;
+								Rect playerBarRect = new Rect(cameraRect.x + buttonSpacing, cameraRect.yMax - PlaybackRectHeight - 5, PlaybackRectHeight, PlaybackRectHeight).ContractedBy(2);
+								Texture2D pauseTex = AnimationManager.Paused ? viewerButtonTextures[1] : viewerButtonTextures[0];
+								if (Widgets.ButtonImage(playerBarRect, pauseTex))
+								{
+									if (AnimationManager.CurrentDriver != null && AnimationManager.TicksPassed >= AnimationManager.CurrentDriver.AnimationLength)
+									{
+										AnimationManager.Reset();
+									}
+									AnimationManager.TogglePause(true);
+								}
+								Rect invisibleClickableWindowRect = new Rect(cameraRect.x, cameraRect.y, cameraRect.width, cameraRect.height - playerBarRect.height * 2.5f);
+								float playButtonAnimatedSize = cameraRect.width / 5;
+								Rect playButtonAnimated = new Rect(cameraRect.x, cameraRect.y, playButtonAnimatedSize, playButtonAnimatedSize);
+								if (AnimationManager.ButtonUpdated(invisibleClickableWindowRect, () => timeFading += Time.deltaTime, () => ButtonFadeHandler(playButtonAnimated), () => timeFading <= 0, doMouseoverSound: false))
+								{
+									timeFading = 0;
+									AnimationManager.TogglePause(true);
+								}
+
+								Text.Anchor = TextAnchor.MiddleCenter;
+								Text.Font = GameFont.Small;
+
+								string timeCount = animationSettings.displayTicks ? "0 / 0" : "0:00/0:00";
+								if (AnimationManager.CurrentDriver != null)
+								{
+									if (animationSettings.displayTicks)
+									{
+										timeCount = $"{AnimationManager.TicksPassed} / {AnimationManager.CurrentDriver.AnimationLength}";
+									}
+									else
+									{
+										TimeSpan timePassed = new TimeSpan(0, 0, Mathf.CeilToInt(AnimationManager.TicksPassed.TicksToSeconds()));
+										TimeSpan timeMax = new TimeSpan(0, 0, Mathf.CeilToInt(AnimationManager.CurrentDriver.AnimationLength.TicksToSeconds()));
+										timeCount = $"{timePassed:m\\:ss} / {timeMax:m\\:ss}";
+									}
+								}
+								
+								Rect timeLeftRect = new Rect(cameraRect.xMax - cameraRect.width / 2 - 10, playerBarRect.y, cameraRect.width / 2, playerBarRect.height);
+								Text.Anchor = TextAnchor.MiddleRight;
+								Widgets.Label(timeLeftRect, timeCount);
+								GUIState.Reset();
+
+								Rect progressBarRect = new Rect(cameraRect.x + 8, playerBarRect.y - PlaybackBarHeight - PlaybackRectHeight / 3, cameraRect.width - 16, PlaybackBarHeight);
+								float handleSize = PlaybackHandleSize;
+								if (Mouse.IsOver(progressBarRect.ExpandedBy(2)))
+								{
+									progressBarRect.height *= 1.5f;
+									handleSize *= 1.5f;
+									progressBarRect.y -= (progressBarRect.height - PlaybackBarHeight) / 2;
+								}
+								float viewerPercent = 0;
+								if (AnimationManager.CurrentDriver != null)
+								{
+									viewerPercent = (float)AnimationManager.TicksPassed / AnimationManager.CurrentDriver.AnimationLength;
+								}
+								UIElements.FillableBar(progressBarRect, viewerPercent, UIData.FillableBarProgressBar, UIData.FillableBarProgressBarBG);
+								
+								Rect progressBarHandleRect = new Rect(progressBarRect.x + (progressBarRect.width * viewerPercent) - handleSize / 2, progressBarRect.y + progressBarRect.height / 2 - handleSize / 2, handleSize, handleSize);						
+								GUI.color = UIData.ProgressBarRed;
+								Widgets.DrawTextureFitted(progressBarHandleRect, dragHandleIcon, 1);
+								GUIState.Reset();
+
+								Widgets.DraggableResult result = Widgets.ButtonInvisibleDraggable(progressBarRect);
+								if (result == Widgets.DraggableResult.Dragged && AnimationManager.CurrentDriver != null)
+								{
+									dragging = true;
+									AnimationManager.EditingTicks = true;
+								}
+								if (!Input.GetMouseButton(0))
+								{
+									dragging = false;
+									AnimationManager.EditingTicks = false;
+								}
+								if ((dragging || result == Widgets.DraggableResult.Pressed) && AnimationManager.CurrentDriver != null)
+								{
+									float percentDrag = Mathf.Clamp01((Event.current.mousePosition.x - progressBarRect.x) / progressBarRect.width);
+									AnimationManager.TicksPassed = Mathf.RoundToInt(AnimationManager.CurrentDriver.AnimationLength * percentDrag);
+								}
+							}
+						}
+						GUIState.Pop();
+					}
+				}
+				catch (Exception ex)
+				{
+					disabledView = true;
+					darkenWindow = true;
+					previewWindowString = ex.ToString();
+					Log.ErrorOnce($"Exception thrown in CameraView. Exception = {ex}", "CameraView_GraphEditor".GetHashCode());
+				}
+			}
+			if (disabledView)
+			{
+				UIElements.Header(rect, previewWindowString, darkenWindow ? new Color(0, 0, 0, 0.75f) : ListingExtension.BannerColor, anchor: TextAnchor.MiddleCenter);
 			}
 		}
 
-		public (float minX, float maxX, float minY, float maxY) GetPlotBounds()
+		private void SelectCurveType()
 		{
-			if (curve.points.NullOrEmpty())
+			List<FloatMenuOption> floatMenuOptions = new List<FloatMenuOption>();
+			floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Linear.ToString(), () => GraphType = Graph.GraphType.Linear));
+			floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Bezier.ToString(), () => GraphType = Graph.GraphType.Bezier));
+			floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Staircase.ToString(), () => GraphType = Graph.GraphType.Staircase));
+			//floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Freeform.ToString(), () => graphType = Graph.GraphType.Freeform));
+			Find.WindowStack.Add(new FloatMenu(floatMenuOptions));
+		}
+
+		private void SaveEdits(bool reportFail = true)
+		{
+			if (curAnimator != null)
 			{
-				return (0, 1, 0, 1);
+				curAnimator.SetCurve(curve);
+				Messages.Message($"Animation data saved to {curAnimator.DisplayName}", MessageTypeDefOf.NeutralEvent);
 			}
-			float minXPoint = curve.points.Min(curvePoint => curvePoint.x);
-			float maxXPoint = curve.points.Max(curvePoint => curvePoint.x);
-			float minYPoint = curve.points.Min(curvePoint => curvePoint.y);
-			float maxYPoint = curve.points.Max(curvePoint => curvePoint.y);
-			return (minXPoint, maxXPoint, minYPoint, maxYPoint);
+			else if (reportFail)
+			{
+				Messages.Message($"Unable to save animation data. No animator loaded.", MessageTypeDefOf.RejectInput);
+			}
+		}
+
+		private void ExportAnimationXml()
+		{
+			if (animationTarget == null)
+			{
+				Messages.Message($"Unable to export animation data. No animation target loaded.", MessageTypeDefOf.RejectInput);
+				return;
+			}
+			else if (animators.NullOrEmpty())
+			{
+				Messages.Message($"Unable to export animation data. No animations to export.", MessageTypeDefOf.RejectInput);
+				return;
+			}
+			bool exported = true;
+			try
+			{
+				SaveEdits(false);
+				XmlExporter.StartDocument(filePath);
+				{
+					XmlExporter.OpenNode("Animations");
+					{
+						IOrderedEnumerable<AnimatorObject> animatorsOrdered = animators.OrderBy(anim => anim.category);
+						string category = animatorsOrdered.FirstOrDefault().category;
+						string prefix = animatorsOrdered.FirstOrDefault().prefix;
+						XmlExporter.OpenNode(category);
+						{
+							foreach (AnimatorObject animatorObject in animatorsOrdered)
+							{
+								if (category != animatorObject.category)
+								{
+									XmlExporter.CloseNode(); //Close previous node
+									category = animatorObject.category;
+									XmlExporter.OpenNode(category); //Open new prefix
+								}
+								if (!animatorObject.prefix.NullOrEmpty() && prefix != animatorObject.prefix)
+								{
+									XmlExporter.CloseNode(); //Close previous node
+									prefix = animatorObject.prefix;
+									XmlExporter.OpenNode(prefix); //Open new prefix
+								}
+								Type curveType = animatorObject.Curve.GetType();
+								(string name, string value) attribute = curveType.IsSubclassOf(typeof(LinearCurve)) ? ("Class", $"{curveType.Namespace}.{curveType.Name}") : (string.Empty, string.Empty);
+
+								XmlExporter.OpenNode(animatorObject.fieldInfo.Name, attribute);
+								{
+									if (animatorObject.Curve.PointsCount > 0)
+									{
+										XmlExporter.OpenNode(nameof(LinearCurve.points));
+										{
+											foreach (CurvePoint curvePoint in animatorObject.Curve)
+											{
+												XmlExporter.OpenNode("li");
+												{
+													//Not using ToString overload, since it outputs 2 digit places regardless of decimal places in the floats eg. 1.00 instead of 1
+													XmlExporter.WriteString($"({curvePoint.x:0.##}, {curvePoint.y:0.##})");
+												}
+												XmlExporter.CloseNode();
+											}
+										}
+										XmlExporter.CloseNode();
+									}
+								}
+								XmlExporter.CloseNode();
+							}
+						}
+						XmlExporter.CloseNode();
+					}
+					XmlExporter.CloseNode();
+				}
+				XmlExporter.Export();
+			}
+			catch (Exception ex)
+			{
+				exported = false;
+				Log.Error($"Unable to export animation data. Exception = {ex}");
+			}
+			finally
+			{
+				XmlExporter.Close();
+			}
+
+			if (exported)
+			{
+				SoundDefOf.Click.PlayOneShotOnCamera();
+			}
+			else
+			{
+				SoundDefOf.ClickReject.PlayOneShotOnCamera();
+			}
+		}
+
+		private static void ButtonFadeHandler(Rect rect)
+		{
+			GUIState.Push();
+			{
+				float size = rect.width;
+				float percentFaded = timeFading / PlayButtonFadeTime;
+				float expanded = Mathf.Lerp(size, size * 2, percentFaded);
+				rect.size = new Vector2(expanded, expanded);
+				float alpha = Mathf.Lerp(0.5f, 0, percentFaded);
+				GUI.color = new Color(0, 0, 0, alpha);
+				Widgets.DrawTextureFitted(rect, dragHandleIcon, 1);
+				GUI.color = new Color(1, 1, 1, alpha);
+				Widgets.DrawTextureFitted(rect, viewerButtonTextures[0], 1);
+			}
+			GUIState.Pop();
+		}
+
+		public class AnimationSettings
+		{
+			public float orthographicSize = 4;
+			public bool pauseOnTransition = false;
+			public bool loop = false;
+			public bool displayTicks = true;
+			public bool drawCellGrid = false;
 		}
 	}
 }

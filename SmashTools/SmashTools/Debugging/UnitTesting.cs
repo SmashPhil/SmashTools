@@ -59,7 +59,10 @@ namespace SmashTools
 			unitTestRadioButtons.Add(new Toggle("NoUnitTest", "None", string.Empty, () => NoUnitTest || SmashSettings.unitTest.NullOrEmpty(), delegate (bool value)
 			{
 				NoUnitTest = value;
-				SmashSettings.unitTest = string.Empty;
+				if (NoUnitTest)
+				{
+					SmashSettings.unitTest = string.Empty;
+				}
 			}));
 			NoUnitTest = true;
 			List<MethodInfo> methods = new List<MethodInfo>();

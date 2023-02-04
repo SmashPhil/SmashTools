@@ -2,11 +2,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Verse;
 
 namespace SmashTools
 {
 	public static class Ext_Rect
 	{
+		public static IEnumerable<IntVec3> CellsNoOverlap(this CellRect cellRect, CellRect excludeRect)
+		{
+			HashSet<IntVec3> noOverlapCells = excludeRect.Cells.ToHashSet();
+			foreach (IntVec3 cell in cellRect)
+			{ 
+				if (!noOverlapCells.Contains(cell))
+				{
+					yield return cell;
+				}
+			}
+		}
+
 		public static Rect[] Split(this Rect rect, int splits, float buffer = 0)
 		{
 			if (splits < 0)

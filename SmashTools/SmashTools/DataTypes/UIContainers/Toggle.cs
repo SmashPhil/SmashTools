@@ -46,7 +46,7 @@ namespace SmashTools
 		public string Id { get; private set; }
 		public string DisplayName { get; private set; }
 		public string Category { get; private set; }
-
+		public bool Disabled { get; set; } = false;
 		public bool Active { get => get_State(); set => set_State(value); }
 
 		public void OnToggle(bool value) => onToggle?.Invoke(value);

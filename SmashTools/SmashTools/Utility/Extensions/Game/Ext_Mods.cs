@@ -7,9 +7,9 @@ namespace SmashTools
 {
 	public static class Ext_Mods
 	{
-		public static bool HasActiveModWithPackageId(string packageId)
+		public static bool HasActiveMod(string packageId)
 		{
-			return ModLister.GetActiveModWithIdentifier(packageId) != null;
+			return ModLister.GetActiveModWithIdentifier(packageId, ignorePostfix: true) != null;
 		}
 	}
 }

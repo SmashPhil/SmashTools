@@ -16,7 +16,6 @@ namespace SmashTools
 		QuickStart_Preset
 	}
 
-	[StaticConstructorOnStartup]
 	public class QuickStartMenu : Window
 	{
 		public const float RowSize = 24;

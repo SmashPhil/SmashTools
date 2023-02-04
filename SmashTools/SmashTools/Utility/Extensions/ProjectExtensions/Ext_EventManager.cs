@@ -38,7 +38,7 @@ namespace SmashTools
 		public static void FillEvents_Def<T>(this IEventManager<T> manager) where T : Def
 		{
 			manager.EventRegistry = new Dictionary<T, EventTrigger>();
-			foreach (T def in DefDatabase<T>.AllDefs)
+			foreach (T def in DefDatabase<T>.AllDefsListForReading)
 			{
 				manager.RegisterEventType(def);
 			}

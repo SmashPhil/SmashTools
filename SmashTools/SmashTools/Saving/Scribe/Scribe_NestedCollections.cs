@@ -8,7 +8,7 @@ namespace SmashTools
 {
 	public class Scribe_NestedCollections
 	{
-		public static void Look<K, K2, V>(ref Dictionary<K, Dictionary<K2, V>> dict, string label, LookMode keyLookMode, LookMode innerKeyLookMode, LookMode innerValueLookMode, bool forceSave = false)
+		public static void Look<K, K2, V>(ref Dictionary<K, Dictionary<K2, V>> dict, string label, LookMode keyLookMode, LookMode innerKeyLookMode, LookMode innerValueLookMode)
 		{
 			if (keyLookMode == LookMode.Reference || innerKeyLookMode == LookMode.Reference || innerValueLookMode == LookMode.Reference)
 			{
@@ -80,7 +80,7 @@ namespace SmashTools
 									Scribe_Collections.Look(ref innerKeys, "innerKeys", innerKeyLookMode);
 									if (typeof(V) == typeof(object) || typeof(V) == typeof(SavedField<object>))
 									{
-										Scribe_ObjectCollection.Look(ref innerValues, "innerValues", forceSave);
+										Scribe_ObjectCollection.Look(ref innerValues, "innerValues");
 									}
 									else
 									{
@@ -164,7 +164,7 @@ namespace SmashTools
 			}
 		}
 
-		public static void Look<K, V>(ref Dictionary<K, List<V>> dict, string label, LookMode keyLookMode, LookMode valueLookMode, bool forceSave = false)
+		public static void Look<K, V>(ref Dictionary<K, List<V>> dict, string label, LookMode keyLookMode, LookMode valueLookMode)
 		{
 			K key;
 			List<K> keys = new List<K>();
@@ -304,7 +304,7 @@ namespace SmashTools
 			}
 		}
 
-		public static void Look<K, V>(ref Dictionary<K, HashSet<V>> dict, string label, LookMode keyLookMode, LookMode valueLookMode, bool forceSave = false)
+		public static void Look<K, V>(ref Dictionary<K, HashSet<V>> dict, string label, LookMode keyLookMode, LookMode valueLookMode)
 		{
 			var listDict = new Dictionary<K, List<V>>();
 			if (Scribe.mode == LoadSaveMode.Saving)
@@ -314,7 +314,7 @@ namespace SmashTools
 					listDict.Add(pair.Key, pair.Value.ToList());
 				}
 			}
-			Look(ref listDict, label, keyLookMode, valueLookMode, forceSave);
+			Look(ref listDict, label, keyLookMode, valueLookMode);
 			if (Scribe.mode == LoadSaveMode.LoadingVars)
 			{
 				dict = new Dictionary<K, HashSet<V>>();

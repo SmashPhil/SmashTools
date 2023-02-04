@@ -114,5 +114,20 @@ namespace SmashTools
 		{
 			return string.Join(",", enumerable);
 		}
+
+		/// <summary>
+		/// Prepend multiple objects to enumerable
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerable"></param>
+		/// <param name="items"></param>
+		public static IEnumerable<T> PrependMany<T>(this IEnumerable<T> enumerable, T[] items)
+		{
+			for (int i = items.Count() - 1; i >= 0; i--)
+			{
+				enumerable = enumerable.Prepend(items[i]);
+			}
+			return enumerable;
+		}
 	}
 }

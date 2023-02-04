@@ -17,16 +17,14 @@ namespace SmashTools
 		{
 		}
 
-		public static Vector2 BezierFunction(List<CurvePoint> controlPoints, float t)
+		/// <summary>
+		/// Bezier formula using Bernstein polynomial
+		/// </summary>
+		/// <remarks>See https://en.wikipedia.org/wiki/Bernstein_polynomial for reference</remarks>
+		/// <param name="controlPoints"></param>
+		/// <param name="t"></param>
+		private static Vector2 BezierFunction(List<CurvePoint> controlPoints, float t)
 		{
-			if (t <= 0)
-			{
-				return controlPoints.FirstOrDefault();
-			}
-			if (t >= 1)
-			{
-				return controlPoints.LastOrDefault();
-			}
 			int n = controlPoints.Count - 1;
 			if (n > 16)
 			{
@@ -49,11 +47,15 @@ namespace SmashTools
 				//No control points -> linear curve
 				return base.Function(x);
 			}
-			if (LeftBound.x == x)
+			if (ValueLimit(x, out float y))
+			{
+				return new Vector2(x, y);
+			}
+			if (x <= LeftBound.x)
 			{
 				return LeftBound;
 			}
-			else if (RightBound.x == x)
+			else if (x >= RightBound.x)
 			{
 				return RightBound;
 			}

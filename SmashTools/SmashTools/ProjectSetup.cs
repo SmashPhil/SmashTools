@@ -35,12 +35,9 @@ namespace SmashTools
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributes)));
 
-			Harmony.Patch(original: AccessTools.Method(typeof(ModContentPack), "LoadPatches"),
-				prefix: new HarmonyMethod(typeof(XmlParseHelper),
-				nameof(XmlParseHelper.PatchOperationsMayRequire)));
-			Harmony.Patch(original: AccessTools.Method(typeof(LoadedModManager), nameof(LoadedModManager.ParseAndProcessXML)),
-				prefix: new HarmonyMethod(typeof(XmlParseHelper),
-				nameof(XmlParseHelper.ParseAndProcessXmlMayRequire)));
+			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.FinalizeInit)),
+				postfix: new HarmonyMethod(typeof(StaticConstructorOnGameInitAttribute),
+				nameof(StaticConstructorOnGameInitAttribute.RunGameInitStaticConstructors)));
 
 			if (ExportXmlDoc)
 			{
@@ -55,13 +52,20 @@ namespace SmashTools
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
 
+			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),
+				postfix: new HarmonyMethod(typeof(DetachedMapComponent),
+				nameof(DetachedMapComponent.InstantiateAllMapComponents)));
+			Harmony.Patch(original: AccessTools.Method(typeof(MapComponentUtility), nameof(MapComponentUtility.MapRemoved)),
+				prefix: new HarmonyMethod(typeof(DetachedMapComponent),
+				nameof(DetachedMapComponent.ClearComponentsFromCache)));
+
 			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearAllMapComps)));
 			Harmony.Patch(original: AccessTools.Method(typeof(MapGenerator), nameof(MapGenerator.GenerateContentsIntoMap)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.MapGenerated)));
-			Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
+			Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit_NewTemp)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearMapComps), new Type[] { typeof(Map) }));
 			Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
@@ -111,6 +115,13 @@ namespace SmashTools
 				prefix: new HarmonyMethod(typeof(ProjectSetup),
 				nameof(InspectablePaneButtons)));
 
+			if (Prefs.DevMode)
+			{
+				Harmony.Patch(original: AccessTools.Method(typeof(UIRoot), nameof(UIRoot.UIRootOnGUI)),
+					postfix: new HarmonyMethod(typeof(ProjectSetup),
+					nameof(ValidateGUIState)));
+			}
+
 			StaticConstructorOnModInit();
 		}
 
@@ -156,6 +167,14 @@ namespace SmashTools
 				return false;
 			}
 			return true;
+		}
+
+		private static void ValidateGUIState()
+		{
+			if (!GUIState.Empty)
+			{
+				Log.Error($"GUIState is not empty on end of frame.  GUIStates need to be popped from the stack when the containing method is finished.");
+			}
 		}
 	}
 }

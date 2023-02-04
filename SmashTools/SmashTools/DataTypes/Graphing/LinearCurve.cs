@@ -11,6 +11,8 @@ namespace SmashTools
 	{
 		public List<CurvePoint> points = new List<CurvePoint>();
 
+		public List<(CurvePoint lhs, CurvePoint rhs)> values = new List<(CurvePoint lhs, CurvePoint rhs)>();
+
 		public LinearCurve()
 		{
 		}
@@ -26,6 +28,8 @@ namespace SmashTools
 
 		public int PointsCount => points.Count;
 
+		public bool IsValid => !points.NullOrEmpty();
+
 		public CurvePoint this[int i]
 		{
 			get
@@ -35,19 +39,6 @@ namespace SmashTools
 			set
 			{
 				points[i] = value;
-			}
-		}
-
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
-
-		public IEnumerator<CurvePoint> GetEnumerator()
-		{
-			foreach (CurvePoint point in points)
-			{
-				yield return point;
 			}
 		}
 
@@ -61,20 +52,45 @@ namespace SmashTools
 			return Function(x).y;
 		}
 
+		public virtual bool ValueLimit(float x, out float y)
+		{
+			y = 0;
+			if (!values.NullOrEmpty())
+			{
+				for (int i = 0; i < values.Count; i++)
+				{
+					(CurvePoint lhs, CurvePoint rhs) = values[i];
+					if (x >= lhs.x && x <= rhs.x)
+					{
+						y = lhs.y;
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
 		public virtual Vector2 Function(float x)
 		{
-			if (points.Count == 0)
+			if (points.NullOrEmpty())
 			{
-				Log.Error("Evaluating a LinearCurve with no points.");
 				return Vector2.zero;
 			}
-			if (x <= points[0].x)
+			if (points.Count == 1)
 			{
 				return points[0];
 			}
-			if (x >= points[points.Count - 1].x)
+			if (x <= LeftBound.x)
 			{
-				return points[points.Count - 1];
+				return LeftBound;
+			}
+			else if (x >= RightBound.x)
+			{
+				return RightBound;
+			}
+			if (ValueLimit(x, out float y))
+			{
+				return new Vector2(x, y);
 			}
 			CurvePoint leftPoint = points[0];
 			CurvePoint rightPoint = points[points.Count - 1];
@@ -96,6 +112,10 @@ namespace SmashTools
 
 		public virtual Vector2 EvaluateT(float t)
 		{
+			if (PointsCount == 0)
+			{
+				return Vector2.zero;
+			}
 			if (t <= 0)
 			{
 				return LeftBound;
@@ -104,8 +124,41 @@ namespace SmashTools
 			{
 				return RightBound;
 			}
-			float x = t * RightBound.x;
-			return Function(x);
+			(CurvePoint leftPoint, CurvePoint rightPoint) = LerpPair(t);
+			return new Vector2(Mathf.Lerp(leftPoint.x, rightPoint.x, t), Mathf.Lerp(leftPoint.y, rightPoint.y, t));
+		}
+
+		private (CurvePoint leftPoint, CurvePoint rightPoint) LerpPair(float t)
+		{
+			if (points.Count <= 1)
+			{
+				return (LeftBound, RightBound);
+			}
+			float totalLength = TotalLength();
+			float distAcc = 0;
+			for (int i = 0; i < points.Count - 1; i++)
+			{
+				CurvePoint lhs = points[i];
+				CurvePoint rhs = points[i + 1];
+				distAcc += Vector2.Distance(lhs, rhs);
+				if (t * totalLength <= distAcc)
+				{
+					return (lhs, rhs);
+				}
+			}
+			return (LeftBound, RightBound);
+		}
+
+		private float TotalLength()
+		{
+			float distX = 0;
+			for (int i = 0; i < points.Count - 1; i++)
+			{
+				CurvePoint lhs = points[i];
+				CurvePoint rhs = points[i + 1];
+				distX = Vector2.Distance(lhs, rhs);
+			}
+			return distX;
 		}
 
 		public virtual void Graph()
@@ -117,6 +170,19 @@ namespace SmashTools
 		public static implicit operator Graph.Function(LinearCurve curve)
 		{
 			return curve.Function;
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+
+		public IEnumerator<CurvePoint> GetEnumerator()
+		{
+			foreach (CurvePoint point in points)
+			{
+				yield return point;
+			}
 		}
 	}
 }

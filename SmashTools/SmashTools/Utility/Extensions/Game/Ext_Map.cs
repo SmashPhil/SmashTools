@@ -1,15 +1,78 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Verse;
 using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
+using HarmonyLib;
 
 namespace SmashTools
 {
 	public static class Ext_Map
 	{
+		public static void DrawCell_ThreadSafe(this Map map, IntVec3 cell, float colorPct = 0, string text = null, int duration = 50)
+		{
+			if (UnityData.IsInMainThread)
+			{
+				map.debugDrawer.FlashCell(cell, colorPct, text, duration);
+			}
+			else
+			{
+				CoroutineManager.QueueInvoke(() => DrawCellRoutine(cell, map, colorPct, text, duration));
+			}
+		}
+
+		public static void DrawLine_ThreadSafe(this Map map, IntVec3 from, IntVec3 to, SimpleColor color = SimpleColor.White, int duration = 50)
+		{
+			if (UnityData.IsInMainThread)
+			{
+				map.debugDrawer.FlashLine(from, to, color: color, duration: duration);
+			}
+			else
+			{
+				CoroutineManager.QueueInvoke(() => DrawLineRoutine(from, to, map, color: color, duration: duration));
+			}
+		}
+
+		public static void DrawLine_ThreadSafe(this Map map, Vector3 from, Vector3 to, SimpleColor color = SimpleColor.White, int duration = 50)
+		{
+			if (UnityData.IsInMainThread)
+			{
+				GenDraw.DrawLineBetween(from, to, color, 0.2f);
+			}
+			else
+			{
+				CoroutineManager.QueueInvoke(() => DrawLineRoutine(from, to, map, color: color, duration: duration));
+			}
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static void DrawCellRoutine(IntVec3 cell, Map map, float colorPct, string label, int duration)
+		{
+			map.debugDrawer.FlashCell(cell, colorPct, label, duration);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static void DrawLineRoutine(IntVec3 from, IntVec3 to, Map map, SimpleColor color = SimpleColor.White, int duration = 50)
+		{
+			map.debugDrawer.FlashLine(from, to, duration: duration, color: color);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static IEnumerator DrawLineRoutine(Vector3 from, Vector3 to, Map map, SimpleColor color = SimpleColor.White, int duration = 50)
+		{
+			float elapsed = 0;
+			while (elapsed < duration)
+			{
+				GenDraw.DrawLineBetween(from, to, color, 0.2f);
+				elapsed = Time.deltaTime;
+				yield return null;
+			}
+		}
+
 		/// <summary>
 		/// Calculate distance between 2 cells as float value
 		/// </summary>
@@ -228,5 +291,27 @@ namespace SmashTools
 		{
 			return map.mapPawns.AllPawnsSpawned.Where(p => p is T t && (faction is null || p.Faction == faction) && (validator is null || validator(t))).Cast<T>().ToList();
 		}
+
+
+		/* ---- DetatchedMapComponent Extensions ---- */
+
+		public static T GetCachedMapComponent<T>(this Map map) where T : DetachedMapComponent
+		{
+			if (DetachedMapComponent.mapMapping.TryGetValue(map, out var components))
+			{
+				foreach (DetachedMapComponent component in components)
+				{
+					if (component is T matchingComponent)
+					{
+						return matchingComponent;
+					}
+				}
+				return null;
+			}
+			Log.Error($"Unable to locate Map={map} in detached map cache.");
+			return null;
+		}
+
+		/* ----------------------------------------- */
 	}
 }

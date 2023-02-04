@@ -10,7 +10,7 @@ namespace SmashTools
 	{
 		private static readonly Stack<StateValues> stack = new Stack<StateValues>();
 
-		private static bool ActiveState => stack.Count > 0;
+		public static bool Empty => stack.Count == 0;
 
 		public static void Push()
 		{
@@ -19,7 +19,7 @@ namespace SmashTools
 
 		public static void Reset()
 		{
-			if (!ActiveState)
+			if (Empty)
 			{
 				SmashLog.Error($"Attempting to reset GUI and Text fields without pushing values.");
 				return;
@@ -38,9 +38,9 @@ namespace SmashTools
 
 		public static void Disable()
 		{
-			if (!ActiveState)
+			if (Empty)
 			{
-				SmashLog.Error($"Attempting to reset GUI and Text fields without pushing values.");
+				SmashLog.Error($"Attempting to disable GUI without pushing values.");
 				return;
 			}
 			GUI.enabled = false;
@@ -49,9 +49,9 @@ namespace SmashTools
 
 		public static void Enable()
 		{
-			if (!ActiveState)
+			if (Empty)
 			{
-				SmashLog.Error($"Attempting to reset GUI and Text fields without pushing values.");
+				SmashLog.Error($"Attempting to enable GUI without pushing values.");
 				return;
 			}
 			GUI.enabled = true;

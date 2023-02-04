@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
+using System.Globalization;
 using System.IO;
 using System.Xml;
 using System.Reflection;
@@ -12,11 +13,44 @@ using Verse;
 
 namespace SmashTools.Xml
 {
+	[StaticConstructorOnModInit]
 	public static class XmlParseHelper
 	{
 		private static readonly Dictionary<string, Pair<Action<XmlNode, string, FieldInfo>, string[]>> registeredAttributes = new Dictionary<string, Pair<Action<XmlNode, string, FieldInfo>, string[]>>();
 
 		private const string ValidAttributeRegex = @"^([A-Za-z0-9]*$)";
+
+		static XmlParseHelper()
+		{
+			ParseHelper.Parsers<ValueTuple<float, float>>.Register(ParseValueTuple2_float);
+			ParseHelper.Parsers<ValueTuple<CurvePoint, CurvePoint>>.Register(ParseValueTuple2_CurvePoint);
+		}
+
+		private static ValueTuple<float, float> ParseValueTuple2_float(string entry)
+		{
+			Vector2 vector2 = ParseHelper.FromStringVector2(entry);
+			return (vector2.x, vector2.y);
+		}
+
+		private static ValueTuple<CurvePoint, CurvePoint> ParseValueTuple2_CurvePoint(string entry)
+		{
+			entry = entry.Replace("(", "");
+			entry = entry.Replace(")", "");
+			string[] array = entry.Split(',');
+
+			if (array.Length == 2)
+			{
+				CurvePoint curvePoint = ParseHelper.ParseCurvePoint($"{array[0]},{array[1]}");
+				return (curvePoint, curvePoint);
+			}
+			else if (array.Length == 4)
+			{
+				CurvePoint curvePoint1 = ParseHelper.ParseCurvePoint($"{array[0]},{array[1]}");
+				CurvePoint curvePoint2 = ParseHelper.ParseCurvePoint($"{array[2]},{array[3]}");
+				return (curvePoint1, curvePoint2);
+			}
+			throw new InvalidOperationException();
+		}
 
 		/// <summary>
 		/// Register custom attribute to be parsed when loading save file
@@ -27,13 +61,13 @@ namespace SmashTools.Xml
 		/// <remarks>
 		/// <para>Action will only be executed if value of attribute matches value of action</para>
 		/// <para>
-		/// Param1 = XmlNode's value
+		/// Arg1 = XmlNode's value
 		/// </para>
 		/// <para>
-		/// Param2 = defName of parent ThingDef to the XmlNode
+		/// Arg2 = defName of parent ThingDef to the XmlNode
 		/// </para>
 		/// <para>
-		/// Param3 = FieldInfo of XmlNode's associated field
+		/// Arg3 = FieldInfo of XmlNode's associated field
 		/// </para>
 		/// </remarks>
 		public static void RegisterAttribute(string attribute, Action<XmlNode, string, FieldInfo> action, params string[] nodeAllowed)
