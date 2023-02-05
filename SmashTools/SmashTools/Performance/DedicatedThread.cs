@@ -15,27 +15,30 @@ namespace SmashTools.Performance
 
 		private readonly Queue<AsyncAction> queue;
 
+		//private ManualResetEventSlim resetEvent = new ManualResetEventSlim(false);
 		private object queueLock = new object();
 
 		public DedicatedThread(int id)
 		{
 			this.id = id;
 
+			ShouldExit = false;
+
 			queue = new Queue<AsyncAction>();
 			thread = new Thread(Execute);
 			thread.Start();
 		}
 
-		private bool ShouldExit { get; set; } = false;
+		private bool ShouldExit { get; set; }
 
-		private bool Empty { get; set; }
+		private int Count { get; set; }
 
 		public void Queue(AsyncAction action)
 		{
 			lock (queueLock)
 			{
-				Empty = false;
 				queue.Enqueue(action);
+				Count = queue.Count;
 			}
 		}
 
@@ -45,7 +48,6 @@ namespace SmashTools.Performance
 			{
 				queue.Clear();
 			}
-			Empty = false; //Allow to reach outer loop for exit condition
 			ShouldExit = true;
 		}
 
@@ -59,10 +61,9 @@ namespace SmashTools.Performance
 					if (queue.Count > 0)
 					{
 						asyncAction = queue.Dequeue();
-						Empty = queue.Count == 0;
 					}
+					Count = queue.Count;
 				}
-
 				if (asyncAction != null && asyncAction.IsValid)
 				{
 					try
@@ -74,7 +75,7 @@ namespace SmashTools.Performance
 						Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
 					}
 				}
-				while (Empty) Thread.Sleep(1);
+				while (Count == 0) Thread.Sleep(1);
 			}
 		}
 	}
