@@ -16,8 +16,6 @@ namespace SmashTools.Pathfinding
 		private readonly Func<T, IEnumerable<T>> neighbors;
 		private readonly Func<T, T, int> cost;
 
-		public bool LogRetraceAttempts { get; set; } = false;
-
 		public Dijkstra(IPathfinder<T> pathfinder)
 		{
 			cost = pathfinder.Cost;
@@ -31,36 +29,51 @@ namespace SmashTools.Pathfinding
 			this.neighbors = neighbors;
 			this.canEnter = canEnter;
 		}
-		
+
+		public bool IsRunning { get; private set; }
+
+		public bool LogRetraceAttempts { get; set; } = false;
+
 		public List<T> Run(T start, T destination)
 		{
-			while (openQueue.Count > 0)
+			IsRunning = true;
+			try
 			{
-				if (!openQueue.TryDequeue(out T current, out int priority))
+				openQueue.Clear();
+				openQueue.Enqueue(start, 0);
+
+				while (openQueue.Count > 0)
 				{
-					goto PathNotFound;
-				}
-				if (current.Equals(destination))
-				{
-					return SolvePath(start, destination); //SOLVE PATH
-				}
-				foreach (T neighbor in neighbors(current))
-				{
-					if (canEnter != null && !canEnter(neighbor))
+					if (!openQueue.TryDequeue(out T current, out int priority))
 					{
-						continue;
+						goto PathNotFound;
 					}
-					if (!CreateNode(current, neighbor, out Node node))
+					if (current.Equals(destination))
 					{
-						continue;
+						return SolvePath(start, destination); //SOLVE PATH
 					}
-					nodes[neighbor] = node;
-					openQueue.Enqueue(neighbor, node.cost + node.heuristicCost); //0 cost heuristic for Dijkstra
+					foreach (T neighbor in neighbors(current))
+					{
+						if (canEnter != null && !canEnter(neighbor))
+						{
+							continue;
+						}
+						if (!CreateNode(current, neighbor, out Node node))
+						{
+							continue;
+						}
+						nodes[neighbor] = node;
+						openQueue.Enqueue(neighbor, node.cost + node.heuristicCost); //0 cost heuristic for Dijkstra
+					}
 				}
-			}
 			PathNotFound:;
-			Log.Error($"Unable to find path from {start} to {destination}.");
-			return null;
+				Log.Error($"Unable to find path from {start} to {destination}.");
+				return null;
+			}
+			finally
+			{
+				IsRunning = false;
+			}
 		}
 
 		protected virtual bool CreateNode(T current, T neighbor, out Node node)

@@ -113,29 +113,17 @@ namespace SmashTools
 		/// <returns></returns>
 		public static List<IntVec3> PawnOccupiedCells(this Pawn pawn, IntVec3 centerPoint, Rot4 rot)
 		{
-			IntVec2 size;
-			switch (rot.AsInt)
+			return GenAdj.OccupiedRect(centerPoint, rot, pawn.def.Size).Cells.ToList();
+		}
+
+		public static CellRect MinRectShifted(this Pawn pawn, IntVec2 shift, Rot4? rot = null)
+		{
+			if (rot is null)
 			{
-				case 0:
-					size.x = pawn.def.Size.x;
-					size.z = pawn.def.Size.z;
-					break;
-				case 1:
-					size.x = pawn.def.Size.z;
-					size.z = pawn.def.Size.x;
-					break;
-				case 2:
-					size.x = pawn.def.Size.x;
-					size.z = pawn.def.Size.z;
-					break;
-				case 3:
-					size.x = pawn.def.Size.z;
-					size.z = pawn.def.Size.x;
-					break;
-				default:
-					throw new NotImplementedException("More than 4 rotations in Rot4 struct.");
+				rot = pawn.Rotation;
 			}
-			return GenAdj.OccupiedRect(centerPoint, rot, size).Cells.ToList();
+			int minSize = Mathf.Min(pawn.def.size.x, pawn.def.size.z);
+			return RectShifted(pawn.Position, shift, new IntVec2(minSize, minSize), rot.Value);
 		}
 
 		/// <summary>
@@ -143,36 +131,42 @@ namespace SmashTools
 		/// </summary>
 		/// <param name="pawn"></param>
 		/// <param name="shift"></param>
-		/// <returns></returns>
-		public static CellRect OccupiedRectShifted(this Pawn pawn, IntVec2 shift, Rot4? newRot = null)
+		public static CellRect OccupiedRectShifted(this Pawn pawn, IntVec2 shift, Rot4? rot = null)
 		{
-			IntVec3 center = pawn.Position;
-			if (newRot is null)
+			if (rot is null)
 			{
-				newRot = pawn.Rotation;
+				rot = pawn.Rotation;
 			}
-			switch (newRot.Value.AsInt)
+			return RectShifted(pawn.Position, shift, pawn.def.size, rot.Value);
+		}
+
+		private static CellRect RectShifted(IntVec3 center, IntVec2 shift, IntVec2 size, Rot8 rot)
+		{
+			if (rot == Rot8.North)
 			{
-				case 0:
-					break;
-				case 1:
-					int x = shift.x;
-					shift.x = shift.z;
-					shift.z = x;
-					break;
-				case 2:
-					shift.z *= -1;
-					break;
-				case 3:
-					int x2 = shift.x;
-					shift.x = -shift.z;
-					shift.z = x2;
-					break;
+				//Do nothing
 			}
+			if (rot == Rot8.East || rot == Rot8.NorthEast || rot == Rot8.SouthEast)
+			{
+				int x = shift.x;
+				shift.x = shift.z;
+				shift.z = x;
+			}
+			if (rot == Rot8.South || rot == Rot8.SouthEast || rot == Rot8.SouthWest)
+			{
+				shift.z *= -1;
+			}
+			if (rot == Rot8.West || rot == Rot8.SouthWest || rot == Rot8.NorthWest)
+			{
+				int x = shift.x;
+				shift.x = -shift.z;
+				shift.z = x;
+			}
+
 			center.x += shift.x;
 			center.z += shift.z;
-			IntVec2 size = pawn.def.size;
-			GenAdj.AdjustForRotation(ref center, ref size, newRot.Value);
+
+			GenAdj.AdjustForRotation(ref center, ref size, rot);
 			return new CellRect(center.x - (size.x - 1) / 2, center.z - (size.z - 1) / 2, size.x, size.z);
 		}
 
@@ -289,9 +283,9 @@ namespace SmashTools
 			{
 				float xPos = bracketLocs[i].x - worldPos.x;
 				float yPos = bracketLocs[i].z - worldPos.z;
-				Pair<float, float> newPos = Ext_Math.RotatePointClockwise(xPos, yPos, pawnAngle);
-				bracketLocs[i].x = newPos.First + worldPos.x;
-				bracketLocs[i].z = newPos.Second + worldPos.z;
+				Vector2 newPos = Ext_Math.RotatePointClockwise(xPos, yPos, pawnAngle);
+				bracketLocs[i].x = newPos.x + worldPos.x;
+				bracketLocs[i].z = newPos.y + worldPos.z;
 			}
 		}
 	}

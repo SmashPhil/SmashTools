@@ -12,13 +12,13 @@ namespace SmashTools.Performance
 	{
 		public readonly Thread thread;
 		public readonly int id;
+		public readonly ThreadType type;
 
 		private readonly Queue<AsyncAction> queue;
 
-		//private ManualResetEventSlim resetEvent = new ManualResetEventSlim(false);
 		private object queueLock = new object();
 
-		public DedicatedThread(int id)
+		public DedicatedThread(int id, ThreadType type)
 		{
 			this.id = id;
 
@@ -73,10 +73,20 @@ namespace SmashTools.Performance
 					catch (Exception ex)
 					{
 						Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
+						if (asyncAction.exceptionHandler != null)
+						{
+							asyncAction.exceptionHandler(ex);
+						}
 					}
 				}
 				while (Count == 0) Thread.Sleep(1);
 			}
+		}
+
+		public enum ThreadType
+		{ 
+			Single,
+			Shared
 		}
 	}
 }

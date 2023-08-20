@@ -17,16 +17,30 @@ namespace SmashTools
 
 		private static int draggingPlotPointIndex = -1;
 
-		//XY Function
+		private static readonly Color progressColor = new Color(0, 0.75f, 0, 0.5f); //transparent green
+
+		// f(x) = y, can be any function that matches the input and output types
 		public delegate Vector2 Function(float x);
 
-		public static void DrawGraph(Rect rect, Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
+		/// <summary>
+		/// Draw graph given function
+		/// </summary>
+		/// <param name="rect">Rect of entire graph</param>
+		/// <param name="function">f(x) function for calculating points on the graph</param>
+		/// <param name="xRange">Boundary of values on the x axis</param>
+		/// <param name="yRange">Boundary of values on the y axis</param>
+		/// <param name="plotPoints">Plot specific points on the graph with labels</param>
+		/// <param name="progress">Draw vertical and horizontal lines at % of the function boundaries for curves representing lerp values from X_min to X_max</param>
+		/// <param name="simplified">Simplified axis representation with no axis for T</param>
+		/// <param name="editable">Graph can be edited</param>
+		/// <param name="drawCoordLabels">Draw labels for <paramref name="plotPoints"/></param>
+		public static void DrawGraph(Rect rect, Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null, float progress = -1, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
 		{
 			Rect axisRect = rect.ContractedBy(5);
 			DrawAxis(axisRect, xRange, yRange, drawAxisT: !simplified);
 			if (function != null && !plotPoints.NullOrEmpty())
 			{
-				PlotFunction(axisRect, function, xRange, yRange, plotPoints, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
+				PlotFunction(axisRect, function, xRange, yRange, plotPoints, progress: progress, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
 				//DrawLegend(graphRect);
 			}
 		}
@@ -98,11 +112,11 @@ namespace SmashTools
 			}
 		}
 
-		private static void PlotFunction(Rect rect, Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
+		private static void PlotFunction(Rect rect, Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints, float progress = -1, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
 		{
 			if (!plotPoints.NullOrEmpty() && plotPoints.Count > 1)
 			{
-				float step = Mathf.Abs((xRange.max - xRange.min) / (AxisNotchCount * 5));
+				float step = Mathf.Abs((xRange.max - xRange.min) / (AxisNotchCount * 10));
 				if (step > 0)
 				{
 					float i = xRange.min;
@@ -112,7 +126,9 @@ namespace SmashTools
 						point.x = i;
 					}
 					Vector2 coordLeft = GraphCoordToScreenPos(rect, point, xRange, yRange);
-					for (i = xRange.min + step; i <= xRange.max; i += step) //start 1 step in
+
+					float start = xRange.min + step;
+					for (i = start; i <= xRange.max; i += step) //start 1 step in
 					{
 						point = function(i);
 						if (simplified)
@@ -125,6 +141,26 @@ namespace SmashTools
 							if (xRange.InRange(point.x) && yRange.InRange(point.y))
 							{
 								Widgets.DrawLine(coordLeft, coordRight, Color.white, 1);
+
+								if (progress >= 0 && progress <= 1)
+								{
+									float percent = (i - start) / (xRange.max - start);
+									float percentHigh = (i + step - start) / (xRange.max - start);
+									if (percent < progress && percentHigh > progress)
+									{
+										float width = coordLeft.x - rect.x;
+										if (width > 0)
+										{
+											UIElements.DrawLineHorizontal(rect.x, coordLeft.y, width, progressColor);
+										}
+										
+										float height = -(rect.yMax - coordLeft.y);
+										if (height < 0) //negative since it goes from bottom to top
+										{
+											UIElements.DrawLineVertical(coordLeft.x, rect.yMax, height, progressColor);
+										}
+									}
+								}
 							}
 							coordLeft = coordRight;
 						}

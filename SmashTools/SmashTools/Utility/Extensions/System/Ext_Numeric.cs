@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Verse;
 using RimWorld;
 using RimWorld.Planet;
@@ -11,17 +12,21 @@ namespace SmashTools
 	public static class Ext_Numeric
 	{
 		/// <summary>
-		/// Clamp value of type T between max and min
+		/// Extension method for <see cref="Mathf.Clamp"/>
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
 		/// <param name="val"></param>
 		/// <param name="min"></param>
 		/// <param name="max"></param>
-		public static T Clamp<T>(this T val, T min, T max) where T : IComparable<T>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static float Clamp(this float val, float min, float max)
 		{
-			if (val.CompareTo(min) < 0) return min;
-			if (val.CompareTo(max) > 0) return max;
-			return val;
+			return Mathf.Clamp(val, min, max);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static int Clamp(this int val, int min, int max)
+		{
+			return Mathf.Clamp(val, min, max);
 		}
 
 		/// <summary>
@@ -48,7 +53,7 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Clamp value between a in and max but wrap around rather than return min / max
+		/// Clamp value between a min and max but wrap around rather than return min / max
 		/// </summary>
 		/// <param name="val"></param>
 		/// <param name="min"></param>
@@ -59,11 +64,11 @@ namespace SmashTools
 			{
 				if (val < min)
 				{
-					val += max;
+					val += (max + 1);
 				}
 				if (val > max)
 				{
-					val -= max;
+					val -= (max + 1);
 				}
 			}
 			return val;

@@ -179,19 +179,28 @@ namespace SmashTools
 			return max - value + min;
 		}
 
+		public static Vector2 RotatePointClockwise(Vector2 coord, float theta)
+		{
+			return RotatePointClockwise(coord.x, coord.y, theta);
+		}
+
+		public static Vector2 RotatePointCounterClockwise(Vector2 coord, float theta)
+		{
+			return RotatePointCounterClockwise(coord.x, coord.y, theta);
+		}
+
 		/// <summary>
 		/// Rotate point clockwise by angle theta
 		/// </summary>
 		/// <param name="x"></param>
 		/// <param name="y"></param>
 		/// <param name="theta"></param>
-		/// <returns></returns>
-		public static Pair<float, float> RotatePointClockwise(float x, float y, float theta)
+		public static Vector2 RotatePointClockwise(float x, float y, float theta)
 		{
 			theta = -theta;
 			float xPrime = (float)(x * Mathf.Cos(theta * Mathf.Deg2Rad)) - (float)(y * Mathf.Sin(theta * Mathf.Deg2Rad));
 			float yPrime = (float)(x * Mathf.Sin(theta * Mathf.Deg2Rad)) + (float)(y * Mathf.Cos(theta * Mathf.Deg2Rad));
-			return new Pair<float, float>(xPrime, yPrime);
+			return new Vector2(xPrime, yPrime);
 		}
 
 		/// <summary>
@@ -200,12 +209,11 @@ namespace SmashTools
 		/// <param name="x"></param>
 		/// <param name="y"></param>
 		/// <param name="theta"></param>
-		/// <returns></returns>
-		public static Pair<float, float> RotatePointCounterClockwise(float x, float y, float theta)
+		public static Vector2 RotatePointCounterClockwise(float x, float y, float theta)
 		{
 			float xPrime = (float)(x * Mathf.Cos(theta * Mathf.Deg2Rad)) - (float)(y * Mathf.Sin(theta * Mathf.Deg2Rad));
 			float yPrime = (float)(x * Mathf.Sin(theta * Mathf.Deg2Rad)) + (float)(y * Mathf.Cos(theta * Mathf.Deg2Rad));
-			return new Pair<float, float>(xPrime, yPrime);
+			return new Vector2(xPrime, yPrime);
 		}
 
 		/// <summary>
@@ -227,7 +235,6 @@ namespace SmashTools
 		/// </summary>
 		/// <param name="angle"></param>
 		/// <param name="rotation"></param>
-		/// <returns></returns>
 		public static float RotateAngle(float angle, float rotation)
 		{
 			angle += rotation;
@@ -250,7 +257,6 @@ namespace SmashTools
 		/// </summary>
 		/// <param name="c"></param>
 		/// <param name="map"></param>
-		/// <returns></returns>
 		public static double AngleThroughOrigin(this IntVec3 c, Map map)
 		{
 			int xPrime = c.x - (map.Size.x / 2);
@@ -273,7 +279,6 @@ namespace SmashTools
 		/// <param name="pos"></param>
 		/// <param name="point"></param>
 		/// <param name="map"></param>
-		/// <returns></returns>
 		public static float AngleToCell(this IntVec3 pos, IntVec3 point, Map map)
 		{
 			Vector3 posVector = pos.ToVector3Shifted();
@@ -311,7 +316,6 @@ namespace SmashTools
 		/// <param name="pos"></param>
 		/// <param name="point"></param>
 		/// <param name="map"></param>
-		/// <returns></returns>
 		public static float AngleToPoint(this Vector3 pos, Vector3 point)
 		{
 			float xPrime = pos.x - point.x;

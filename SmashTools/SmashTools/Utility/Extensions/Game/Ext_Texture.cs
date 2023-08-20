@@ -1,16 +1,36 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using Verse;
-using System;
+using Object = UnityEngine.Object;
 
 namespace SmashTools
 {
     [StaticConstructorOnStartup]
     public static class Ext_Texture
     {
-        private static readonly Dictionary<Texture2D, Texture2D> wrapTexDictionary = new Dictionary<Texture2D, Texture2D>();
-        private static readonly Dictionary<Pair<Texture2D, float>, Texture2D> rotatedTexDictionary = new Dictionary<Pair<Texture2D, float>, Texture2D>();
         private static RenderTexture previous;
+
+        public static bool TryReplaceInContentFinder<T>(string itemPath, T item) where T : Object
+		{
+            List<ModContentPack> runningModsListForReading = LoadedModManager.RunningModsListForReading;
+            for (int i = runningModsListForReading.Count - 1; i >= 0; i--)
+            {
+                ModContentPack modContentPack = runningModsListForReading[i];
+                T itemToDestroy = modContentPack.GetContentHolder<T>().Get(itemPath);
+                if (itemToDestroy != null && itemToDestroy != item)
+                {
+                    Object.Destroy(itemToDestroy);
+                    InjectIntoContentFinder(modContentPack, itemPath, item);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static void InjectIntoContentFinder<T>(ModContentPack modContentPack, string itemPath, T item) where T : class
+		{
+            modContentPack.GetContentHolder<T>().contentList[itemPath] = item;
+        }
 
         /// <summary>
         /// Change <seealso cref="TextureWrapMode"/> of <paramref name="source"/> to <paramref name="wrapMode"/>
@@ -20,26 +40,21 @@ namespace SmashTools
         /// <returns></returns>
         public static Texture2D WrapTexture(Texture2D source, TextureWrapMode wrapMode)
         {
-            if (wrapTexDictionary.TryGetValue(source, out var wrappedTex))
-            {
-                return wrappedTex;
-            }
             if (source.isReadable)
             {
                 source.wrapMode = wrapMode;
                 return source;
             }
             RenderTexture renderTex = ConvertToRenderTex(source);
-            wrappedTex = new Texture2D(source.width, source.height)
+            Texture2D wrappedTex = new Texture2D(source.width, source.height)
             {
                 wrapMode = wrapMode,
                 name = source.name
             };
             
             wrappedTex.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
-            wrappedTex.Apply();
+            wrappedTex.Apply(true, true);
             ReleaseMemory(renderTex);
-            wrapTexDictionary.Add(source, wrappedTex);
             return wrappedTex;
         }
 
@@ -65,34 +80,6 @@ namespace SmashTools
             return renderTex;
         }
 
-        /// <summary>
-        /// Create an exact copy of <paramref name="source"/> into a readable and writable <seealso cref="Texture2D"/>
-        /// </summary>
-        /// <param name="source"></param>
-        public static Texture2D ConvertToReadableTex(Texture2D source)
-        {
-            RenderTexture renderTex = RenderTexture.GetTemporary(
-                source.width,
-                source.height,
-                0,
-                RenderTextureFormat.Default,
-                RenderTextureReadWrite.Linear);
-
-            Graphics.Blit(source, renderTex);
-            previous = RenderTexture.active;
-            RenderTexture.active = renderTex;
-
-            Texture2D readableTex = new Texture2D(source.width, source.height)
-            {
-                name = source.name
-            };
-
-            readableTex.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
-            readableTex.Apply();
-            ReleaseMemory(renderTex);
-            return readableTex;
-        }
-
         public static void ReleaseMemory(RenderTexture renderTex)
         {
             RenderTexture.active = previous;
@@ -110,10 +97,6 @@ namespace SmashTools
             {
                 Log.Error($"Unable to rotate {tex.name} by angle=\"{angle}\". Angle must equal 90, 180, or 270.");
                 return tex;
-            }
-            if (rotatedTexDictionary.TryGetValue(new Pair<Texture2D, float>(tex, angle), out Texture2D rotImage))
-            {
-                return rotImage;
             }
             if (tex.width != tex.height)
             {
@@ -142,7 +125,7 @@ namespace SmashTools
             height = tex.height;
             rWidth = readableTex.width;
             rHeight = readableTex.height;
-            rotImage = new Texture2D(width, height)
+            Texture2D rotImage = new Texture2D(width, height)
             {
                 name = tex.name
             };
@@ -159,8 +142,7 @@ namespace SmashTools
                 }
             }
             rotImage.SetPixels32(pix1);
-            rotImage.Apply();
-            rotatedTexDictionary.Add(new Pair<Texture2D, float>(tex, angle), rotImage);
+            rotImage.Apply(true, true);
             return rotImage;
         }
 

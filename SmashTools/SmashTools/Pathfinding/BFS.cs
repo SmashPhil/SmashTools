@@ -15,21 +15,21 @@ namespace SmashTools.Pathfinding
 		private readonly Func<T, bool> canEnter;
 		private readonly Func<T, IEnumerable<T>> neighbors;
 
-		public bool IsRunning { get; private set; }
-
-		public bool LogRetraceAttempts { get; set; } = false;
-
 		public BFS(IPathfinder<T> pathfinder)
 		{
 			canEnter = pathfinder.CanEnter;
 			neighbors = pathfinder.Neighbors;
 		}
 
-		public BFS(Func<T, List<T>> neighbors, Func<T, bool> canEnter = null)
+		public BFS(Func<T, IEnumerable<T>> neighbors, Func<T, bool> canEnter = null)
 		{
 			this.neighbors = neighbors;
 			this.canEnter = canEnter;
 		}
+
+		public bool IsRunning { get; private set; }
+
+		public bool LogRetraceAttempts { get; set; } = false;
 
 		/// <summary>
 		/// Halt and clear the BFS traverser
@@ -45,11 +45,12 @@ namespace SmashTools.Pathfinding
 		/// </summary>
 		public List<T> Run(T start, T destination)
 		{
+			IsRunning = true;
 			try
 			{
-				IsRunning = true;
-
 				openQueue.Clear();
+				openQueue.Enqueue(start);
+
 				while (openQueue.Count > 0)
 				{
 					T current = openQueue.Dequeue();

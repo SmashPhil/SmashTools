@@ -18,7 +18,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\Steam\steamapps\common\RimWorld\Mods\Vehicles\Versions\1.4\Assemblies\</OutputPath>
+    <OutputPath>..\..\..\Steam\steamapps\common\RimWorld\Mods\Vehicles\1.4\Assemblies\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -34,6 +34,7 @@
   <ItemGroup>
     <Reference Include="0Harmony, Version=2.2.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\..\Steam\steamapps\common\RimWorld\Mods\Vehicles\Source\Vehicles\packages\Lib.Harmony.2.2.2\lib\net472\0Harmony.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
@@ -293,15 +294,19 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Animating\AnimationDriver.cs" />
     <Compile Include="Animating\AnimationEvent.cs" />
     <Compile Include="Animating\AnimatorObject.cs" />
     <Compile Include="Attributes\GraphEditableAttribute.cs" />
+    <Compile Include="Attributes\HeaderTitleAttribute.cs" />
     <Compile Include="Attributes\LoadedEarlyAttribute.cs" />
     <Compile Include="Attributes\MustImplementAttribute.cs" />
+    <Compile Include="Attributes\NumericBoxValuesAttribute.cs" />
+    <Compile Include="Attributes\SliderValuesAttribute.cs" />
     <Compile Include="Attributes\StaticConstructorOnGameInitAttribute.cs" />
     <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
+    <Compile Include="Attributes\TweakFieldAttribute.cs" />
     <Compile Include="Attributes\UnitTestAttribute.cs" />
-    <Compile Include="BackCompatibility\BackCompatibilityRegistry.cs" />
     <Compile Include="Collections\SimpleDictionary.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
@@ -319,6 +324,7 @@
     <Compile Include="Debugging\TimerUtility.cs" />
     <Compile Include="Debugging\UnitTesting.cs" />
     <Compile Include="Enums\MathOp.cs" />
+    <Compile Include="Enums\UISettingsType.cs" />
     <Compile Include="Events\EventTrigger.cs" />
     <Compile Include="Interfaces\IAnimationTarget.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
@@ -329,6 +335,7 @@
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
+    <Compile Include="Patching\Harmony\Compatibility_RimHUD.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationAddSafely.cs" />
     <Compile Include="Pathfinding\AStar.cs" />
     <Compile Include="Pathfinding\BFS.cs" />
@@ -352,10 +359,12 @@
     <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />
     <Compile Include="UI\Windows\Dialog_ToggleMenu.cs" />
     <Compile Include="UI\Windows\Dialog_RadioButtonMenu.cs" />
+    <Compile Include="UI\Windows\EditWindow_TweakFields.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
     <Compile Include="UI\Windows\SingleWindow.cs" />
     <Compile Include="Animating\AnimationTargetHandler.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Queue.cs" />
+    <Compile Include="Utility\Extensions\Game\Ext_Comp.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_Animation.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\DefIndexManager.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_EventManager.cs" />
@@ -409,4 +418,8 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
 </Project>

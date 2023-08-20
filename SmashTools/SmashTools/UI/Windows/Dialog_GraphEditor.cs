@@ -52,7 +52,7 @@ namespace SmashTools
 		private Vector2 scrollPos;
 		public static AnimationSettings animationSettings = new AnimationSettings();
 		private Listing_SplitColumns lister = new Listing_SplitColumns();
-		private List<IAnimationTarget> animationTargets = new List<IAnimationTarget>();
+		private List<IAnimationTarget> potentialAnimationTargets = new List<IAnimationTarget>();
 
 		private static bool dragging = false;
 		private static float timeFading = 0;
@@ -104,6 +104,8 @@ namespace SmashTools
 
 		public bool LogReport { get; set; } = false;
 
+		private float StartingAnimationDriverTick { get; set; }
+
 		public override Vector2 InitialSize
 		{
 			get
@@ -141,12 +143,25 @@ namespace SmashTools
 			}
 		}
 
+		protected override float Progress
+		{
+			get
+			{
+				return -1;
+				//if (AnimationManager.CurrentDriver != null)
+				//{
+				//	return Mathf.Clamp01((AnimationManager.TicksPassed - StartingAnimationDriverTick) / AnimationManager.CurrentDriver.AnimationLength);
+				//}
+				//return 0;
+			}
+		}
+
 		public override void PostOpen()
 		{
 			base.PostOpen();
 			if (!Find.Maps.NullOrEmpty())
 			{
-				animationTargets = Find.Maps.SelectMany(map => map.spawnedThings.Where(thing => thing is IAnimationTarget)).Cast<IAnimationTarget>().ToList();
+				potentialAnimationTargets = Find.Maps.SelectMany(map => map.spawnedThings.Where(thing => thing is IAnimationTarget)).Cast<IAnimationTarget>().ToList();
 			}
 			if (!DisableCameraView && AnimationManager.Reserve(animationTarget, AnimationTick))
 			{
@@ -176,6 +191,7 @@ namespace SmashTools
 				Find.Selector.ClearSelection();
 				AnimationManager.Reset();
 				AnimationManager.SetDriver(null);
+				RecacheAnimationDriverStartingTick();
 			}
 		}
 
@@ -236,7 +252,26 @@ namespace SmashTools
 				AnimationManager.Reset();
 			}
 			AnimationManager.SetDriver(animationDriver);
+			RecacheAnimationDriverStartingTick();
 			SelectAnimator(null);
+		}
+
+		private void RecacheAnimationDriverStartingTick()
+		{
+			StartingAnimationDriverTick = 0;
+			if (AnimationManager.CurrentDriver != null)
+			{
+				int totalLength = 0;
+				foreach (AnimationDriver animationDriver in animationTarget.Animations)
+				{
+					if (animationDriver == AnimationManager.CurrentDriver)
+					{
+						StartingAnimationDriverTick = totalLength;
+						return;
+					}
+					totalLength += animationDriver.AnimationLength;
+				}
+			}
 		}
 
 		public Graph.GraphType CurveToGraphType(Type type)
@@ -310,10 +345,9 @@ namespace SmashTools
 			{
 				try
 				{
+					Text.Font = GameFont.Small;
 					GUIState.Push();
 					{
-						Text.Font = GameFont.Small;
-
 						Widgets.DrawMenuSection(inputRect);
 						inputRect = inputRect.ContractedBy(10);
 						TopLevelButtons(inputRect,
@@ -321,6 +355,8 @@ namespace SmashTools
 							(VectorEvaluation ? "Vector" : "Simplified", () => VectorEvaluation = !VectorEvaluation),
 							("Save", () => SaveEdits()),
 							("Export Xml", ExportAnimationXml));
+
+						GUIState.Reset();
 
 						string formula = graphType switch
 						{
@@ -357,11 +393,11 @@ namespace SmashTools
 						Rect animationTargetRect = new Rect(graphSizeRect.xMax, graphSizeRect.y, inputRect.width - graphSizeRect.width, graphSizeRect.height);
 						if (UIElements.ClickableLabel(animationTargetRect, animationTargetLabel, GenUI.MouseoverColor, Color.white, fontSize: GameFont.Medium, anchor: TextAnchor.MiddleRight))
 						{
-							if (!animationTargets.NullOrEmpty())
+							if (!potentialAnimationTargets.NullOrEmpty())
 							{
 								List<FloatMenuOption> options = new List<FloatMenuOption>();
 								options.Add(new FloatMenuOption("None", () => TryStartCamera(null)));
-								foreach (IAnimationTarget animationTarget in animationTargets)
+								foreach (IAnimationTarget animationTarget in potentialAnimationTargets)
 								{
 									options.Add(new FloatMenuOption(animationTarget.Thing.Label, () => TryStartCamera(animationTarget)));
 								}
@@ -370,6 +406,7 @@ namespace SmashTools
 							else
 							{
 								Messages.Message("Map must be loaded with at least 1 IAnimationTarget spawned.", MessageTypeDefOf.RejectInput);
+								GUIState.Reset();
 							}
 						}
 
@@ -607,6 +644,7 @@ namespace SmashTools
 										AnimationManager.Reset();
 									}
 									AnimationManager.TogglePause(true);
+									SoundDefOf.Click.PlayOneShotOnCamera();
 								}
 								Rect invisibleClickableWindowRect = new Rect(cameraRect.x, cameraRect.y, cameraRect.width, cameraRect.height - playerBarRect.height * 2.5f);
 								float playButtonAnimatedSize = cameraRect.width / 5;
@@ -615,6 +653,7 @@ namespace SmashTools
 								{
 									timeFading = 0;
 									AnimationManager.TogglePause(true);
+									SoundDefOf.Click.PlayOneShotOnCamera();
 								}
 
 								Text.Anchor = TextAnchor.MiddleCenter;

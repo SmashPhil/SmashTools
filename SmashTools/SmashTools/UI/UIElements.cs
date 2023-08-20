@@ -139,12 +139,12 @@ namespace SmashTools
 			GUIState.Pop();
 		}
 
-		public static void Vector2Box(Rect rect, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		public static void Vector2Box(Rect rect, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
 			value = Vector2Box(rect, label, value, tooltip, labelProportion, buffer);
 		}
 
-		public static Vector2 Vector2Box(Rect rect, string label, Vector2 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		public static Vector2 Vector2Box(Rect rect, string label, Vector2 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
 			GUIState.Push();
 			{
@@ -156,17 +156,17 @@ namespace SmashTools
 					TooltipHandler.TipRegion(rect, tooltip);
 				}
 
-				Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
+				Rect labelRect = new Rect(rect.x, rect.y, rect.width * labelProportion, rect.height);
 				if (!label.NullOrEmpty())
 				{
 					Widgets.Label(labelRect, label);
 				}
 
-				Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
+				Rect inputRect = new Rect(labelRect.xMax, rect.y, rect.width - labelRect.width, rect.height);
 				Rect[] rects = inputRect.Split(2, buffer);
 
-				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
+				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
 				value.x = x;
 				value.y = y;
 			}
@@ -174,12 +174,12 @@ namespace SmashTools
 			return value;
 		}
 
-		public static void Vector3Box(Rect rect, string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		public static void Vector3Box(Rect rect, string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
-			value = Vector3Box(rect, label, value, tooltip, labelProportion, buffer);
+			value = Vector3Box(rect, label, value, tooltip, labelProportion, subLabelProportions, buffer);
 		}
 
-		public static Vector3 Vector3Box(Rect rect, string label, Vector3 value, string tooltip = null, float labelProportion = 0.45f, float buffer = 0)
+		public static Vector3 Vector3Box(Rect rect, string label, Vector3 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
 			GUIState.Push();
 			{
@@ -191,15 +191,15 @@ namespace SmashTools
 					TooltipHandler.TipRegion(rect, tooltip);
 				}
 
-				Rect labelRect = new Rect(rect.x, rect.y, rect.width / 3, rect.height);
+				Rect labelRect = new Rect(rect.x, rect.y, rect.width * labelProportion, rect.height);
 				Widgets.Label(labelRect, label);
 
-				Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width * 2 / 3, rect.height);
+				Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width - labelRect.width, rect.height);
 				Rect[] rects = inputRect.Split(3, buffer);
 
-				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
-				NumericBox(rects[2], ref z, "z", string.Empty, string.Empty, float.MinValue, float.MaxValue, labelProportion);
+				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
+				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
+				NumericBox(rects[2], ref z, "z", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
 				value.x = x;
 				value.y = y;
 				value.z = z;
@@ -285,6 +285,7 @@ namespace SmashTools
 				GUI.DrawTexture(rect, BaseContent.WhiteTex);
 				GUI.color = textColor;
 
+				Text.Anchor = anchor;
 				Widgets.Label(rect, label);
 			}
 			GUIState.Pop();
@@ -313,7 +314,12 @@ namespace SmashTools
 			}
 			GUIState.Pop();
 
-			return Widgets.ButtonInvisible(rect);
+			if (Widgets.ButtonInvisible(rect))
+			{
+				SoundDefOf.Click.PlayOneShotOnCamera();
+				return true;
+			}
+			return false;
 		}
 
 		public static void SliderLabeled(Rect rect, string label, string tooltip, string endSymbol, ref float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
@@ -491,13 +497,11 @@ namespace SmashTools
 		/// <param name="texCoords"></param>
 		public static void DrawTextureWithMaterialOnGUI(Rect rect, Texture texture, Material material, float angle, Rect texCoords = default)
 		{
-			bool rotate = angle != 0 && angle != 360;
 			Matrix4x4 matrix = GUI.matrix;
 			try
 			{
-				if (rotate)
+				if (angle != 0 && angle != 360)
 				{
-					matrix = GUI.matrix;
 					UI.RotateAroundPivot(angle, rect.center);
 				}
 				GenUI.DrawTextureWithMaterial(rect, texture, material, texCoords);
@@ -543,14 +547,13 @@ namespace SmashTools
 		/// <param name="flip"></param>
 		public static Rect VerticalFillableBar(Rect rect, float fillPercent, Texture2D fillTex, Texture2D bgTex, bool doBorder = false, bool flip = false)
 		{
-			if (doBorder)
-			{
-				GUI.DrawTexture(rect, bgTex);
-				rect = rect.ContractedBy(3f);
-			}
 			if (bgTex != null)
 			{
 				GUI.DrawTexture(rect, bgTex);
+				if (doBorder)
+				{
+					rect = rect.ContractedBy(3f);
+				}
 			}
 			if (!flip)
 			{
@@ -669,20 +672,6 @@ namespace SmashTools
 			}
 			GUI.DrawTexture(position, image);
 			GUI.color = color;
-		}
-
-		/// <summary>
-		/// Convert RenderTexture to Texture2D
-		/// <para>Warning: This is very costly. Do not do often.</para>
-		/// </summary>
-		/// <param name="rTex"></param>
-		public static Texture2D ConvertToTexture2D(this RenderTexture rTex)
-		{
-			Texture2D tex2d = new Texture2D(512, 512, TextureFormat.RGB24, false);
-			RenderTexture.active = rTex;
-			tex2d.ReadPixels(new Rect(0, 0, rTex.width, rTex.height), 0, 0);
-			tex2d.Apply();
-			return tex2d;
 		}
 
 		public static void LabelUnderlined(Rect rect, string label, Color labelColor, Color lineColor)

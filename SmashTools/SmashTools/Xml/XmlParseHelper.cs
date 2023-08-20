@@ -198,13 +198,6 @@ namespace SmashTools.Xml
 			return defNode.InnerText;
 		}
 
-		public static void ExportCombinedXmlDocument(XmlDocument xmlDoc)
-		{
-			string filePath = Path.Combine(Application.dataPath, "CombinedXmlDoc.xml");
-			xmlDoc.Save(filePath);
-			Application.OpenURL(filePath);
-		}
-
 		/// <summary>
 		/// <see cref="ModContentPack.LoadPatches"/>
 		/// </summary>

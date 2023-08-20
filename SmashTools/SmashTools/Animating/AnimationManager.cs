@@ -8,42 +8,6 @@ using Verse.Sound;
 
 namespace SmashTools
 {
-	public delegate (Vector3 drawPos, float rotation) AnimationDrawer(Vector3 drawPos, float rotation);
-
-	public class AnimationDriver
-	{
-		private string label;
-		private Func<int, int> animator;
-		private AnimationDrawer drawHandler;
-		private int totalAnimationTicks;
-		private Action onSelect;
-
-		public AnimationDriver(string label, Func<int, int> animator, AnimationDrawer drawHandler, int totalAnimationTicks, Action onSelect = null)
-		{
-			this.label = label;
-			this.animator = animator;
-			this.drawHandler = drawHandler;
-			this.totalAnimationTicks = totalAnimationTicks;
-			this.onSelect = onSelect;
-		}
-
-		public string Name => label;
-
-		public int AnimationLength => totalAnimationTicks;
-
-		public (Vector3 drawPos, float rotation) Draw(Vector3 drawPos, float rotation) => drawHandler(drawPos, rotation);
-
-		public void Tick(int ticksPassed)
-		{
-			animator(ticksPassed);
-		}
-
-		public void Select()
-		{
-			onSelect?.Invoke();
-		}
-	}
-
 	public static class AnimationManager
 	{
 		internal static readonly float[] playbackSpeeds = { 0.25f, 0.5f, 0.75f, 1, 2, 3, 4 };

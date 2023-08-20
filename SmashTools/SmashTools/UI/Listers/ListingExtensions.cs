@@ -72,24 +72,24 @@ namespace SmashTools
 			Rect rectLeft = new Rect(rect.x, rect.y, labelLength, rect.height);
 			Rect rectRight = new Rect(rect.x + labelLength + padding, rect.y, rect.width - labelLength - padding, rect.height);
 
-			Color color = GUI.color;
 			Widgets.Label(rectLeft, text);
 
-			var align = Text.CurTextFieldStyle.alignment;
-			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleLeft;
-			string buffer = value.ToString();
-			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
-
-			if (!tooltip.NullOrEmpty())
+			GUIState.Push();
 			{
-				if (Mouse.IsOver(rect))
+				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleLeft;
+				string buffer = value.ToString();
+				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+
+				if (!tooltip.NullOrEmpty())
 				{
-					Widgets.DrawHighlight(rect);
+					if (Mouse.IsOver(rect))
+					{
+						Widgets.DrawHighlight(rect);
+					}
+					TooltipHandler.TipRegion(rect, tooltip);
 				}
-				TooltipHandler.TipRegion(rect, tooltip);
 			}
-			Text.CurTextFieldStyle.alignment = align;
-			GUI.color = color;
+			GUIState.Pop();
 		}
 
 		public static void Numericbox(this Listing lister, string text, string tooltip, ref float value, float labelLength, float padding, float min = -1E+09f, float max = 1E+09f)
@@ -100,25 +100,67 @@ namespace SmashTools
 			Rect rectLeft = new Rect(rect.x, rect.y, labelLength, rect.height);
 			Rect rectRight = new Rect(rect.x + labelLength + padding, rect.y, rect.width - labelLength - padding, rect.height);
 
-			Color color = GUI.color;
 			Widgets.Label(rectLeft, text);
 
-			var align = Text.CurTextFieldStyle.alignment;
-			Text.CurTextFieldStyle.alignment = TextAnchor.MiddleLeft;
-			string buffer = value.ToString();
-			Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
-
-			if (!tooltip.NullOrEmpty())
+			GUIState.Push();
 			{
-				if (Mouse.IsOver(rect))
-				{
-					Widgets.DrawHighlight(rect);
-				}
-				TooltipHandler.TipRegion(rect, tooltip);
-			}
+				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleLeft;
+				string buffer = value.ToString();
+				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
 
-			Text.CurTextFieldStyle.alignment = align;
-			GUI.color = color;
+				if (!tooltip.NullOrEmpty())
+				{
+					if (Mouse.IsOver(rect))
+					{
+						Widgets.DrawHighlight(rect);
+					}
+					TooltipHandler.TipRegion(rect, tooltip);
+				}
+			}
+			GUIState.Pop();
+		}
+
+		public static void EnumSliderLabeled(this Listing lister, string label, ref int value, string tooltip, string disabledTooltip, Type enumType, bool translate = false)
+		{
+			GUIState.Push();
+			{
+				try
+				{
+					int[] enumValues = Enum.GetValues(enumType).Cast<int>().ToArray();
+					string[] enumNames = Enum.GetNames(enumType);
+					int min = enumValues[0];
+					int max = enumValues.Last();
+					Rect rect = lister.GetRect(24f);
+					Rect fullRect = rect;
+					rect.y += rect.height / 2;
+					string format = Enum.GetName(enumType, value);
+					if (translate)
+					{
+						format = format.Translate();
+					}
+					if (!disabledTooltip.NullOrEmpty())
+					{
+						GUIState.Disable();
+						TooltipHandler.TipRegion(fullRect, disabledTooltip);
+					}
+					else if (!tooltip.NullOrEmpty())
+					{
+						if (Mouse.IsOver(fullRect))
+						{
+							Widgets.DrawHighlight(fullRect);
+						}
+						TooltipHandler.TipRegion(fullRect, tooltip);
+					}
+					GUIState.Reset();
+					value = (int)Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
+				}
+				catch (Exception ex)
+				{
+					Log.Error($"Unable to convert to {enumType}. Exception={ex.Message}");
+					return;
+				}
+			}
+			GUIState.Pop();
 		}
 
 		public static float SliderLabeled(this Listing lister, string label, string tooltip, string endSymbol, float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
@@ -150,7 +192,7 @@ namespace SmashTools
 				}
 				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
-			value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+			value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 			if (endValue > 0 && value >= max)
 			{
 				value = endValue;
@@ -187,7 +229,48 @@ namespace SmashTools
 				}
 				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
-			value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format).RoundTo(roundTo);
+			value = (int)Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format).RoundTo(roundTo);
+		}
+
+		public static void SliderPercentLabeled(this Listing listing, string label, string tooltip, string endSymbol, ref float value, float min, float max, int decimalPlaces = 2,
+			float endValue = -1f, string endValueDisplay = "")
+		{
+			GUIState.Push();
+			try
+			{
+				Rect rect = listing.GetRect(24f);
+				Rect fullRect = rect;
+				rect.y += rect.height / 2;
+				string format = $"{Math.Round(value * 100, decimalPlaces)}" + endSymbol;
+
+				if (!endValueDisplay.NullOrEmpty() && endValue > 0)
+				{
+					if (value >= endValue)
+					{
+						format = endValueDisplay;
+					}
+				}
+				bool mouseOver = Mouse.IsOver(fullRect);
+				
+				if (!tooltip.NullOrEmpty())
+				{
+					if (mouseOver)
+					{
+						Widgets.DrawHighlight(fullRect);
+					}
+					TooltipHandler.TipRegion(fullRect, tooltip);
+				}
+
+				value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
+				if (endValue > 0 && value >= max)
+				{
+					value = endValue;
+				}
+			}
+			finally
+			{
+				GUIState.Pop();
+			}
 		}
 
 		public static void Header(this Listing lister, string header, Color highlight, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft, float rowGap = 16)
@@ -202,33 +285,33 @@ namespace SmashTools
 			splitLister?.Gap(2);
 		}
 
-		public static void Vector2Box(this Listing lister, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		public static void Vector2Box(this Listing lister, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f)
 		{
-			value = lister.Vector2Box(label, value, tooltip, labelProportion);
+			value = lister.Vector2Box(label, value, tooltip, labelProportion, subLabelProportions);
 		}
 
-		public static Vector2 Vector2Box(this Listing lister, string label, Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		public static Vector2 Vector2Box(this Listing lister, string label, Vector2 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f)
 		{
 			GUIState.Push();
 			{
 				Rect rect = lister.GetRect(24);
-				UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
+				UIElements.Vector2Box(rect, label, value, tooltip, labelProportion, subLabelProportions);
 			}
 			GUIState.Pop();
 			return value;
 		}
 
-		public static void Vector3Box(this Listing lister, string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		public static void Vector3Box(this Listing lister, string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f)
 		{
-			value = lister.Vector3Box(label, value, tooltip, labelProportion);
+			value = lister.Vector3Box(label, value, tooltip, labelProportion, subLabelProportions);
 		}
 
-		public static Vector3 Vector3Box(this Listing lister, string label, Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		public static Vector3 Vector3Box(this Listing lister, string label, Vector3 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f)
 		{
 			GUIState.Push();
 			{
 				Rect rect = lister.GetRect(24);
-				UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
+				UIElements.Vector3Box(rect, label, value, tooltip, labelProportion, subLabelProportions);
 			}
 			GUIState.Pop();
 			return value;
@@ -237,6 +320,7 @@ namespace SmashTools
 		public static bool ListItemSelectable(this Listing lister, string header, Color hoverColor, bool selected = false, bool active = true, string disabledTooltip = null)
 		{
 			Rect rect = lister.GetRect(20f);
+
 			GUIState.Push();
 			{
 				if (selected)

@@ -146,8 +146,8 @@ namespace SmashTools
 			InUse = false;
 			if (camera && camera.gameObject)
 			{
-				GameObject.DestroyImmediate(renderTexture);
-				GameObject.DestroyImmediate(camera.gameObject);
+				GameObject.Destroy(renderTexture);
+				GameObject.Destroy(camera.gameObject);
 
 				camera = null;
 				renderTexture = null;

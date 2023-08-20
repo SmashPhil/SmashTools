@@ -9,13 +9,15 @@ namespace SmashTools.Performance
 {
 	public class AsyncAction
 	{
-		public Action action;
-		private Func<bool> validator;
+		public readonly Action action;
+		public readonly Func<bool> validator;
+		public readonly Action<Exception> exceptionHandler;
 
-		public AsyncAction(Action action, Func<bool> validator = null)
+		public AsyncAction(Action action, Func<bool> validator = null, Action<Exception> exceptionHandler = null)
 		{
 			this.action = action;
 			this.validator = validator;
+			this.exceptionHandler = exceptionHandler;
 		}
 
 		public bool IsValid => validator is null || validator();

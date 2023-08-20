@@ -74,7 +74,7 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Calculate distance between 2 cells as float value
+		/// Calculate euclidean distance between 2 cells as float value
 		/// </summary>
 		/// <param name="c1"></param>
 		/// <param name="c2"></param>
@@ -238,8 +238,7 @@ namespace SmashTools
 		/// </summary>
 		/// <param name="c1"></param>
 		/// <param name="c2"></param>
-		/// <returns></returns>
-		public static int DirectionToCell(IntVec3 c1, IntVec3 c2)
+		public static Rot8 DirectionToCell(IntVec3 c1, IntVec3 c2)
 		{
 			int xDiff = c1.x - c2.x;
 			int zDiff = c1.z - c2.z;
@@ -247,44 +246,38 @@ namespace SmashTools
 			{
 				if (zDiff < 0)
 				{
-					return 4;
+					return Rot8.NorthEast;
 				}
 				else if (zDiff > 0)
 				{
-					return 5;
+					return Rot8.SouthEast;
 				}
-				else
-				{
-					return 1;
-				}
+				return Rot8.East;
 			}
 			else if (xDiff > 0)
 			{
 				if (zDiff < 0)
 				{
-					return 7;
+					return Rot8.NorthWest;
 				}
 				else if (zDiff > 0)
 				{
-					return 6;
+					return Rot8.SouthWest;
 				}
-				else
-				{
-					return 3;
-				}
+				return Rot8.West;
 			}
 			else
 			{
 				if (zDiff < 0)
 				{
-					return 0;
+					return Rot8.North;
 				}
 				else if (zDiff > 0)
 				{
-					return 2;
+					return Rot8.South;
 				}
 			}
-			return -1;
+			return Rot8.Invalid;
 		}
 
 		public static List<T> AllPawnsOnMap<T>(this Map map, Faction faction = null, Predicate<T> validator = null) where T : Pawn

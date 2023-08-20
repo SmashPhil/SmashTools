@@ -6,6 +6,10 @@ using Verse;
 
 namespace SmashTools
 {
+	/// <summary>
+	/// Captures and maintains GUI and Text states
+	/// </summary>
+	/// <remarks>Ensures values of GUI and Text remain consistent from beginning to end of OnGUI function.</remarks>
 	public static class GUIState
 	{
 		private static readonly Stack<StateValues> stack = new Stack<StateValues>();
@@ -14,7 +18,7 @@ namespace SmashTools
 
 		public static void Push()
 		{
-			stack.Push(new StateValues(GUI.color, Text.Font, Text.Anchor));
+			stack.Push(StateValues.Capture());
 		}
 
 		public static void Reset()
@@ -25,9 +29,7 @@ namespace SmashTools
 				return;
 			}
 			StateValues state = stack.Peek();
-			GUI.color = state.guiColor;
-			Text.Font = state.gameFont;
-			Text.Anchor = state.textAnchor;
+			state.Reset();
 		}
 
 		public static void Pop()
@@ -55,20 +57,47 @@ namespace SmashTools
 				return;
 			}
 			GUI.enabled = true;
-			GUI.color = stack.Peek().guiColor;
+			GUI.color = stack.Peek().color;
 		}
 
 		private struct StateValues
 		{
-			public Color guiColor;
+			//GUI
+			public Color color;
+			public Color backgroundColor;
+			public bool enabled;
+			public Matrix4x4 matrix;
+
+			//Text
 			public GameFont gameFont;
 			public TextAnchor textAnchor;
-
-			public StateValues(Color guiColor, GameFont gameFont, TextAnchor textAnchor)
+			public bool wordWrap;
+			
+			public void Reset()
 			{
-				this.guiColor = guiColor;
-				this.gameFont = gameFont;
-				this.textAnchor = textAnchor;
+				GUI.color = color;
+				GUI.backgroundColor = backgroundColor;
+				GUI.enabled = enabled;
+				GUI.matrix = matrix;
+
+				Text.Font = gameFont;
+				Text.Anchor = textAnchor;
+				Text.WordWrap = wordWrap;
+			}
+
+			public static StateValues Capture()
+			{
+				StateValues values = new StateValues();
+				values.color = GUI.color;
+				values.backgroundColor = GUI.backgroundColor;
+				values.enabled = GUI.enabled;
+				values.matrix = GUI.matrix;
+
+				values.gameFont = Text.Font;
+				values.textAnchor = Text.Anchor;
+				values.wordWrap = Text.WordWrap;
+
+				return values;
 			}
 		}
 	}

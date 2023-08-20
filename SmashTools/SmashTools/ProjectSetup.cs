@@ -18,8 +18,6 @@ namespace SmashTools
 		public const string ProjectLabel = "[SmashTools]";
 		public const string HarmonyId = "SmashPhil.SmashTools";
 
-		public const bool ExportXmlDoc = false;
-
 		public static Harmony Harmony { get; private set; }
 
 		public ProjectSetup(ModContentPack content) : base(content)
@@ -28,6 +26,7 @@ namespace SmashTools
 
 			Harmony = new Harmony(HarmonyId);
 
+			//Xml Parsing
 			Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributesOnDef)));
@@ -35,30 +34,23 @@ namespace SmashTools
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributes)));
 
+			//Game Init
 			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.FinalizeInit)),
 				postfix: new HarmonyMethod(typeof(StaticConstructorOnGameInitAttribute),
 				nameof(StaticConstructorOnGameInitAttribute.RunGameInitStaticConstructors)));
 
-			if (ExportXmlDoc)
-			{
-#pragma warning disable CS0162 // Unreachable code detected
-				Harmony.Patch(original: AccessTools.Method(typeof(LoadedModManager), nameof(LoadedModManager.ParseAndProcessXML)),
-					postfix: new HarmonyMethod(typeof(XmlParseHelper),
-					nameof(XmlParseHelper.ExportCombinedXmlDocument)));
-#pragma warning restore CS0162 // Unreachable code detected
-			}
-
+			//Logging
 			Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
 
+			//Component Cache + DetachedMapComponent
 			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),
 				postfix: new HarmonyMethod(typeof(DetachedMapComponent),
 				nameof(DetachedMapComponent.InstantiateAllMapComponents)));
 			Harmony.Patch(original: AccessTools.Method(typeof(MapComponentUtility), nameof(MapComponentUtility.MapRemoved)),
 				prefix: new HarmonyMethod(typeof(DetachedMapComponent),
 				nameof(DetachedMapComponent.ClearComponentsFromCache)));
-
 			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearAllMapComps)));
@@ -78,6 +70,7 @@ namespace SmashTools
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ConstructGameComponents)));
 
+			//IThingHolderPawnOverlayer
 			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
 				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
 				nameof(PawnOverlayRenderer.GetBodyPos)));
@@ -91,6 +84,7 @@ namespace SmashTools
 				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
 				nameof(PawnOverlayRenderer.LayingFacing)));
 
+			//Unit Tests
 			Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.DrawDebugWindowButton)));
@@ -104,6 +98,7 @@ namespace SmashTools
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecuteOnStartupTesting)));
 
+			//Input handling
 			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI)),
 				prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
 				nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
@@ -111,10 +106,15 @@ namespace SmashTools
 				prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
 				nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
 
+			//UI
 			Harmony.Patch(original: AccessTools.Method(typeof(MainTabWindow_Inspect), nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),
 				prefix: new HarmonyMethod(typeof(ProjectSetup),
 				nameof(InspectablePaneButtons)));
+			Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.Notify_ClickedInsideWindow)),
+				prefix: new HarmonyMethod(typeof(ProjectSetup),
+				nameof(HandleSingleWindowDialogs)));
 
+			//Debugging
 			if (Prefs.DevMode)
 			{
 				Harmony.Patch(original: AccessTools.Method(typeof(UIRoot), nameof(UIRoot.UIRootOnGUI)),
@@ -122,6 +122,7 @@ namespace SmashTools
 					nameof(ValidateGUIState)));
 			}
 
+			//Mod Init
 			StaticConstructorOnModInit();
 		}
 
@@ -157,16 +158,29 @@ namespace SmashTools
 		{
 			if (Find.Selector.SingleSelectedThing is IInspectable inspectable)
 			{
-				float num = rect.width - 48f;
-				if (UIElements.InfoCardButton(new Rect(num, 0f, 30, 30)))
+				lineEndWidth += 30;
+				if (UIElements.InfoCardButton(new Rect(rect.width - lineEndWidth, 0f, 30, 30)))
 				{
 					Find.WindowStack.Add(new Dialog_InspectWindow(inspectable));
 				}
-				num -= 30;
-				lineEndWidth += 24f + inspectable.DoInspectPaneButtons(num);
+				lineEndWidth += inspectable.DoInspectPaneButtons(rect.width - lineEndWidth);
 				return false;
 			}
 			return true;
+		}
+
+		private static void HandleSingleWindowDialogs(Window window, WindowStack __instance)
+		{
+			if (Event.current.type == EventType.MouseDown)
+			{
+				if (window is null || !(window is SingleWindow) && (__instance.GetWindowAt(UI.GUIToScreenPoint(Event.current.mousePosition)) != SingleWindow.CurrentlyOpenedWindow))
+				{
+					if (SingleWindow.CurrentlyOpenedWindow != null && SingleWindow.CurrentlyOpenedWindow.closeOnAnyClickOutside)
+					{
+						Find.WindowStack.TryRemove(SingleWindow.CurrentlyOpenedWindow);
+					}
+				}
+			}
 		}
 
 		private static void ValidateGUIState()
@@ -174,6 +188,8 @@ namespace SmashTools
 			if (!GUIState.Empty)
 			{
 				Log.Error($"GUIState is not empty on end of frame.  GUIStates need to be popped from the stack when the containing method is finished.");
+
+				while (!GUIState.Empty) GUIState.Pop();
 			}
 		}
 	}

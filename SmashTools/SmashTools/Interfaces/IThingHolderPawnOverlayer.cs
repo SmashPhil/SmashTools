@@ -5,7 +5,7 @@ using Verse;
 
 namespace SmashTools
 {
-	[MustImplement("DrawPawnOverlay")]
+	//[MustImplement("DrawPawnOverlay")]
 	public interface IThingHolderPawnOverlayer : IThingHolder
 	{
 		public Rot4 PawnRotation { get; }

@@ -42,6 +42,8 @@ namespace SmashTools
 
 		protected virtual bool DrawCoordLabels => true;
 
+		protected virtual float Progress => 0;
+
 		public override Vector2 InitialSize
 		{
 			get
@@ -60,7 +62,7 @@ namespace SmashTools
 		{
 			Widgets.DrawMenuSection(rect);
 			Rect graphRect = rect.ContractedBy(45);
-			Graph.DrawGraph(graphRect, Function, XRange, YRange, CurvePoints, simplified: !VectorEvaluation, editable: Editable, drawCoordLabels: DrawCoordLabels);
+			Graph.DrawGraph(graphRect, Function, XRange, YRange, CurvePoints, progress: Progress, simplified: !VectorEvaluation, editable: Editable, drawCoordLabels: DrawCoordLabels);
 		}
 	}
 }

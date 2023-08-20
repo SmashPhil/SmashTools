@@ -15,46 +15,77 @@ namespace SmashTools.Performance
 	/// <remarks>This is for dedicated threads only. For long running tasks that don't occur very frequently, use <seealso cref="ThreadPool"/> or <seealso cref="Task"/></remarks>
 	public static class ThreadManager
 	{
+		public const sbyte MaxThreads = 20;
+		public const byte MaxPooledThreads = 20;
+
 		private static int nextId = 0;
 
-		private static readonly DedicatedThread[] threads = new DedicatedThread[sbyte.MaxValue];
+		private static readonly DedicatedThread[] threads = new DedicatedThread[MaxThreads + MaxPooledThreads];
+
+		private static readonly ushort[] pooledThreadCounts = new ushort[MaxPooledThreads];
 
 		/// <summary>
 		/// Create new <see cref="DedicatedThread"/> for asynchronous 
 		/// </summary>
-		/// <returns>DedicatedThread instance</returns>
+		/// <returns>new DedicatedThread</returns>
+
 		public static DedicatedThread CreateNew()
 		{
-			ThreadPool.GetAvailableThreads(out int workerThreads, out int _);
-			if (nextId < 0 && workerThreads == 0)
+			if (nextId < 0)
 			{
 				Log.Error($"Attempting to create more dedicated threads than allowed.");
 				return null;
 			}
-			DedicatedThread dedicatedThread = new DedicatedThread(nextId);
+			DedicatedThread dedicatedThread = new DedicatedThread(nextId, DedicatedThread.ThreadType.Single);
 			threads[nextId] = dedicatedThread;
 			FindNextUsableId();
 			return dedicatedThread;
 		}
 
-		public static bool Release(int id)
+		public static DedicatedThread GetShared(int id)
 		{
-			if (threads[id] != null)
+			if (id < 0 || id > MaxPooledThreads)
 			{
-				threads[id].Stop();
-				threads[id] = null; //remove from array and allow GC to clean up
-				FindNextUsableId();
+				Log.Error($"Attempting to get shared Thread with invalid id.");
+				return null;
+			}
+			int index = id + MaxThreads;
+			if (threads[index] == null)
+			{
+				threads[index] = new DedicatedThread(index, DedicatedThread.ThreadType.Shared);
+			}
+			pooledThreadCounts[id]++;
+			return threads[index];
+		}
+
+		public static bool Release(this DedicatedThread dedicatedThread)
+		{
+			if (dedicatedThread.type == DedicatedThread.ThreadType.Shared)
+			{
+				return TryReleaseShared(dedicatedThread);
+			}
+			DisposeThread(dedicatedThread);
+			return true;
+		}
+
+		private static bool TryReleaseShared(DedicatedThread dedicatedThread)
+		{
+			int id = dedicatedThread.id;
+			pooledThreadCounts[id - MaxThreads]--;
+			//Log.Message($"Used by: {pooledThreadCounts[id - MaxThreads]}");
+			if (pooledThreadCounts[id - MaxThreads] == 0)
+			{
+				DisposeThread(dedicatedThread);
 				return true;
 			}
 			return false;
 		}
 
-		public static bool Release(this DedicatedThread dedicatedThread)
+		private static void DisposeThread(DedicatedThread dedicatedThread)
 		{
 			dedicatedThread.Stop();
-			threads[dedicatedThread.id] = null; //remove from array and allow GC to clean up
+			threads[dedicatedThread.id] = null;
 			FindNextUsableId();
-			return true;
 		}
 
 		private static void FindNextUsableId()
@@ -64,6 +95,7 @@ namespace SmashTools.Performance
 				if (threads[i] is null)
 				{
 					nextId = i;
+					return;
 				}
 			}
 			nextId = -1;

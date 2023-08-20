@@ -30,11 +30,11 @@ namespace SmashTools
 			{
 				return new Rect[] { rect };
 			}
-			float width = rect.width / splits - buffer;
+			float width = rect.width / splits - buffer * splits;
 			Rect[] rects = new Rect[splits];
 			for (int i = 0; i < splits; i++)
 			{
-				Rect splitRect = new Rect(i * width + buffer, rect.y, width, rect.height);
+				Rect splitRect = new Rect(rect.x + i * (width + buffer), rect.y, width, rect.height);
 				rects[i] = splitRect;
 			}
 			return rects;

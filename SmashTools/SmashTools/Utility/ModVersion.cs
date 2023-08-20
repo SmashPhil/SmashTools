@@ -6,12 +6,12 @@ namespace SmashTools
 {
 	public class ModVersion
 	{
-		public ModVersion(Version version, DateTime startDate)
+		public ModVersion(int major, int minor, DateTime buildDate, DateTime startDate)
 		{
-			BuildDate = new DateTime(2000, 1, 1).AddDays(version.Build);
-			int revision = version.Revision * 2 / 60;
-			int build = Math.Abs((DateTime.Now - startDate).Days);
-			Version = new Version(version.Major, version.Minor, build, revision);
+			BuildDate = buildDate;
+			int revision = (buildDate.Hour * 360 + buildDate.Minute * 60 + buildDate.Second) / 2; //AssemblyVersion.Revision is 1/2 the number of seconds into the day
+			int build = Math.Abs((buildDate - startDate).Days);
+			Version = new Version(major, minor, build, revision);
 
 			VersionString = $"{Version.Major}.{Version.Minor}.{Version.Build}";
 			VersionStringWithRevision = $"{Version.Major}.{Version.Minor}.{Version.Build} rev{Version.Revision}";
@@ -27,11 +27,5 @@ namespace SmashTools
 		public string VersionStringWithoutBuild { get; private set; }
 
 		public string VersionStringWithRevision { get; private set; }
-
-		public static ModVersion VersionFromAssembly(Assembly assembly, DateTime startDate)
-		{
-			Version version = assembly.GetName().Version;
-			return new ModVersion(version, startDate);
-		}
 	}
 }

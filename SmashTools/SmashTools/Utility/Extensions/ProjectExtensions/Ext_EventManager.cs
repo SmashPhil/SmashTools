@@ -49,14 +49,28 @@ namespace SmashTools
 			manager.EventRegistry[@event] = new EventTrigger();
 		}
 
-		public static void AddEvent<T>(this IEventManager<T> manager, T @event, Action action)
+		public static void AddEvent<T>(this IEventManager<T> manager, T @event, Action action, params Action[] actions)
 		{
 			manager.EventRegistry[@event].Add(action);
+			if (!actions.NullOrEmpty())
+			{
+				foreach (Action additionalAction in actions)
+				{
+					manager.EventRegistry[@event].Add(additionalAction);
+				}
+			}
 		}
 
-		public static void AddSingleEvent<T>(this IEventManager<T> manager, T @event, Action action)
+		public static void AddSingleEvent<T>(this IEventManager<T> manager, T @event, Action action, params Action[] actions)
 		{
 			manager.EventRegistry[@event].AddSingle(action);
+			if (!actions.NullOrEmpty())
+			{
+				foreach (Action additionalAction in actions)
+				{
+					manager.EventRegistry[@event].AddSingle(additionalAction);
+				}
+			}
 		}
 
 		public static void RemoveEvent<T>(this IEventManager<T> manager, T @event, Action action)

@@ -178,12 +178,14 @@ namespace SmashTools
 			GUIState.Push();
 			try
 			{
+				bool disabled = !disabledTooltip.NullOrEmpty();
 				float height = lineHeight ?? Text.LineHeight;
 				Rect rect = GetSplitRect(height);
-				float centerY = rect.y - rect.height / 2;
-				float length = rect.width * 0.45f;
-				Rect rectLeft = new Rect(rect.x, centerY, length, rect.height);
-				Rect rectRight = new Rect(rect.x + (rect.width - length), centerY, length, rect.height);
+				float centerY = rect.y + (rect.height - Text.LineHeight) / 2;
+				float leftLength = rect.width * 0.75f;
+				float rightLength = rect.width * 0.25f;
+				Rect rectLeft = new Rect(rect.x, centerY, leftLength, rect.height);
+				Rect rectRight = new Rect(rect.x + rect.width - rightLength, centerY, rightLength, Text.LineHeight);
 
 				if (!disabledTooltip.NullOrEmpty())
 				{
@@ -279,7 +281,7 @@ namespace SmashTools
 					TooltipHandler.TipRegion(rect, tooltip);
 				}
 				GUIState.Reset();
-				value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 				float value2 = value;
 				if (endValue > 0 && value2 >= max)
 				{
@@ -331,7 +333,7 @@ namespace SmashTools
 					TooltipHandler.TipRegion(fullRect, tooltip);
 				}
 				GUIState.Reset();
-				value = Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 				float value2 = value;
 				if (increment > 0)
 				{
@@ -399,7 +401,7 @@ namespace SmashTools
 					TooltipHandler.TipRegion(fullRect, tooltip);
 				}
 				GUIState.Reset();
-				value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+				value = (int)Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 				int value2 = value;
 				if (value2 >= max && endValue > 0)
 				{
@@ -442,7 +444,7 @@ namespace SmashTools
 						TooltipHandler.TipRegion(fullRect, tooltip);
 					}
 					GUIState.Reset();
-					value = (int)Widgets.HorizontalSlider(rect, value, min, max, false, null, label, format);
+					value = (int)Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 				}
 				catch (Exception ex)
 				{
@@ -453,36 +455,36 @@ namespace SmashTools
 			GUIState.Pop();
 		}
 
-		public void Vector2Box(string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		public void Vector2Box(string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
-			value = Vector2Box(label, value, tooltip, labelProportion);
+			value = Vector2Box(label, value, tooltip, labelProportion: labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
 		}
 
-		public Vector2 Vector2Box(string label, Vector2 value, string tooltip = null, float labelProportion = 0.5f)
+		public Vector2 Vector2Box(string label, Vector2 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
 			Shift();
 			GUIState.Push();
 			{
 				Rect rect = GetSplitRect(24);
-				value = UIElements.Vector2Box(rect, label, value, tooltip, labelProportion);
+				value = UIElements.Vector2Box(rect, label, value, tooltip, labelProportion: labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
 			}
 			GUIState.Pop();
 
 			return value;
 		}
 
-		public void Vector3Box(string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		public void Vector3Box(string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
-			value = Vector3Box(label, value, tooltip, labelProportion);
+			value = Vector3Box(label, value, tooltip, labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
 		}
 
-		public Vector3 Vector3Box(string label, Vector3 value, string tooltip = null, float labelProportion = 0.5f)
+		public Vector3 Vector3Box(string label, Vector3 value, string tooltip = null, float labelProportion = 0.5f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
 			Shift();
 			GUIState.Push();
 			{
 				Rect rect = GetSplitRect(24);
-				value = UIElements.Vector3Box(rect, label, value, tooltip, labelProportion);
+				value = UIElements.Vector3Box(rect, label, value, tooltip, labelProportion: labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
 			}
 			GUIState.Pop();
 			return value;

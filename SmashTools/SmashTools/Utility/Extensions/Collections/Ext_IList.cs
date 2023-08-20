@@ -10,6 +10,22 @@ namespace SmashTools
 	public static class Ext_IList
 	{
 		/// <summary>
+		/// Populate array with <paramref name="value"/> up to <paramref name="count"/> times.
+		/// </summary>
+		/// <remarks>Overwrites existing values, as list may or may not be pre-filled and of a smaller size than <paramref name="count"/></remarks>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="array"></param>
+		/// <param name="value"></param>
+		public static void Populate<T>(this IList<T> list, T value, int count)
+		{
+			list.Clear();
+			for (int i = 0; i < count; ++i)
+			{
+				list.Add(value);
+			}
+		}
+
+		/// <summary>
 		/// Pop random value from List
 		/// </summary>
 		/// <typeparam name="T"></typeparam>

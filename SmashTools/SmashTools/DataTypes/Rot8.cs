@@ -357,6 +357,22 @@ namespace SmashTools
 			return North;
 		}
 
+		public static int FromIntClockwise(int asInt)
+		{
+			return asInt switch
+			{
+				0 => 0,
+				1 => 4,
+				2 => 1,
+				3 => 5,
+				4 => 2,
+				5 => 6,
+				6 => 3,
+				7 => 7,
+				_ => throw new Exception($"value cannot be > 7 but it is = {asInt}")
+			};
+		}
+
 		public int Difference(Rot8 rot)
 		{
 			if (!rot.IsValid || !IsValid)
@@ -380,26 +396,36 @@ namespace SmashTools
 					return rotations;
 				}
 			}
-			Log.Error($"Could not match rot {rot} with {this}. Difference excluding rotation direction should not be > 4.");
+			Log.Error($"Could not match rot {rot} with {this}.");
 			return 4;
 		}
 
 		public void Rotate(RotationDirection rotDir, bool diagonals = true)
 		{
-			if (rotDir == RotationDirection.Clockwise)
+			if (AsInt < 0 || AsInt > 7)
 			{
-				int asInt = AsInt;
-				AsInt = asInt + 1;
-			}
-			if (rotDir == RotationDirection.Counterclockwise)
-			{
-				int asInt = AsInt;
-				AsInt = asInt - 1;
+				return;
 			}
 			if (!diagonals)
 			{
-				AsInt %= 4;
+				Rot4 rot = this;
+				AsByte = rot.Rotated(rotDir).AsByte;
+				return;
 			}
+			int intClockwise = AsIntClockwise;
+			if (rotDir == RotationDirection.Clockwise)
+			{
+				intClockwise += 1;
+			}
+			if (rotDir == RotationDirection.Counterclockwise)
+			{
+				intClockwise -= 1;
+			}
+			if (rotDir == RotationDirection.Opposite)
+			{
+				intClockwise += 4;
+			}
+			AsInt = FromIntClockwise(GenMath.PositiveMod(intClockwise, 8));
 		}
 
 		public Rot8 Rotated(RotationDirection rotDir, bool diagonals = true)
@@ -431,17 +457,7 @@ namespace SmashTools
 			return FromDirection(new IntVec2(result.x, result.z));
 		}
 
-		public static bool operator ==(Rot8 a, Rot8 b)
-		{
-			return a.AsInt == b.AsInt;
-		}
-
-		public static bool operator !=(Rot8 a, Rot8 b)
-		{
-			return a.AsInt != b.AsInt;
-		}
-
-		public static implicit operator Rot4(Rot8 rot)
+		public static Rot4 ToRot4(Rot8 rot)
 		{
 			return rot.AsInt switch
 			{
@@ -458,6 +474,21 @@ namespace SmashTools
 			};
 		}
 
+		public static bool operator ==(Rot8 a, Rot8 b)
+		{
+			return a.AsInt == b.AsInt;
+		}
+
+		public static bool operator !=(Rot8 a, Rot8 b)
+		{
+			return a.AsInt != b.AsInt;
+		}
+
+		public static implicit operator Rot4(Rot8 rot)
+		{
+			return ToRot4(rot);
+		}
+
 		public static implicit operator Rot8(Rot4 rot)
 		{
 			return new Rot8(rot.AsInt);
@@ -471,6 +502,22 @@ namespace SmashTools
 		public override string ToString()
 		{
 			return rotInt.ToString();
+		}
+
+		public string ToStringNamed()
+		{
+			return rotInt switch
+			{
+				0 => "North",
+				1 => "East",
+				2 => "South",
+				3 => "West",
+				4 => "NorthEast",
+				5 => "SouthEast",
+				6 => "SouthWest",
+				7 => "NorthWest",
+				_ => "Invalid"
+			};
 		}
 
 		public static Rot8 FromString(string innerText)
