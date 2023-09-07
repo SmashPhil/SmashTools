@@ -85,6 +85,11 @@ namespace SmashTools
 			return result;
 		}
 
+		public Rect GetCurrentRect(float height)
+		{
+			return new Rect(curX, curY, ColumnWidth / (columns + (columns * columns * ColumnSplitWidth)) - columnGap, height);
+		}
+
 		public virtual void Shift(float gapHeight = 34)
 		{
 			if (curColumn > 0)
@@ -172,40 +177,15 @@ namespace SmashTools
 			}
 		}
 
-		public void IntegerBox(string label, ref int value, string tooltip, string disabledTooltip, int min = int.MinValue, int max = int.MaxValue, float? lineHeight = null)
+		public void IntegerBox(string label, ref int value, string tooltip, string disabledTooltip, int min = int.MinValue, int max = int.MaxValue, float? lineHeight = null, float labelProportion = 0.75f)
 		{
 			Shift();
 			GUIState.Push();
 			try
 			{
-				bool disabled = !disabledTooltip.NullOrEmpty();
 				float height = lineHeight ?? Text.LineHeight;
 				Rect rect = GetSplitRect(height);
-				float centerY = rect.y + (rect.height - Text.LineHeight) / 2;
-				float leftLength = rect.width * 0.75f;
-				float rightLength = rect.width * 0.25f;
-				Rect rectLeft = new Rect(rect.x, centerY, leftLength, rect.height);
-				Rect rectRight = new Rect(rect.x + rect.width - rightLength, centerY, rightLength, Text.LineHeight);
-
-				if (!disabledTooltip.NullOrEmpty())
-				{
-					GUIState.Disable();
-					TooltipHandler.TipRegion(rect, disabledTooltip);
-				}
-				else if (!tooltip.NullOrEmpty())
-				{
-					if (Mouse.IsOver(rect))
-					{
-						Widgets.DrawHighlight(rect);
-					}
-					TooltipHandler.TipRegion(rect, tooltip);
-				}
-				GUIState.Reset();
-				Widgets.Label(rectLeft, label);
-
-				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
-				string buffer = value.ToString();
-				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+				UIElements.NumericBox(rect, ref value, label, tooltip, disabledTooltip, min: min, max: max, labelProportion: labelProportion);
 			}
 			finally
 			{
@@ -213,37 +193,14 @@ namespace SmashTools
 			}
 		}
 
-		public void FloatBox(string label, ref float value, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float? lineHeight = null)
+		public void FloatBox(string label, ref float value, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float? lineHeight = null, float labelProportion = 0.75f)
 		{
 			Shift();
 			GUIState.Push();
 			{
 				float height = lineHeight ?? Text.LineHeight;
 				Rect rect = GetSplitRect(height);
-				float centerY = rect.y - rect.height / 2;
-				float length = rect.width * 0.45f;
-				Rect rectLeft = new Rect(rect.x, centerY, length, rect.height);
-				Rect rectRight = new Rect(rect.x + (rect.width - length), centerY, length, rect.height);
-
-				if (!disabledTooltip.NullOrEmpty())
-				{
-					GUIState.Disable();
-					TooltipHandler.TipRegion(rect, disabledTooltip);
-				}
-				else if (!tooltip.NullOrEmpty())
-				{
-					if (Mouse.IsOver(rect))
-					{
-						Widgets.DrawHighlight(rect);
-					}
-					TooltipHandler.TipRegion(rect, tooltip);
-				}
-				GUIState.Reset();
-				Widgets.Label(rectLeft, label);
-
-				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
-				string buffer = value.ToString();
-				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+				UIElements.NumericBox(rect, ref value, label, tooltip, disabledTooltip, min: min, max: max, labelProportion: labelProportion);
 			}
 			GUIState.Pop();
 		}
@@ -448,7 +405,7 @@ namespace SmashTools
 				}
 				catch (Exception ex)
 				{
-					Log.Error($"Unable to convert to {enumType}. Exception={ex.Message}");
+					Log.Error($"Unable to convert to {enumType}. Exception={ex}");
 					return;
 				}
 			}

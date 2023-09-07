@@ -13,17 +13,5 @@ namespace SmashTools
 			item1 = pair.First;
 			item2 = pair.Second;
 		}
-
-		public static IntVec2 RotatedBy(this IntVec2 orig, Rot4 rot)
-		{
-			return rot.AsInt switch
-			{
-				0 => orig,
-				1 => new IntVec2(orig.z, -orig.x),
-				2 => new IntVec2(-orig.x, -orig.z),
-				3 => new IntVec2(-orig.z, orig.x),
-				_ => orig,
-			};
-		}
 	}
 }

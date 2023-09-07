@@ -44,7 +44,7 @@ namespace SmashTools
 				}
 				catch (Exception ex)
 				{
-					SmashLog.Error($"{ProjectSetup.ProjectLabel} Failed to apply patch <type>{type}</type>. Exception={ex.Message}");
+					SmashLog.Error($"{ProjectSetup.ProjectLabel} Failed to apply patch <type>{type}</type>. Exception={ex}");
 				}
 			}
 		}

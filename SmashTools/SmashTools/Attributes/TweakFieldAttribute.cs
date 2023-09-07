@@ -13,6 +13,8 @@ namespace SmashTools
 
 		public string Category { get; set; }
 
+		public string SubCategory { get; set; }
+
 		public UISettingsType SettingsType { get; set; } = UISettingsType.None;
 	}
 }

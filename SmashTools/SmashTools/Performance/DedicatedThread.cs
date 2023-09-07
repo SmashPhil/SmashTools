@@ -14,40 +14,28 @@ namespace SmashTools.Performance
 		public readonly int id;
 		public readonly ThreadType type;
 
-		private readonly Queue<AsyncAction> queue;
-
-		private object queueLock = new object();
+		private readonly ConcurrentQueue<AsyncAction> queue;
 
 		public DedicatedThread(int id, ThreadType type)
 		{
 			this.id = id;
-
+			this.type = type;
 			ShouldExit = false;
 
-			queue = new Queue<AsyncAction>();
+			queue = new ConcurrentQueue<AsyncAction>();
 			thread = new Thread(Execute);
 			thread.Start();
 		}
 
 		private bool ShouldExit { get; set; }
 
-		private int Count { get; set; }
-
 		public void Queue(AsyncAction action)
 		{
-			lock (queueLock)
-			{
-				queue.Enqueue(action);
-				Count = queue.Count;
-			}
+			queue.Enqueue(action);
 		}
 
 		internal void Stop()
 		{
-			lock (queueLock)
-			{
-				queue.Clear();
-			}
 			ShouldExit = true;
 		}
 
@@ -55,31 +43,26 @@ namespace SmashTools.Performance
 		{
 			while (!ShouldExit)
 			{
-				AsyncAction asyncAction = null;
-				lock (queueLock)
+				if (queue.TryDequeue(out AsyncAction asyncAction))
 				{
-					if (queue.Count > 0)
+					if (asyncAction != null && asyncAction.IsValid)
 					{
-						asyncAction = queue.Dequeue();
-					}
-					Count = queue.Count;
-				}
-				if (asyncAction != null && asyncAction.IsValid)
-				{
-					try
-					{
-						asyncAction.Invoke();
-					}
-					catch (Exception ex)
-					{
-						Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
-						if (asyncAction.exceptionHandler != null)
+						try
 						{
-							asyncAction.exceptionHandler(ex);
+							asyncAction.Invoke();
+						}
+						catch (Exception ex)
+						{
+							Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
+							if (asyncAction.exceptionHandler != null)
+							{
+								asyncAction.exceptionHandler(ex);
+							}
 						}
 					}
+					AsyncPool<AsyncAction>.Return(asyncAction);
 				}
-				while (Count == 0) Thread.Sleep(1);
+				while (queue.Count == 0) Thread.Sleep(1);
 			}
 		}
 

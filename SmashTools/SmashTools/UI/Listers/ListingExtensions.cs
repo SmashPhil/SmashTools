@@ -156,7 +156,7 @@ namespace SmashTools
 				}
 				catch (Exception ex)
 				{
-					Log.Error($"Unable to convert to {enumType}. Exception={ex.Message}");
+					Log.Error($"Unable to convert to {enumType}. Exception={ex}");
 					return;
 				}
 			}
@@ -278,9 +278,14 @@ namespace SmashTools
 			Listing_SplitColumns splitLister = lister as Listing_SplitColumns;
 
 			splitLister?.NextRow(rowGap);
-
-			Rect rect = lister.GetRect(Text.CalcHeight(header, lister.ColumnWidth));
-			UIElements.Header(rect, header, highlight, fontSize: fontSize, anchor: anchor);
+			GUIState.Push();
+			{
+				Text.Font = fontSize;
+				Rect rect = lister.GetRect(Text.CalcHeight(header, lister.ColumnWidth));
+				GUIState.Reset();
+				UIElements.Header(rect, header, highlight, fontSize: fontSize, anchor: anchor);
+			}
+			GUIState.Pop();
 
 			splitLister?.Gap(2);
 		}

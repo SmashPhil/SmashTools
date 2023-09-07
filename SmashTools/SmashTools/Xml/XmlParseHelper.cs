@@ -111,15 +111,15 @@ namespace SmashTools.Xml
 							}
 							catch (Exception ex)
 							{
-								SmashLog.Error($"Unable to execute {attribute.Name} action. Method={registeredAction.Method.Name}. Exception={ex.Message}");
+								SmashLog.Error($"Unable to execute {attribute.Name} action. Method={registeredAction.Method.Name}. Exception={ex}");
 							}
 						}
 					}
 				}
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
-				Log.Error($"Exception thrown while trying to apply registered attributes to field {token}. Exception={ex.Message}");
+				Log.Error($"Exception thrown while trying to apply registered attributes to field {token}. Exception={ex}");
 			}
 		}
 
@@ -165,7 +165,7 @@ namespace SmashTools.Xml
 							}
 							catch (Exception ex)
 							{
-								SmashLog.Error($"Unable to execute {attribute.Name} action. Method={registeredAction.Method.Name}. Exception={ex.Message}");
+								SmashLog.Error($"Unable to execute {attribute.Name} action. Method={registeredAction.Method.Name}. Exception={ex}");
 							}
 						}
 					}
@@ -173,7 +173,7 @@ namespace SmashTools.Xml
 			}
 			catch (Exception ex)
 			{
-				Log.Error($"Exception thrown while trying to apply registered attributes to Def of type {node?.Name ?? "[Null]"}. Exception={ex.Message}");
+				Log.Error($"Exception thrown while trying to apply registered attributes to Def of type {node?.Name ?? "[Null]"}. Exception={ex}");
 			}
 		}
 

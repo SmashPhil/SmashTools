@@ -35,6 +35,7 @@ namespace SmashTools
 
 				GUIState.Reset();
 
+				Text.Font = fontSize;
 				Text.Anchor = anchor;
 				Widgets.Label(rect, header);
 			}

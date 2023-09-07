@@ -55,7 +55,7 @@ namespace SmashTools
 			}
 			catch (Exception ex)
 			{
-				SmashLog.Error($"Unable to execute {action.Method?.Name ?? action.ToString()} Exception={ex.Message}");
+				SmashLog.Error($"Unable to execute {action.Method?.Name ?? action.ToString()} Exception={ex}");
 			}
 		}
 	}

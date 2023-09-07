@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Verse;
 using RimWorld;
 using RimWorld.Planet;
@@ -78,6 +79,18 @@ namespace SmashTools
 		public static int Sign(bool value)
 		{
 			return value ? 1 : -1;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsOdd(this int value)
+		{
+			return value % 2 != 0;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsEven(this int value)
+		{
+			return value % 2 == 0;
 		}
 
 		/// <summary>

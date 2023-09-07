@@ -9,11 +9,16 @@ namespace SmashTools.Performance
 {
 	public class AsyncAction
 	{
-		public readonly Action action;
-		public readonly Func<bool> validator;
-		public readonly Action<Exception> exceptionHandler;
+		internal Action action;
+		internal Func<bool> validator;
+		internal Action<Exception> exceptionHandler;
 
-		public AsyncAction(Action action, Func<bool> validator = null, Action<Exception> exceptionHandler = null)
+		[Obsolete("Don't instantiate AsyncActions manually, use AsyncPool to retrieve one instead.", error: true)]
+		public AsyncAction()
+		{
+		}
+
+		public void Set(Action action, Func<bool> validator = null, Action<Exception> exceptionHandler = null)
 		{
 			this.action = action;
 			this.validator = validator;
@@ -24,11 +29,6 @@ namespace SmashTools.Performance
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void Invoke() => action.Invoke();
-
-		public static implicit operator AsyncAction(Action action)
-		{
-			return new AsyncAction(action);
-		}
 
 		public override string ToString()
 		{

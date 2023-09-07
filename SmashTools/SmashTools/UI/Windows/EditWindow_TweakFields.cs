@@ -12,6 +12,7 @@ namespace SmashTools
 	{
 		private const float VectorLabelProportion = 0.5f;
 		private const float VectorSubLabelProportion = 0.15f;
+		private const float RowHeight = 24;
 
 		private Thing thing;
 		private static List<TweakInfo> tweakValueFields;
@@ -19,7 +20,7 @@ namespace SmashTools
 		private Vector2 scrollPosition;
 		private Listing_SplitColumns listing = new Listing_SplitColumns();
 
-		private static readonly Dictionary<FieldInfo, (string category, UISettingsType settingsType)> registeredFields = new Dictionary<FieldInfo, (string category, UISettingsType settingsType)>();
+		private static readonly Dictionary<FieldInfo, (string category, string subCategory, UISettingsType settingsType)> registeredFields = new Dictionary<FieldInfo, (string category, string subCategory, UISettingsType settingsType)>();
 
 		public override bool IsDebug => true;
 
@@ -27,28 +28,41 @@ namespace SmashTools
 		{
 			this.thing = thing;
 			optionalTitle = "TweakValues";
-			tweakValueFields = FindAllTweakablesRecursive(thing).OrderBy(info => info.category).ThenBy(info => info.fieldInfo.DeclaringType.Name).ThenBy(info => info.Name).ToList();
+			tweakValueFields = FindAllTweakablesRecursive(thing).OrderBy(info => info.category).ThenBy(info => info.subCategory).ThenBy(info => info.fieldInfo.DeclaringType.Name).ThenBy(info => info.Name).ToList();
+			RecacheHeight();
 		}
 
-		public override Vector2 InitialSize => new Vector2(650, 650);
+		public override Vector2 InitialSize => new Vector2(UI.screenWidth / 2, UI.screenHeight * 0.9f);
 
-		public static bool RegisterField(FieldInfo fieldInfo, string category, UISettingsType settingsType)
+		private float CachedHeight { get; set; }
+
+		public static bool RegisterField(FieldInfo fieldInfo, string category, string subCategory, UISettingsType settingsType)
 		{
 			if (registeredFields.ContainsKey(fieldInfo))
 			{
 				return false;
 			}
-			registeredFields.Add(fieldInfo, (category, settingsType));
+			registeredFields.Add(fieldInfo, (category, subCategory, settingsType));
 			return true;
 		}
 
 		private IEnumerable<TweakInfo> FindAllTweakablesRecursive(Thing thing)
 		{
-			foreach (var info in FindAllTweakablesRecursive(thing.GetType(), thing, thing.Label))
+			foreach (var info in FindAllTweakablesRecursive(thing.def.GetType(), thing.def, thing.def.defName, string.Empty))
 			{
 				yield return info;
 			}
-			foreach (var info in FindAllTweakablesRecursive(thing.def.GetType(), thing.def, thing.def.defName))
+			if (!thing.def.comps.NullOrEmpty())
+			{
+				foreach (CompProperties compProperties in thing.def.comps)
+				{
+					foreach (var info in FindAllTweakablesRecursive(compProperties.GetType(), compProperties, compProperties.GetType().Name, string.Empty))
+					{
+						yield return info;
+					}
+				}
+			}
+			foreach (var info in FindAllTweakablesRecursive(thing.GetType(), thing, thing.Label, string.Empty))
 			{
 				yield return info;
 			}
@@ -56,7 +70,7 @@ namespace SmashTools
 			{
 				foreach (ThingComp thingComp in thingWithComps.AllComps)
 				{
-					foreach (var info in FindAllTweakablesRecursive(thingComp.GetType(), thingComp, thingComp.GetType().Name))
+					foreach (var info in FindAllTweakablesRecursive(thingComp.GetType(), thingComp, thingComp.GetType().Name, string.Empty))
 					{
 						yield return info;
 					}
@@ -64,7 +78,7 @@ namespace SmashTools
 			}
 		}
 
-		private IEnumerable<TweakInfo> FindAllTweakablesRecursive(Type type, object parent, string category)
+		private IEnumerable<TweakInfo> FindAllTweakablesRecursive(Type type, object parent, string category, string subCategory)
 		{
 			foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
 			{
@@ -73,10 +87,12 @@ namespace SmashTools
 					if (fieldInfo.IsStatic)
 					{
 						Log.Error($"Cannot use TweakFieldAttribute on static fields. Use vanilla's TweakValues for static fields instead. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
+						continue;
 					}
 					if (fieldInfo.IsLiteral)
 					{
 						Log.Error($"Cannot use TweakFieldAttribute on constants. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
+						continue;
 					}
 					if (fieldInfo.FieldType.IsClass)
 					{
@@ -85,41 +101,42 @@ namespace SmashTools
 							if (!fieldInfo.FieldType.GetGenericArguments()[0].IsClass)
 							{
 								Log.Error($"Cannot use TweakFieldAttribute on list of non-reference types. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
+								continue;
 							}
 							else
 							{
 								IList list = (IList)fieldInfo.GetValue(parent);
-								int index = 0;
-								foreach (object item in list)
+								if (list != null)
 								{
-									List<TweakInfo> infos = FindAllTweakablesRecursive(item.GetType(), item, category).ToList();
-									for (int i = 0; i < infos.Count; i++)
+									int index = 0;
+									foreach (object item in list)
 									{
-										TweakInfo info = infos[i];
-										if (list.Count > 1)
+										(string newCategory, string newSubCategory) = GetCategory(fieldInfo, item, category, subCategory);
+										List<TweakInfo> infos = FindAllTweakablesRecursive(item.GetType(), item, newCategory, newSubCategory).ToList();
+										for (int i = 0; i < infos.Count; i++)
 										{
-											info.IndexInList = index;
+											TweakInfo info = infos[i];
+											if (list.Count > 1)
+											{
+												info.IndexInList = index;
+											}
+											yield return info;
 										}
-										yield return info;
+										index++;
 									}
-									index++;
 								}
 							}
 						}
 						else
 						{
 							object instance = fieldInfo.GetValue(parent);
-							if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is TweakFieldAttribute tweakFieldAttribute && !tweakFieldAttribute.Category.NullOrEmpty())
+							if (instance != null)
 							{
-								category = tweakFieldAttribute.Category;
-							}
-							else if (registeredFields.TryGetValue(fieldInfo, out (string category, UISettingsType settingsType) info))
-							{
-								category = info.category;
-							}
-							foreach (TweakInfo info in FindAllTweakablesRecursive(fieldInfo.FieldType, instance, category))
-							{
-								yield return info;
+								(string newCategory, string newSubCategory) = GetCategory(fieldInfo, instance, category, subCategory);
+								foreach (TweakInfo info in FindAllTweakablesRecursive(fieldInfo.FieldType, instance, newCategory, newSubCategory))
+								{
+									yield return info;
+								}
 							}
 						}
 					}
@@ -134,23 +151,98 @@ namespace SmashTools
 						{
 							settingsType = info.settingsType;
 						}
-						yield return CreateInfo(fieldInfo, parent, category, settingsType);
+						yield return CreateInfo(fieldInfo, parent, category, subCategory, settingsType);
 					}
 				}
 			}
 		}
 
-		private TweakInfo CreateInfo(FieldInfo fieldInfo, object instance, string category, UISettingsType settingsType)
+		private (string category, string subCategory) GetCategory(FieldInfo fieldInfo, object instance, string category, string subCategory)
+		{
+			if (instance is ITweakFields tweakFields)
+			{
+				if (!tweakFields.Category.NullOrEmpty())
+				{
+					category = tweakFields.Category;
+				}
+				if (!tweakFields.Label.NullOrEmpty())
+				{
+					subCategory = tweakFields.Label;
+				}
+			}
+			else if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is TweakFieldAttribute tweakFieldAttribute)
+			{
+				if (!tweakFieldAttribute.Category.NullOrEmpty())
+				{
+					category = tweakFieldAttribute.Category;
+				}
+				if (!tweakFieldAttribute.SubCategory.NullOrEmpty())
+				{
+					subCategory = tweakFieldAttribute.SubCategory;
+				}
+			}
+			else if (registeredFields.TryGetValue(fieldInfo, out (string category, string subCategory, UISettingsType settingsType) info))
+			{
+				if (!info.category.NullOrEmpty())
+				{
+					category = info.category;
+				}
+				if (!info.subCategory.NullOrEmpty())
+				{
+					subCategory = info.subCategory;
+				}
+			}
+			return (category, subCategory);
+		}
+
+		private TweakInfo CreateInfo(FieldInfo fieldInfo, object instance, string category, string subCategory, UISettingsType settingsType)
 		{
 			TweakInfo info = new TweakInfo()
 			{
 				fieldInfo = fieldInfo,
 				instance = instance,
 				category = category,
+				subCategory = subCategory,
 				settingsType = settingsType,
 				initialValue = fieldInfo.GetValue(instance),
 			};
 			return info;
+		}
+
+		private void RecacheHeight()
+		{
+			CachedHeight = 0;
+
+			GUIState.Push();
+			{
+				string currentCategory = string.Empty;
+				string currentSubCategory = string.Empty;
+				foreach (TweakInfo info in tweakValueFields)
+				{
+					if (info.category != currentCategory)
+					{
+						currentCategory = info.category;
+						if (!currentCategory.NullOrEmpty())
+						{
+							Text.Font = GameFont.Medium;
+							CachedHeight += Text.LineHeight;
+						}
+					}
+					if (info.subCategory != currentSubCategory)
+					{
+						currentSubCategory = info.subCategory;
+						if (!currentSubCategory.NullOrEmpty())
+						{
+							Text.Font = GameFont.Small;
+							CachedHeight += Text.LineHeight;
+						}
+					}
+					CachedHeight += RowHeight;
+				}
+			}
+			GUIState.Pop();
+
+			CachedHeight += Text.LineHeight * (tweakValueFields.Count / 2);
 		}
 
 		public override void DoWindowContents(Rect inRect)
@@ -161,19 +253,33 @@ namespace SmashTools
 				Rect rect;
 				Rect outRect = rect = inRect.ContractedBy(4f);
 				rect.xMax -= 33f;
-				Rect viewRect = new Rect(0f, 0f, rect.width, Text.LineHeight * tweakValueFields.Count).ContractedBy(4);
+				Rect viewRect = new Rect(0f, 0f, rect.width, CachedHeight).ContractedBy(4);
 				listing.BeginScrollView(outRect, ref scrollPosition, ref viewRect, 2);
 				{
 					string currentCategory = string.Empty;
+					string currentSubCategory = string.Empty;
 					foreach (TweakInfo info in tweakValueFields)
 					{
 						if (info.category != currentCategory)
 						{
 							currentCategory = info.category;
-							//string label = headerTitleAttribute.Translate ? headerTitleAttribute.Label.Translate().ToString() : headerTitleAttribute.Label;
-							listing.Header(currentCategory, ListingExtension.BannerColor, fontSize: GameFont.Small, anchor: TextAnchor.MiddleCenter, rowGap: 24);
+							if (!currentCategory.NullOrEmpty())
+							{
+								listing.Header(currentCategory, ListingExtension.BannerColor, fontSize: GameFont.Medium, anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
+							}
 						}
-						DrawField(info);
+						if (info.subCategory != currentSubCategory)
+						{
+							currentSubCategory = info.subCategory;
+							if (!currentSubCategory.NullOrEmpty())
+							{
+								listing.Header(currentSubCategory, ListingExtension.BannerColor, fontSize: GameFont.Small, anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
+							}
+						}
+						if (DrawField(info))
+						{
+							FieldChanged();
+						}
 					}
 				}
 				listing.EndScrollView(ref viewRect);
@@ -181,13 +287,18 @@ namespace SmashTools
 			GUIState.Pop();
 		}
 
-		private void DrawField(TweakInfo info)
+		/// <summary>
+		/// Draw field for editing in the TweakValues menu
+		/// </summary>
+		/// <param name="info"></param>
+		/// <returns>True if value was changed this frame.</returns>
+		private bool DrawField(TweakInfo info)
 		{
 			UISettingsType settingsType = info.settingsType;
 			switch (info.settingsType)
 			{
 				case UISettingsType.None:
-					return;
+					return false;
 				case UISettingsType.Checkbox:
 					bool checkOn = info.GetValue<bool>();
 					bool checkAfter = checkOn;
@@ -195,6 +306,7 @@ namespace SmashTools
 					if (checkOn != checkAfter)
 					{
 						info.SetValue(checkAfter);
+						return true;
 					}
 					break;
 				case UISettingsType.IntegerBox:
@@ -203,15 +315,16 @@ namespace SmashTools
 						int newValue = value;
 						if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
 						{
-							listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue), lineHeight: 24);
+							listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue), lineHeight: RowHeight);
 						}
 						else
 						{
-							listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: int.MaxValue, lineHeight: 24);
+							listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: int.MaxValue, lineHeight: RowHeight);
 						}
 						if (value != newValue)
 						{
 							info.SetValue(newValue);
+							return true;
 						}
 						break;
 					}
@@ -227,6 +340,7 @@ namespace SmashTools
 								if (nullableValue.Value != newValue)
 								{
 									info.SetValue(newValue);
+									return true;
 								}
 							}
 						}
@@ -238,6 +352,7 @@ namespace SmashTools
 							if (value != newValue)
 							{
 								info.SetValue(newValue);
+								return true;
 							}
 						}
 						else if (info.fieldInfo.FieldType == typeof(Vector3?))
@@ -250,6 +365,7 @@ namespace SmashTools
 								if (nullableValue.Value != newValue)
 								{
 									info.SetValue(newValue);
+									return true;
 								}
 							}
 						}
@@ -261,6 +377,7 @@ namespace SmashTools
 							if (value != newValue)
 							{
 								info.SetValue(newValue);
+								return true;
 							}
 						}
 						else
@@ -269,15 +386,16 @@ namespace SmashTools
 							float newValue = value;
 							if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
 							{
-								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: inputBox.MinValue, max: inputBox.MaxValue, lineHeight: 24);
+								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: inputBox.MinValue, max: inputBox.MaxValue, lineHeight: RowHeight);
 							}
 							else
 							{
-								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: float.MaxValue, lineHeight: 24);
+								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: float.MaxValue, lineHeight: RowHeight);
 							}
 							if (value != newValue)
 							{
 								info.SetValue(newValue);
+								return true;
 							}
 						}
 						break;
@@ -292,6 +410,7 @@ namespace SmashTools
 						if (value != newValue)
 						{
 							info.SetValue(newValue);
+							return true;
 						}
 					}
 					break;
@@ -311,6 +430,7 @@ namespace SmashTools
 						if (value != newValue)
 						{
 							info.SetValue(newValue);
+							return true;
 						}
 					}
 					break;
@@ -330,6 +450,7 @@ namespace SmashTools
 						if (value != newValue)
 						{
 							info.SetValue(newValue);
+							return true;
 						}
 					}
 					break;
@@ -349,12 +470,25 @@ namespace SmashTools
 						if (value != newValue)
 						{
 							info.SetValue(newValue);
+							return true;
 						}
 					}
 					break;
 				default:
 					Log.ErrorOnce($"{settingsType} has not yet been implemented for PostToSettings.DrawLister. Please notify SmashPhil.", settingsType.ToString().GetHashCode());
 					break;
+			}
+			return false;
+		}
+
+		private void FieldChanged()
+		{
+			foreach (TweakInfo info in tweakValueFields)
+			{
+				if (info.instance is ITweakFields tweakFields)
+				{
+					tweakFields.OnFieldChanged();
+				}
 			}
 		}
 
@@ -364,12 +498,23 @@ namespace SmashTools
 			public object instance;
 
 			public string category;
+			public string subCategory;
 
 			public UISettingsType settingsType;
 
 			public object initialValue;
 
-			public string Name => IndexInList > 0 ? $"{fieldInfo.Name}_{IndexInList}" : fieldInfo.Name;
+			public string Name
+			{
+				get
+				{
+					if (IndexInList > 0)
+					{
+						return $"{fieldInfo.Name}_{IndexInList}";
+					}
+					return fieldInfo.Name;
+				}
+			}
 
 			public int IndexInList { get; internal set; }
 

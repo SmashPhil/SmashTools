@@ -138,7 +138,7 @@ namespace SmashTools
 				}
 				catch (Exception ex)
 				{
-					Log.Error($"An error occurred while logging an error with a label: {ex.Message}");
+					Log.Error($"An error occurred while logging an error with a label: {ex}");
 				}
 			}
 		}
