@@ -28,7 +28,7 @@ namespace SmashTools
 			int n = controlPoints.Count - 1;
 			if (n > 16)
 			{
-				Debug.LogError("Max number of control points is 16, factorials are precalculated.");
+				Log.Error("Max number of control points is 16, factorials are precalculated.");
 				n = 16;
 			}
 

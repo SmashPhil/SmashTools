@@ -142,16 +142,33 @@ namespace SmashTools
 
 		public static void Vector2Box(Rect rect, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
-			value = Vector2Box(rect, label, value, tooltip, labelProportion, buffer);
+			value = Vector2Box(rect, label, value, tooltip, labelProportion: labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
 		}
 
 		public static Vector2 Vector2Box(Rect rect, string label, Vector2 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
+			(float x, float y) = SplitFloatBoxes(rect, label, (value.x, "x"), (value.y, "y"), tooltip: tooltip, labelProportion: labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
+			return new Vector2(x, y);
+		}
+
+		public static void FloatRangeBox(Rect rect, string label, ref FloatRange value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.25f, float buffer = 0)
+		{
+			value = FloatRangeBox(rect, label, value, tooltip, labelProportion: labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
+		}
+
+		public static FloatRange FloatRangeBox(Rect rect, string label, FloatRange value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.25f, float buffer = 0)
+		{
+			(float x, float y) = SplitFloatBoxes(rect, label, (value.min, "min"), (value.max, "max"), tooltip: tooltip, labelProportion: labelProportion, subLabelProportions: subLabelProportions, buffer: buffer);
+			return new FloatRange(x, y);
+		}
+
+		private static (float left, float right) SplitFloatBoxes(Rect rect, string label, (float value, string label) leftBox, (float value, string label) rightBox, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
+		{
+			float x = leftBox.value;
+			float y = rightBox.value;
+
 			GUIState.Push();
 			{
-				float x = value.x;
-				float y = value.y;
-
 				if (!tooltip.NullOrEmpty())
 				{
 					TooltipHandler.TipRegion(rect, tooltip);
@@ -166,13 +183,11 @@ namespace SmashTools
 				Rect inputRect = new Rect(labelRect.xMax, rect.y, rect.width - labelRect.width, rect.height);
 				Rect[] rects = inputRect.Split(2, buffer);
 
-				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
-				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
-				value.x = x;
-				value.y = y;
+				NumericBox(rects[0], ref x, leftBox.label, string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
+				NumericBox(rects[1], ref y, rightBox.label, string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
 			}
 			GUIState.Pop();
-			return value;
+			return (x, y);
 		}
 
 		public static void Vector3Box(Rect rect, string label, ref Vector3 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
@@ -344,7 +359,7 @@ namespace SmashTools
 			{
 				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
-			value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
+			value = Widgets.HorizontalSlider(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 			if (endValue > 0 && value >= max)
 			{
 				value = endValue;
@@ -452,10 +467,10 @@ namespace SmashTools
 			float num = Prefs.UIScale / 2f;
 			if (Prefs.UIScale > 1f && Math.Abs(num - Mathf.Floor(num)) > 1E-45f)
 			{
-				position.xMin = Widgets.AdjustCoordToUIScalingFloor(rect.xMin);
-				position.yMin = Widgets.AdjustCoordToUIScalingFloor(rect.yMin);
-				position.xMax = Widgets.AdjustCoordToUIScalingCeil(rect.xMax + 1E-05f);
-				position.yMax = Widgets.AdjustCoordToUIScalingCeil(rect.yMax + 1E-05f);
+				//position.xMin = Widgets.AdjustCoordToUIScalingFloor(rect.xMin);
+				//position.yMin = Widgets.AdjustCoordToUIScalingFloor(rect.yMin);
+				//position.xMax = Widgets.AdjustCoordToUIScalingCeil(rect.xMax + 1E-05f);
+				//position.yMax = Widgets.AdjustCoordToUIScalingCeil(rect.yMax + 1E-05f);
 			}
 			GUI.Label(position, label, style);
 		}
@@ -466,10 +481,10 @@ namespace SmashTools
 			float num = Prefs.UIScale / 2f;
 			if (Prefs.UIScale > 1f && Math.Abs(num - Mathf.Floor(num)) > 1E-45f)
 			{
-				position.xMin = Widgets.AdjustCoordToUIScalingFloor(rect.xMin);
-				position.yMin = Widgets.AdjustCoordToUIScalingFloor(rect.yMin);
-				position.xMax = Widgets.AdjustCoordToUIScalingCeil(rect.xMax + 1E-05f);
-				position.yMax = Widgets.AdjustCoordToUIScalingCeil(rect.yMax + 1E-05f);
+				//position.xMin = Widgets.AdjustCoordToUIScalingFloor(rect.xMin);
+				//position.yMin = Widgets.AdjustCoordToUIScalingFloor(rect.yMin);
+				//position.xMax = Widgets.AdjustCoordToUIScalingCeil(rect.xMax + 1E-05f);
+				//position.yMax = Widgets.AdjustCoordToUIScalingCeil(rect.yMax + 1E-05f);
 			}
 
 			var innerColor = style.normal.textColor;

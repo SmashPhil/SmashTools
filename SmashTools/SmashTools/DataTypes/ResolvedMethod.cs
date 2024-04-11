@@ -6,6 +6,7 @@ using System.Xml;
 using Verse;
 using RimWorld;
 using HarmonyLib;
+using SmashTools.Xml;
 
 namespace SmashTools
 {
@@ -16,12 +17,33 @@ namespace SmashTools
 		public MethodInfo method;
 		public object[] args;
 
+		private int count = -1;
+
+		public int InjectedCount
+		{
+			get
+			{
+				if (count < 0)
+				{
+					Type type = GetType();
+					if (!type.IsGenericType)
+					{
+						count = 0;
+					}
+					else
+					{
+						count = type.GetGenericArguments().Length;
+					}
+				}
+				return count;
+			}
+		}
+
 		public void LoadDataFromXmlCustom(XmlNode xmlNode)
 		{
 			string entry = xmlNode.InnerText;
 
 			string[] methodInfoBody = entry.Split('(');
-			
 			try
 			{
 				string[] array = methodInfoBody.FirstOrDefault().Split('.');
@@ -49,23 +71,30 @@ namespace SmashTools
 					return;
 				}
 
-				bool exactParameters = true;
+				bool exactParameters = false;
 				if (xmlNode.Attributes[UnsafeAttributeName] is XmlAttribute unsafeAttribute)
 				{
 					exactParameters = bool.Parse(unsafeAttribute.Value.ToLowerInvariant());
 				}
 
-				if (!exactParameters && argStrings.Length != argTypes.Length)
+				if (exactParameters && (argStrings.Length + InjectedCount) != argTypes.Length)
 				{
 					Log.Error($"Number of parameters doesn't match number of args passed in. Xml={entry}");
 				}
 				
-				int argDiff = argTypes.Length - argStrings.Length;
-				args = new object[argStrings.Length];
-				for (int i = 0; i < argStrings.Length; i++)
+				args = new object[argTypes.Length];
+				for (int i = InjectedCount; i < argTypes.Length; i++)
 				{
-					string arg = argStrings[i];
-					args[i] = ParseHelper.FromString(arg, argTypes[i + argDiff]); //Skip difference from beginning to allow prepended args
+					int argIndex = i - InjectedCount;
+					if (argStrings.OutOfBounds(argIndex))
+					{
+						args[i] = Type.Missing; //Handles optional parameters
+					}
+					else
+					{
+						string text = argStrings[argIndex];
+						args[i] = XmlParseHelper.WrapStringAndParse(argTypes[i], text, true);
+					}
 				}
 			}
 			catch (IndexOutOfRangeException)
@@ -74,26 +103,23 @@ namespace SmashTools
 			}
 		}
 
-		public object Invoke(object obj)
+		public virtual object Invoke(object obj)
 		{
 			return method.Invoke(obj, args);
-		}
-
-		public object InvokeUnsafe(object obj, params object[] prependArgs)
-		{
-			if (!prependArgs.NullOrEmpty())
-			{
-				return method.Invoke(obj, args.PrependMany(prependArgs).ToArray());
-			}
-			return Invoke(obj);
 		}
 	}
 
 	public class ResolvedMethod<T> : ResolvedMethod
 	{
+		public override object Invoke(object obj)
+		{
+			throw new MethodAccessException("ResolvedMethod subtypes should never call the base Invoke method.");
+		}
+
 		public object Invoke(object obj, T param)
 		{
-			return method.Invoke(obj, args.Prepend(param).ToArray());
+			args[0] = param;
+			return method.Invoke(obj, args);
 		}
 	}
 }

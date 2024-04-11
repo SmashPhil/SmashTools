@@ -21,6 +21,7 @@ namespace SmashTools.Performance
 			this.id = id;
 			this.type = type;
 			ShouldExit = false;
+			InLongOperation = false;
 
 			queue = new ConcurrentQueue<AsyncAction>();
 			thread = new Thread(Execute);
@@ -28,6 +29,8 @@ namespace SmashTools.Performance
 		}
 
 		private bool ShouldExit { get; set; }
+
+		public bool InLongOperation { get; set; }
 
 		public void Queue(AsyncAction action)
 		{
@@ -54,13 +57,10 @@ namespace SmashTools.Performance
 						catch (Exception ex)
 						{
 							Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
-							if (asyncAction.exceptionHandler != null)
-							{
-								asyncAction.exceptionHandler(ex);
-							}
+							asyncAction.ExceptionThrown(ex);
 						}
 					}
-					AsyncPool<AsyncAction>.Return(asyncAction);
+					asyncAction.ReturnToPool();
 				}
 				while (queue.Count == 0) Thread.Sleep(1);
 			}

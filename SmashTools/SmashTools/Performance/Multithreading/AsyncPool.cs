@@ -11,10 +11,12 @@ namespace SmashTools.Performance
 	public static class AsyncPool<T> where T : new()
 	{
 		private static readonly ConcurrentBag<T> returnItems = new ConcurrentBag<T>();
-		
+
+		public static int Count => returnItems.Count;
+
 		public static T Get()
 		{
-			if (returnItems.Count > 0 && returnItems.TryTake(out T item))
+			if (returnItems.TryTake(out T item))
 			{
 				return item;
 			}

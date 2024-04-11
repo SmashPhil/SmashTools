@@ -137,6 +137,7 @@ namespace SmashTools
 				{
 					Graph.GraphType.Linear => typeof(LinearCurve),
 					Graph.GraphType.Bezier => typeof(BezierCurve),
+					Graph.GraphType.Lagrange => typeof(LagrangeCurve),
 					Graph.GraphType.Staircase => typeof(StaircaseCurve),
 					_ => null
 				};
@@ -284,6 +285,10 @@ namespace SmashTools
 			{
 				return Graph.GraphType.Bezier;
 			}
+			if (type == typeof(LagrangeCurve))
+			{
+				return Graph.GraphType.Lagrange;
+			}
 			if (type == typeof(StaircaseCurve))
 			{
 				return Graph.GraphType.Staircase;
@@ -361,7 +366,8 @@ namespace SmashTools
 						string formula = graphType switch
 						{
 							Graph.GraphType.Linear => "y = mx + b",
-							Graph.GraphType.Bezier => "Σ{n:i=0} nC_i((1-t)^(n-i))(t^i)(P_i)",
+							Graph.GraphType.Bezier => "Σ{n : i=0} nC_i ((1-t) ^ (n-i)) * (t^i) * (P_i)",
+							Graph.GraphType.Lagrange => "Σ{n-1 : i=0} y * ∏{n-1 : j=0, j≠1} (x - xj) / (xi - xj)",
 							_ => string.Empty
 						};
 						Vector2 textSize = Text.CalcSize(formula);
@@ -739,6 +745,7 @@ namespace SmashTools
 			List<FloatMenuOption> floatMenuOptions = new List<FloatMenuOption>();
 			floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Linear.ToString(), () => GraphType = Graph.GraphType.Linear));
 			floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Bezier.ToString(), () => GraphType = Graph.GraphType.Bezier));
+			floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Lagrange.ToString(), () => GraphType = Graph.GraphType.Lagrange));
 			floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Staircase.ToString(), () => GraphType = Graph.GraphType.Staircase));
 			//floatMenuOptions.Add(new FloatMenuOption(Graph.GraphType.Freeform.ToString(), () => graphType = Graph.GraphType.Freeform));
 			Find.WindowStack.Add(new FloatMenu(floatMenuOptions));

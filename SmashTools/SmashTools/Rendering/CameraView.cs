@@ -18,7 +18,7 @@ namespace SmashTools
 		private const float ZoomScaleFromAltDenominator = 35;
 		private const float CameraViewerZoomRate = 0.55f;
 
-		private static MethodInfo GetSunShadowsViewRect_MethodInfo;
+		private static MethodInfo getSunShadowsViewRect_MethodInfo;
 
 		private static Camera camera;
 		private static RenderTexture renderTexture;
@@ -61,10 +61,10 @@ namespace SmashTools
 
 		public static CellRect VisibleSections(Map map, CellRect viewRect)
 		{
-			CellRect sunShadowsViewRect = (CellRect)GetSunShadowsViewRect_MethodInfo.Invoke(map.mapDrawer, new object[] { viewRect });
+			CellRect sunShadowsViewRect = (CellRect)getSunShadowsViewRect_MethodInfo.Invoke(map.mapDrawer, new object[] { viewRect });
 			sunShadowsViewRect.ClipInsideMap(map);
-			IntVec2 intVec = SectionCoordsAt(sunShadowsViewRect.BottomLeft);
-			IntVec2 intVec2 = SectionCoordsAt(sunShadowsViewRect.TopRight);
+			IntVec2 intVec = SectionCoordsAt(sunShadowsViewRect.Min);
+			IntVec2 intVec2 = SectionCoordsAt(sunShadowsViewRect.Max);
 			if (intVec2.x < intVec.x || intVec2.z < intVec.z)
 			{
 				return CellRect.Empty;
@@ -247,8 +247,8 @@ namespace SmashTools
 				Patched = true;
 				try
 				{
-					GetSunShadowsViewRect_MethodInfo = AccessTools.Method(typeof(MapDrawer), "GetSunShadowsViewRect");
-					if (GetSunShadowsViewRect_MethodInfo == null)
+					getSunShadowsViewRect_MethodInfo = AccessTools.Method(typeof(MapDrawer), "GetSunShadowsViewRect");
+					if (getSunShadowsViewRect_MethodInfo == null)
 					{
 						throw new NullReferenceException("MethodInfo fields");
 					}
@@ -351,7 +351,7 @@ namespace SmashTools
 				foreach (IntVec3 intVec in currentViewRect.CellsNoOverlap(visibleSections))
 				{
 					Section section = ___sections[intVec.x, intVec.z];
-					section.DrawSection(false);
+					section.DrawSection();
 				}
 			}
 		}

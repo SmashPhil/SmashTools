@@ -6,10 +6,10 @@ using Verse;
 
 namespace SmashTools
 {
-	public class AnimationEvent
+	public class AnimationEvent<T>
 	{
 		public float triggerAt = 0;
-		public ResolvedMethod method;
+		public ResolvedMethod<T> method;
 		public AnimationTrigger type = AnimationTrigger.EqualTo;
 		public AnimationFrequency frequency = AnimationFrequency.OneShot;
 
@@ -36,7 +36,7 @@ namespace SmashTools
 		public enum AnimationTrigger
 		{
 			EqualTo,
-			GreaterThan
+			GreaterThan,
 		}
 
 		public enum AnimationFrequency

@@ -5,11 +5,14 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using HarmonyLib;
 using Verse;
 using RimWorld;
 using RimWorld.Planet;
 using SmashTools.Xml;
+using SmashTools.Performance;
+using LudeonTK;
 
 namespace SmashTools
 {
@@ -53,33 +56,24 @@ namespace SmashTools
 				nameof(DetachedMapComponent.ClearComponentsFromCache)));
 			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
-				nameof(ComponentCache.ClearAllMapComps)));
+				nameof(ComponentCache.ClearCache)));
 			Harmony.Patch(original: AccessTools.Method(typeof(MapGenerator), nameof(MapGenerator.GenerateContentsIntoMap)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.MapGenerated)));
-			Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit_NewTemp)),
+			Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearMapComps), new Type[] { typeof(Map) }));
-			Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
-				postfix: new HarmonyMethod(typeof(ComponentCache),
-				nameof(ComponentCache.RegisterMapComps)));
-			Harmony.Patch(original: AccessTools.Method(typeof(World), "FillComponents"),
-				postfix: new HarmonyMethod(typeof(ComponentCache),
-				nameof(ComponentCache.ConstructWorldComponents)));
-			Harmony.Patch(original: AccessTools.Method(typeof(Game), "FillComponents"),
-				postfix: new HarmonyMethod(typeof(ComponentCache),
-				nameof(ComponentCache.ConstructGameComponents)));
+			Harmony.Patch(original: AccessTools.Method(typeof(Game), "ClearCaches"),
+				postfix: new HarmonyMethod(typeof(ProjectSetup),
+				nameof(ClearCaches)));
+			Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
+				prefix: new HarmonyMethod(typeof(ComponentCache),
+				nameof(ComponentCache.ClearCache)));
 
 			//IThingHolderPawnOverlayer
 			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
-				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
-				nameof(PawnOverlayRenderer.GetBodyPos)));
-			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.BodyAngle)),
-				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
-				nameof(PawnOverlayRenderer.BodyAngle)));
-			Harmony.Patch(original: AccessTools.Method(typeof(PawnUtility), nameof(PawnUtility.GetPosture)),
-				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
-				nameof(PawnOverlayRenderer.PawnOverlayerPosture)));
+				transpiler: new HarmonyMethod(typeof(PawnOverlayRenderer),
+				nameof(PawnOverlayRenderer.ShowBodyTranspiler)));
 			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.LayingFacing)),
 				prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
 				nameof(PawnOverlayRenderer.LayingFacing)));
@@ -124,6 +118,8 @@ namespace SmashTools
 
 			//Mod Init
 			StaticConstructorOnModInit();
+
+			SceneManager.sceneLoaded += (scene, mode) => ClearCaches();
 		}
 
 		private static void RegisterParseableStructs()
@@ -191,6 +187,12 @@ namespace SmashTools
 
 				while (!GUIState.Empty) GUIState.Pop();
 			}
+		}
+
+		private static void ClearCaches()
+		{
+			ComponentCache.ClearCache();
+			ThreadManager.ReleaseAllActiveThreads();
 		}
 	}
 }

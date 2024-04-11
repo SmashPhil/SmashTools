@@ -94,6 +94,20 @@ namespace SmashTools
 		}
 
 		/// <summary>
+		/// Calculates t given a and b and the resulting value between the two bounds.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="a"></param>
+		/// <param name="b"></param>
+		public static float ReverseInterpolate(float value, float a, float b)
+		{
+			//value = (1 - t)a + bt
+			//value - a = bt - at
+			//(value - a) / (b - a) = t
+			return (value - a) / (b - a);
+		}
+
+		/// <summary>
 		/// Get Absolute Value of IntVec2
 		/// </summary>
 		/// <param name="c"></param>
@@ -296,18 +310,18 @@ namespace SmashTools
 		{
 			Vector3 posVector = pos.ToVector3Shifted();
 			Vector3 pointVector = point.ToVector3Shifted();
-			float xPrime = posVector.x - pointVector.x;
-			float yPrime = posVector.z - pointVector.z;
-			float slope = yPrime / xPrime;
-			float angleRadians = Mathf.Atan(slope);
-			float angle = Mathf.Abs(angleRadians * Mathf.Rad2Deg);
-			return Quadrant.QuadrantRelativeToPoint(pos, point, map).AsInt switch
-			{
-				2 => 360 - angle,
-				3 => 180 + angle,
-				4 => 180 - angle,
-				_ => angle,
-			};
+			return AngleToPoint(posVector, pointVector);
+			//float xPrime = posVector.x - pointVector.x;
+			//float yPrime = posVector.z - pointVector.z;
+			//float angleRadians = Mathf.Atan2(xPrime, yPrime);
+			//float angle = Mathf.Abs(angleRadians * Mathf.Rad2Deg);
+			//return Quadrant.QuadrantRelativeToPoint(pos, point, map).AsInt switch
+			//{
+			//	2 => 360 - angle,
+			//	3 => 180 + angle,
+			//	4 => 180 - angle,
+			//	_ => angle,
+			//};
 		}
 
 		/// <summary>

@@ -3,8 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Verse;
 using UnityEngine;
+using LudeonTK;
 
 namespace SmashTools
 {
@@ -12,7 +14,11 @@ namespace SmashTools
 	{
 		private const float VectorLabelProportion = 0.5f;
 		private const float VectorSubLabelProportion = 0.15f;
+		private const float FloatRangeLabelProportion = 0.5f;
+		private const float FloatRangeSubLabelProportion = 0.25f;
+
 		private const float RowHeight = 24;
+		private const int ColumnCount = 2;
 
 		private Thing thing;
 		private static List<TweakInfo> tweakValueFields;
@@ -206,6 +212,7 @@ namespace SmashTools
 				settingsType = settingsType,
 				initialValue = fieldInfo.GetValue(instance),
 			};
+			info.IndexInList = -1; //Default to -1, 0 and above indicate it's in a list
 			return info;
 		}
 
@@ -217,6 +224,8 @@ namespace SmashTools
 			{
 				string currentCategory = string.Empty;
 				string currentSubCategory = string.Empty;
+
+				int rowCount = 0;
 				foreach (TweakInfo info in tweakValueFields)
 				{
 					if (info.category != currentCategory)
@@ -225,7 +234,9 @@ namespace SmashTools
 						if (!currentCategory.NullOrEmpty())
 						{
 							Text.Font = GameFont.Medium;
-							CachedHeight += Text.LineHeight;
+							float rowHeight = Text.LineHeight + 2; //+2 for gap
+							CachedHeight += rowHeight;
+							rowCount = 0;
 						}
 					}
 					if (info.subCategory != currentSubCategory)
@@ -234,15 +245,26 @@ namespace SmashTools
 						if (!currentSubCategory.NullOrEmpty())
 						{
 							Text.Font = GameFont.Small;
-							CachedHeight += Text.LineHeight;
+							float rowHeight = Text.LineHeight + 2; //+2 for gap
+							CachedHeight += rowHeight;
+							rowCount = 0;
 						}
 					}
-					CachedHeight += RowHeight;
+					if (DrawField(info, out _))
+					{
+						rowCount++;
+						if (rowCount > ColumnCount) //Mark for new column
+						{
+							rowCount = 1;
+						}
+						if (rowCount == 1) //Only count for first item in row
+						{
+							CachedHeight += Listing_SplitColumns.GapHeight;
+						}
+					}
 				}
 			}
 			GUIState.Pop();
-
-			CachedHeight += Text.LineHeight * (tweakValueFields.Count / 2);
 		}
 
 		public override void DoWindowContents(Rect inRect)
@@ -254,7 +276,7 @@ namespace SmashTools
 				Rect outRect = rect = inRect.ContractedBy(4f);
 				rect.xMax -= 33f;
 				Rect viewRect = new Rect(0f, 0f, rect.width, CachedHeight).ContractedBy(4);
-				listing.BeginScrollView(outRect, ref scrollPosition, ref viewRect, 2);
+				listing.BeginScrollView(outRect, ref scrollPosition, ref viewRect, ColumnCount);
 				{
 					string currentCategory = string.Empty;
 					string currentSubCategory = string.Empty;
@@ -276,7 +298,7 @@ namespace SmashTools
 								listing.Header(currentSubCategory, ListingExtension.BannerColor, fontSize: GameFont.Small, anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
 							}
 						}
-						if (DrawField(info))
+						if (DrawField(info, out bool fieldChange) && fieldChange)
 						{
 							FieldChanged();
 						}
@@ -292,98 +314,87 @@ namespace SmashTools
 		/// </summary>
 		/// <param name="info"></param>
 		/// <returns>True if value was changed this frame.</returns>
-		private bool DrawField(TweakInfo info)
+		private bool DrawField(TweakInfo info, out bool fieldChanged)
 		{
+			fieldChanged = false;
 			UISettingsType settingsType = info.settingsType;
 			switch (info.settingsType)
 			{
 				case UISettingsType.None:
 					return false;
 				case UISettingsType.Checkbox:
-					bool checkOn = info.GetValue<bool>();
-					bool checkAfter = checkOn;
-					listing.CheckboxLabeled(info.Name, ref checkAfter, string.Empty, string.Empty, false);
-					if (checkOn != checkAfter)
+					if (info.TryGetValue(out bool checkOn))
 					{
-						info.SetValue(checkAfter);
+						bool checkAfter = checkOn;
+						listing.CheckboxLabeled(info.Name, ref checkAfter, string.Empty, string.Empty, false, lineHeight: RowHeight);
+						if (checkOn != checkAfter)
+						{
+							info.SetValue(checkAfter);
+							fieldChanged = true;
+						}
 						return true;
 					}
-					break;
+					return false;
 				case UISettingsType.IntegerBox:
 					{
-						int value = info.GetValue<int>();
-						int newValue = value;
-						if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
+						if (info.TryGetValue(out int value))
 						{
-							listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue), lineHeight: RowHeight);
-						}
-						else
-						{
-							listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: int.MaxValue, lineHeight: RowHeight);
-						}
-						if (value != newValue)
-						{
-							info.SetValue(newValue);
+							int newValue = value;
+							if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
+							{
+								listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue), lineHeight: RowHeight);
+							}
+							else
+							{
+								listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: int.MaxValue, lineHeight: RowHeight);
+							}
+							if (value != newValue)
+							{
+								info.SetValue(newValue);
+								fieldChanged = true;
+							}
 							return true;
 						}
-						break;
+						return false;
 					}
 				case UISettingsType.FloatBox:
 					{
-						if (info.fieldInfo.FieldType == typeof(Vector2?))
+						if (info.TryGetValue(out Vector2 vector2))
 						{
-							Vector2? nullableValue = info.GetValue<Vector2?>();
-							if (nullableValue.HasValue)
-							{
-								Vector2 newValue = nullableValue.Value;
-								listing.Vector2Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, subLabelProportions: VectorSubLabelProportion, buffer: 5);
-								if (nullableValue.Value != newValue)
-								{
-									info.SetValue(newValue);
-									return true;
-								}
-							}
-						}
-						else if (info.fieldInfo.FieldType == typeof(Vector2))
-						{
-							Vector2 value = info.GetValue<Vector2>();
-							Vector2 newValue = value;
+							Vector2 newValue = vector2;
 							listing.Vector2Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, subLabelProportions: VectorSubLabelProportion, buffer: 5);
-							if (value != newValue)
+							if (vector2 != newValue)
 							{
 								info.SetValue(newValue);
-								return true;
+								fieldChanged = true;
 							}
+							return true;
 						}
-						else if (info.fieldInfo.FieldType == typeof(Vector3?))
+						else if (info.TryGetValue(out FloatRange floatRange))
 						{
-							Vector3? nullableValue = info.GetValue<Vector3?>();
-							if (nullableValue.HasValue)
+							FloatRange newValue = floatRange;
+							listing.FloatRangeBox(info.Name, ref newValue, labelProportion: FloatRangeLabelProportion, subLabelProportions: FloatRangeSubLabelProportion, buffer: 5);
+							if (floatRange != newValue)
 							{
-								Vector3 newValue = nullableValue.Value;
-								listing.Vector3Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, subLabelProportions: VectorSubLabelProportion, buffer: 5);
-								if (nullableValue.Value != newValue)
-								{
-									info.SetValue(newValue);
-									return true;
-								}
+								info.SetValue(newValue);
+								fieldChanged = true;
 							}
+							return true;
 						}
-						else if (info.fieldInfo.FieldType == typeof(Vector3))
+						else if (info.TryGetValue(out Vector3 vector3))
 						{
-							Vector3 value = info.GetValue<Vector3>();
-							Vector3 newValue = value;
+							Vector3 newValue = vector3;
 							listing.Vector3Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, subLabelProportions: VectorSubLabelProportion, buffer: 5);
-							if (value != newValue)
+							if (vector3 != newValue)
 							{
 								info.SetValue(newValue);
-								return true;
+								fieldChanged = true;
 							}
+							return true;
 						}
-						else
+						else if (info.TryGetValue(out float @float))
 						{
-							float value = info.GetValue<float>();
-							float newValue = value;
+							float newValue = @float;
 							if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
 							{
 								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: inputBox.MinValue, max: inputBox.MaxValue, lineHeight: RowHeight);
@@ -392,93 +403,130 @@ namespace SmashTools
 							{
 								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: float.MaxValue, lineHeight: RowHeight);
 							}
+							if (@float != newValue)
+							{
+								info.SetValue(newValue);
+								fieldChanged = true;
+							}
+							return true;
+						}
+						return false;
+					}
+				case UISettingsType.ToggleLabel:
+
+					Color color = Color.white;
+					Color highlightedColor = new Color(0.1f, 0.85f, 0.85f);
+					Color clickColor = new Color(highlightedColor.r - 0.15f, highlightedColor.g - 0.15f, highlightedColor.b - 0.15f);
+
+					if (info.TryGetValue(out Rot4 rot4))
+					{
+						if (listing.ClickableLabel(info.Name, rot4.ToStringWord(), highlightedColor, color, clickColor: clickColor, lineHeight: RowHeight))
+						{
+							rot4.Rotate(RotationDirection.Clockwise);
+							info.SetValue(rot4);
+							fieldChanged = true;
+						}
+						return true;
+					}
+					else if (info.TryGetValue(out Rot8 rot8))
+					{
+						if (listing.ClickableLabel(info.Name, rot8.ToStringNamed(), highlightedColor, color, clickColor: clickColor, lineHeight: RowHeight))
+						{
+							rot8.Rotate(RotationDirection.Clockwise);
+							info.SetValue(rot8);
+							fieldChanged = true;
+						}
+						return true;
+					}
+					return false;
+				case UISettingsType.SliderEnum:
+					{
+						if (info.TryGetValue(out int value))
+						{
+							int newValue = value;
+							listing.EnumSliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, info.fieldInfo.FieldType);
 							if (value != newValue)
 							{
 								info.SetValue(newValue);
-								return true;
+								fieldChanged = true;
 							}
-						}
-						break;
-					}
-				case UISettingsType.ToggleLabel:
-					break;
-				case UISettingsType.SliderEnum:
-					{
-						int value = info.GetValue<int>();
-						int newValue = value;
-						listing.EnumSliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, info.fieldInfo.FieldType);
-						if (value != newValue)
-						{
-							info.SetValue(newValue);
 							return true;
 						}
 					}
-					break;
+					return false;
 				case UISettingsType.SliderInt:
 					{
-						int value = info.GetValue<int>();
-						int newValue = value;
-						if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
+						if (info.TryGetValue(out int value))
 						{
-							listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, slider.EndSymbol, Mathf.RoundToInt(slider.MinValue), Mathf.RoundToInt(slider.MaxValue), endValue: (int)slider.EndValue, maxValueDisplay: slider.MaxValueDisplay, minValueDisplay: slider.MinValueDisplay);
-						}
-						else
-						{
-							SmashLog.WarningOnce($"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no SliderValues attribute. Slider will use default values instead.", info.fieldInfo.GetHashCode());
-							listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, string.Empty, 0, 100);
-						}
-						if (value != newValue)
-						{
-							info.SetValue(newValue);
+							int newValue = value;
+							if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
+							{
+								listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, slider.EndSymbol, Mathf.RoundToInt(slider.MinValue), Mathf.RoundToInt(slider.MaxValue), endValue: (int)slider.EndValue, maxValueDisplay: slider.MaxValueDisplay, minValueDisplay: slider.MinValueDisplay);
+							}
+							else
+							{
+								SmashLog.WarningOnce($"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no SliderValues attribute. Slider will use default values instead.", info.fieldInfo.GetHashCode());
+								listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, string.Empty, 0, 100);
+							}
+							if (value != newValue)
+							{
+								info.SetValue(newValue);
+								fieldChanged = true;
+							}
 							return true;
 						}
 					}
-					break;
+					return false;
 				case UISettingsType.SliderFloat:
 					{
-						float value = info.GetValue<float>();
-						float newValue = value;
-						if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
+						if (info.TryGetValue(out float value))
 						{
-							listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, slider.EndSymbol, slider.MinValue, slider.MaxValue, decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue, increment: slider.Increment);
-						}
-						else
-						{
-							SmashLog.WarningOnce($"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no SliderValues attribute. Slider will use default values instead.", info.fieldInfo.GetHashCode());
-							listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, string.Empty, 0, 100);
-						}
-						if (value != newValue)
-						{
-							info.SetValue(newValue);
+							float newValue = value;
+							if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
+							{
+								listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, slider.EndSymbol, slider.MinValue, slider.MaxValue, decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue, increment: slider.Increment);
+							}
+							else
+							{
+								SmashLog.WarningOnce($"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no SliderValues attribute. Slider will use default values instead.", info.fieldInfo.GetHashCode());
+								listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, string.Empty, 0, 100);
+							}
+							if (value != newValue)
+							{
+								info.SetValue(newValue);
+								fieldChanged = true;
+							}
 							return true;
 						}
 					}
-					break;
+					return false;
 				case UISettingsType.SliderPercent:
 					{
-						float value = info.GetValue<float>();
-						float newValue = value;
-						if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
+						if (info.TryGetValue(out float value))
 						{
-							listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty, slider.EndSymbol, slider.MinValue, slider.MaxValue, decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue);
-						}
-						else
-						{
-							SmashLog.WarningOnce($"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no SliderValues attribute. Slider will use default values instead.", info.fieldInfo.GetHashCode());
-							listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty, "%", 0, 1, decimalPlaces: 0);
-						}
-						if (value != newValue)
-						{
-							info.SetValue(newValue);
+							float newValue = value;
+							if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
+							{
+								listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty, slider.EndSymbol, slider.MinValue, slider.MaxValue, decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue);
+							}
+							else
+							{
+								SmashLog.WarningOnce($"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no SliderValues attribute. Slider will use default values instead.", info.fieldInfo.GetHashCode());
+								listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty, "%", 0, 1, decimalPlaces: 0);
+							}
+							if (value != newValue)
+							{
+								info.SetValue(newValue);
+								fieldChanged = true;
+							}
 							return true;
 						}
 					}
-					break;
+					return false;
 				default:
 					Log.ErrorOnce($"{settingsType} has not yet been implemented for PostToSettings.DrawLister. Please notify SmashPhil.", settingsType.ToString().GetHashCode());
-					break;
+					return false;
 			}
-			return false;
 		}
 
 		private void FieldChanged()
@@ -508,9 +556,9 @@ namespace SmashTools
 			{
 				get
 				{
-					if (IndexInList > 0)
+					if (IndexInList >= 0)
 					{
-						return $"{fieldInfo.Name}_{IndexInList}";
+						return $"{fieldInfo.Name}_{IndexInList + 1}"; //Xml indices are 1-based
 					}
 					return fieldInfo.Name;
 				}
@@ -518,9 +566,33 @@ namespace SmashTools
 
 			public int IndexInList { get; internal set; }
 
-			public T GetValue<T>()
+			public bool TryGetValue<T>(out T value) where T : struct
 			{
-				return (T)fieldInfo.GetValue(instance);
+				value = default;
+				if (typeof(T) != fieldInfo.FieldType && typeof(T) != Nullable.GetUnderlyingType(fieldInfo.FieldType))
+				{
+					if (!fieldInfo.FieldType.IsEnum || typeof(T) != typeof(int))
+					{
+						return false;
+					}
+				}
+				object rawValue = fieldInfo.GetValue(instance);
+				if (Nullable.GetUnderlyingType(fieldInfo.FieldType) == typeof(T))
+				{
+					T? nullableValue = (T?)rawValue;
+					if (!nullableValue.HasValue)
+					{
+						return false;
+					}
+					rawValue = nullableValue.Value;
+				}
+				if (rawValue.GetType() != typeof(T) && (!fieldInfo.FieldType.IsEnum || typeof(T) != typeof(int)))
+				{
+					Log.Error($"Invalid Cast: {rawValue.GetType()} to {typeof(T)}");
+					return false;
+				}
+				value = (T)rawValue;
+				return true;
 			}
 
 			public void SetValue<T>(T value)

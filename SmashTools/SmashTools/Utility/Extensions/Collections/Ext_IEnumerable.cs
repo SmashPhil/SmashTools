@@ -53,6 +53,15 @@ namespace SmashTools
 			return enumerable != null && (predicate is null ? enumerable.Any() : enumerable.Any(e => predicate(e)));
 		}
 
+		public static bool NullOrEmpty<T>(this IEnumerable<T> enumerable)
+		{
+			if (enumerable == null)
+			{
+				return true;
+			}
+			return !enumerable.Any();
+		}
+
 		/// <summary>
 		/// Uncached Count check with conditional predicate
 		/// </summary>
@@ -113,6 +122,21 @@ namespace SmashTools
 		public static string ToReadableString<T>(this IEnumerable<T> enumerable)
 		{
 			return string.Join(",", enumerable);
+		}
+
+		/// <summary>
+		/// Prepend multiple objects to enumerable
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="enumerable"></param>
+		/// <param name="items"></param>
+		public static IEnumerable<T> AppendMany<T>(this IEnumerable<T> enumerable, T[] items)
+		{
+			for (int i = items.Count() - 1; i >= 0; i--)
+			{
+				enumerable = enumerable.Append(items[i]);
+			}
+			return enumerable;
 		}
 
 		/// <summary>

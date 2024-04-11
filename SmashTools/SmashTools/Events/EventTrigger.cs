@@ -8,22 +8,82 @@ namespace SmashTools
 {
 	public class EventTrigger
 	{
-		private List<Action> persistents;
-		private List<Action> singles;
+		private List<(string key, Action action)> persistents;
+		private List<(string key, Action action)> singles;
 
 		public EventTrigger()
 		{
-			persistents = new List<Action>();
-			singles = new List<Action>();
+			persistents = new List<(string key, Action action)>();
+			singles = new List<(string key, Action action)>();
 		}
 
-		public void Add(Action action) => persistents.Add(action);
+		public void Add(Action action, string key) => persistents.Add((key, action));
 
-		public void AddSingle(Action action) => singles.Add(action);
+		public void Add(Action action) => persistents.Add((null, action));
 
-		public bool Remove(Action action) => persistents.Remove(action);
+		public void AddSingle(Action action, string key) => singles.Add((key, action));
 
-		public bool RemoveSingle(Action action) => singles.Remove(action);
+		public void AddSingle(Action action) => singles.Add((null, action));
+
+		public int Remove(string key)
+		{
+			int count = 0;
+			for (int i = persistents.Count - 1; i >= 0; i--)
+			{
+				(string keyMatch, _) = persistents[i];
+				if (keyMatch == key)
+				{
+					persistents.RemoveAt(i);
+					count++;
+				}
+			}
+			return count;
+		}
+
+		public int Remove(Action action)
+		{
+			int count = 0;
+			for (int i = persistents.Count - 1; i >= 0; i--)
+			{
+				(_, Action actionMatch) = persistents[i];
+				if (actionMatch == action)
+				{
+					persistents.RemoveAt(i);
+					count++;
+				}
+			}
+			return count;
+		}
+
+		public int RemoveSingle(string key)
+		{
+			int count = 0;
+			for (int i = singles.Count - 1; i >= 0; i--)
+			{
+				(string keyMatch, _) = singles[i];
+				if (keyMatch == key)
+				{
+					singles.RemoveAt(i);
+					count++;
+				}
+			}
+			return count;
+		}
+
+		public int RemoveSingle(Action action)
+		{
+			int count = 0;
+			for (int i = singles.Count - 1; i >= 0; i--)
+			{
+				(_, Action actionMatch) = singles[i];
+				if (actionMatch == action)
+				{
+					singles.RemoveAt(i);
+					count++;
+				}
+			}
+			return count;
+		}
 
 		public void ClearAll()
 		{
@@ -33,15 +93,15 @@ namespace SmashTools
 
 		public void ExecuteEvents()
 		{
-			foreach (Action action in persistents)
+			foreach ((_, Action action) in persistents)
 			{
 				action();
 			}
 			for (int i = singles.Count - 1; i >= 0; i--)
 			{
-				Action action = singles[i];
+				(_, Action action) = singles[i];
 				action();
-				singles.Remove(action);
+				singles.RemoveAt(i);
 			}
 		}
 	}

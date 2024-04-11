@@ -273,6 +273,7 @@ namespace SmashTools
 		{
 			Linear,
 			Bezier,
+			Lagrange,
 			Staircase,
 			Freeform
 		}

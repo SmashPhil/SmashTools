@@ -53,6 +53,28 @@ namespace SmashTools.Xml
 		}
 
 		/// <summary>
+		/// Wraps text into xml object so vanilla parsing can operate on it
+		/// </summary>
+		/// <param name="type"></param>
+		/// <param name="innerText"></param>
+		/// <param name="doPostLoad"></param>
+		public static object WrapStringAndParse(Type type, string innerText, bool doPostLoad = true)
+		{
+			if (ParseHelper.HandlesType(type))
+			{
+				return ParseHelper.FromString(innerText, type);
+			}
+			if (type != typeof(string))
+			{
+				innerText = innerText.Trim();
+			}
+			XmlDocument doc = new XmlDocument();
+			doc.LoadXml($"<temp>{innerText}</temp>");
+			XmlNode newNode = doc.DocumentElement;
+			return DirectXmlToObject.GetObjectFromXmlMethod(type)(newNode, doPostLoad);
+		}
+
+		/// <summary>
 		/// Register custom attribute to be parsed when loading save file
 		/// </summary>
 		/// <param name="attribute">XmlAttribute name</param>

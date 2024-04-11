@@ -126,7 +126,7 @@ namespace SmashTools
 			{
 				try
 				{
-					if (Prefs.PauseOnError && Current.ProgramState == ProgramState.Playing)
+					if (DebugSettings.pauseOnError && Current.ProgramState == ProgramState.Playing)
 					{
 						Find.TickManager.Pause();
 					}

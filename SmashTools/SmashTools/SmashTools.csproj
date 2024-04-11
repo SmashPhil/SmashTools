@@ -22,6 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <NoWarn>CS0649</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,14 +33,45 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Krafs.Rimworld.Ref">
-      <Version>1.4.3704</Version>
-    </PackageReference>
     <PackageReference Include="Lib.Harmony">
       <Version>2.2.2</Version>
     </PackageReference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputModule">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Animating\AnimationDriver.cs" />
@@ -62,11 +94,13 @@
     <Compile Include="Animating\AnimationManager.cs" />
     <Compile Include="DataTypes\Components\DetachedMapComponent.cs" />
     <Compile Include="DataTypes\Graphing\BezierCurve.cs" />
+    <Compile Include="DataTypes\Graphing\LagrangeCurve.cs" />
     <Compile Include="DataTypes\Graphing\LinearPool.cs" />
     <Compile Include="DataTypes\Graphing\StaircaseCurve.cs" />
     <Compile Include="DataTypes\Graphing\LinearCurve.cs" />
     <Compile Include="DataTypes\ResolvedMethod.cs" />
     <Compile Include="DataTypes\UIContainers\Toggle.cs" />
+    <Compile Include="Debugging\CameraAttacher.cs" />
     <Compile Include="Debugging\GameState.cs" />
     <Compile Include="Debugging\MainMenuKeyBindHandler.cs" />
     <Compile Include="Debugging\QuickStartMenu.cs" />
@@ -74,8 +108,10 @@
     <Compile Include="Debugging\UnitTesting.cs" />
     <Compile Include="Enums\MathOp.cs" />
     <Compile Include="Enums\UISettingsType.cs" />
+    <Compile Include="Events\EventManager.cs" />
     <Compile Include="Events\EventTrigger.cs" />
     <Compile Include="Interfaces\IAnimationTarget.cs" />
+    <Compile Include="Debugging\CameraController.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
     <Compile Include="Interfaces\IDefIndex.cs" />
     <Compile Include="Interfaces\IEventManager.cs" />
@@ -90,13 +126,14 @@
     <Compile Include="Pathfinding\AStar.cs" />
     <Compile Include="Pathfinding\BFS.cs" />
     <Compile Include="Pathfinding\Dijkstra.cs" />
-    <Compile Include="Performance\AsyncAction.cs" />
-    <Compile Include="Performance\AsyncPool.cs" />
-    <Compile Include="Performance\CoroutineManager.cs" />
-    <Compile Include="Performance\DedicatedThread.cs" />
-    <Compile Include="Performance\ProfilerWatch.cs" />
-    <Compile Include="Performance\TaskManager.cs" />
-    <Compile Include="Performance\ThreadManager.cs" />
+    <Compile Include="Performance\Caching\MapComponentCache.cs" />
+    <Compile Include="Performance\Multithreading\AsyncAction.cs" />
+    <Compile Include="Performance\Multithreading\AsyncPool.cs" />
+    <Compile Include="Performance\Asynchronous\CoroutineManager.cs" />
+    <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
+    <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
+    <Compile Include="Performance\Multithreading\TaskManager.cs" />
+    <Compile Include="Performance\Multithreading\ThreadManager.cs" />
     <Compile Include="Rendering\CameraView.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
     <Compile Include="Saving\ClassLoader.cs" />
@@ -120,7 +157,7 @@
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_Animation.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\DefIndexManager.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_EventManager.cs" />
-    <Compile Include="Utility\Extensions\ComponentCache.cs" />
+    <Compile Include="Performance\Caching\ComponentCache.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Array.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Color.cs" />
     <Compile Include="Utility\Extensions\System\Ext_Conversion.cs" />
@@ -168,6 +205,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

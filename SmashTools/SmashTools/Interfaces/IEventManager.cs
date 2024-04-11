@@ -8,6 +8,6 @@ namespace SmashTools
 {
 	public interface IEventManager<T>
 	{
-		Dictionary<T, EventTrigger> EventRegistry { get; set; }
+		EventManager<T> EventRegistry { get; set; }
 	}
 }

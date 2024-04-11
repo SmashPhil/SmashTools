@@ -18,6 +18,7 @@ namespace SmashTools
 
 		public static SelfOrderingList<GameComponent> gameComps = new SelfOrderingList<GameComponent>();
 
+		//TODO - 1.5, switch to MapComponentCache
 		/// <summary>
 		/// Cache Retrieval for MapComponents
 		/// </summary>
@@ -66,7 +67,9 @@ namespace SmashTools
 					return t;
 				}
 			}
-			return default;
+			T comp = world.GetComponent<T>();
+			worldComps.Add(comp);
+			return comp;
 		}
 
 		/// <summary>
@@ -84,30 +87,23 @@ namespace SmashTools
 					return t;
 				}
 			}
-			return default;
+			T comp = game.GetComponent<T>();
+			gameComps.Add(comp);
+			return comp;
 		}
 
-
-		/* Initialization of sorted lists */
-
-		internal static void ConstructWorldComponents(World __instance)
-		{
-			worldComps = new SelfOrderingList<WorldComponent>(__instance.components);
-		}
-
-		internal static void ConstructGameComponents(Game __instance)
-		{
-			gameComps = new SelfOrderingList<GameComponent>(__instance.components);
-		}
-
-		internal static void ClearAllMapComps()
+		internal static void ClearCache()
 		{
 			mapComps = new SelfOrderingList<MapComponent>[sbyte.MaxValue].Populate(() => new SelfOrderingList<MapComponent>());
+			worldComps.Clear();
+			gameComps.Clear();
+			MapComponentCache.ClearAll();
 		}
 
 		internal static void ClearMapComps(Map map)
 		{
 			ClearMapComps(map.Index);
+			MapComponentCache.ClearMap(map);
 		}
 
 		internal static void ClearMapComps(int index)
@@ -118,11 +114,6 @@ namespace SmashTools
 		internal static void MapGenerated(IEnumerable<GenStepWithParams> genStepDefs, Map map, int seed)
 		{
 			ClearMapComps(map.Index);
-		}
-
-		internal static void RegisterMapComps(Map map)
-		{
-			mapComps[map.Index].AddRange(map.components);
 		}
 	}
 }

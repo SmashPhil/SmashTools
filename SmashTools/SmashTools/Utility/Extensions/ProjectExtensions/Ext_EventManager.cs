@@ -14,7 +14,7 @@ namespace SmashTools
 				Log.Error($"Tried to fill IEventManager with empty events. Any attempt to execute an event's actions will throw an exception. Manager=\"{manager}\"");
 				return;
 			}
-			manager.EventRegistry = new Dictionary<T, EventTrigger>();
+			manager.EventRegistry = new EventManager<T>();
 			foreach (T value in events)
 			{
 				manager.RegisterEventType(value);
@@ -28,7 +28,7 @@ namespace SmashTools
 				Log.Error($"Tried to fill IEventManager with enum values and non-enum type. Type=\"{typeof(T)}\" Manager=\"{manager}\"");
 				return;
 			}
-			manager.EventRegistry = new Dictionary<T, EventTrigger>();
+			manager.EventRegistry = new EventManager<T>();
 			foreach (T value in Enum.GetValues(typeof(T)))
 			{
 				manager.RegisterEventType(value);
@@ -37,7 +37,7 @@ namespace SmashTools
 
 		public static void FillEvents_Def<T>(this IEventManager<T> manager) where T : Def
 		{
-			manager.EventRegistry = new Dictionary<T, EventTrigger>();
+			manager.EventRegistry = new EventManager<T>();
 			foreach (T def in DefDatabase<T>.AllDefsListForReading)
 			{
 				manager.RegisterEventType(def);
@@ -61,6 +61,18 @@ namespace SmashTools
 			}
 		}
 
+		public static void AddEvent<T>(this IEventManager<T> manager, T @event, Action action, string key, params Action[] actions)
+		{
+			manager.EventRegistry[@event].Add(action, key);
+			if (!actions.NullOrEmpty())
+			{
+				foreach (Action additionalAction in actions)
+				{
+					manager.EventRegistry[@event].Add(additionalAction, key);
+				}
+			}
+		}
+
 		public static void AddSingleEvent<T>(this IEventManager<T> manager, T @event, Action action, params Action[] actions)
 		{
 			manager.EventRegistry[@event].AddSingle(action);
@@ -73,9 +85,31 @@ namespace SmashTools
 			}
 		}
 
+		public static void AddSingleEvent<T>(this IEventManager<T> manager, T @event, Action action, string key, params Action[] actions)
+		{
+			manager.EventRegistry[@event].AddSingle(action, key);
+			if (!actions.NullOrEmpty())
+			{
+				foreach (Action additionalAction in actions)
+				{
+					manager.EventRegistry[@event].AddSingle(additionalAction, key);
+				}
+			}
+		}
+
+		public static void RemoveEvent<T>(this IEventManager<T> manager, T @event, string key)
+		{
+			manager.EventRegistry[@event].Remove(key);
+		}
+
 		public static void RemoveEvent<T>(this IEventManager<T> manager, T @event, Action action)
 		{
 			manager.EventRegistry[@event].Remove(action);
+		}
+
+		public static void RemoveSingleEvent<T>(this IEventManager<T> manager, T @event, string key)
+		{
+			manager.EventRegistry[@event].RemoveSingle(key);
 		}
 
 		public static void RemoveSingleEvent<T>(this IEventManager<T> manager, T @event, Action action)
@@ -86,6 +120,11 @@ namespace SmashTools
 		public static void ClearAll<T>(this IEventManager<T> manager, T @event)
 		{
 			manager.EventRegistry[@event].ClearAll();
+		}
+
+		public static bool Initialized<T>(this EventManager<T> manager)
+		{
+			return manager != null && !manager.lookup.NullOrEmpty();
 		}
 	}
 }

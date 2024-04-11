@@ -120,24 +120,19 @@ namespace SmashTools
 			GUIState.Pop();
 		}
 
-		public static void EnumSliderLabeled(this Listing lister, string label, ref int value, string tooltip, string disabledTooltip, Type enumType, bool translate = false)
+		public static void EnumSliderLabeled<T>(this Listing lister, string label, ref T value, string tooltip, string disabledTooltip, Func<T, string> valueNameGetter = null) where T : Enum
 		{
 			GUIState.Push();
 			{
 				try
 				{
-					int[] enumValues = Enum.GetValues(enumType).Cast<int>().ToArray();
-					string[] enumNames = Enum.GetNames(enumType);
+					int[] enumValues = Enum.GetValues(typeof(T)).Cast<int>().ToArray();
 					int min = enumValues[0];
 					int max = enumValues.Last();
 					Rect rect = lister.GetRect(24f);
 					Rect fullRect = rect;
 					rect.y += rect.height / 2;
-					string format = Enum.GetName(enumType, value);
-					if (translate)
-					{
-						format = format.Translate();
-					}
+					string rightLabel = valueNameGetter?.Invoke(value) ?? Enum.GetName(typeof(T), value);
 					if (!disabledTooltip.NullOrEmpty())
 					{
 						GUIState.Disable();
@@ -152,11 +147,13 @@ namespace SmashTools
 						TooltipHandler.TipRegion(fullRect, tooltip);
 					}
 					GUIState.Reset();
-					value = (int)Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
+					int boxedValue = (int)Convert.ChangeType(value, typeof(int));
+					boxedValue = (int)Widgets.HorizontalSlider(rect, boxedValue, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: rightLabel);
+					value = (T)Enum.ToObject(typeof(T), boxedValue);
 				}
 				catch (Exception ex)
 				{
-					Log.Error($"Unable to convert to {enumType}. Exception={ex}");
+					Log.Error($"Exception thrown for slider of enum type = {typeof(T)}.\nException={ex}");
 					return;
 				}
 			}
@@ -192,7 +189,7 @@ namespace SmashTools
 				}
 				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
-			value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
+			value = Widgets.HorizontalSlider(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 			if (endValue > 0 && value >= max)
 			{
 				value = endValue;
@@ -229,7 +226,7 @@ namespace SmashTools
 				}
 				TooltipHandler.TipRegion(fullRect, tooltip);
 			}
-			value = (int)Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format).RoundTo(roundTo);
+			value = (int)Widgets.HorizontalSlider(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format).RoundTo(roundTo);
 		}
 
 		public static void SliderPercentLabeled(this Listing listing, string label, string tooltip, string endSymbol, ref float value, float min, float max, int decimalPlaces = 2,
@@ -261,7 +258,7 @@ namespace SmashTools
 					TooltipHandler.TipRegion(fullRect, tooltip);
 				}
 
-				value = Widgets.HorizontalSlider_NewTemp(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
+				value = Widgets.HorizontalSlider(rect, value, min, max, middleAlignment: false, label: null, leftAlignedLabel: label, rightAlignedLabel: format);
 				if (endValue > 0 && value >= max)
 				{
 					value = endValue;

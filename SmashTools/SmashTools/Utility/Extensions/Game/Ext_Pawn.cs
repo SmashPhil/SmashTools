@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Verse;
+using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
 
@@ -9,6 +10,23 @@ namespace SmashTools
 {
 	public static class Ext_Pawn
 	{
+		public static List<Pawn> SpawnedColonyMechs(this MapPawns mapPawns, bool onlyControllable = false)
+		{
+			List<Pawn> pawns = SimplePool<List<Pawn>>.Get();
+			foreach (Pawn pawn in mapPawns.SpawnedPawnsInFaction(Faction.OfPlayer))
+			{
+				if (!onlyControllable && pawn.IsColonyMech)
+				{
+					pawns.Add(pawn);
+				}
+				else if (pawn.IsColonyMechPlayerControlled)
+				{
+					pawns.Add(pawn);
+				}
+			}
+			return pawns;
+		}
+
 		/// <summary>
 		/// Clamp a Pawn's exit point to their hitbox size. Avoids derendering issues for multicell-pawns
 		/// </summary>
@@ -111,9 +129,9 @@ namespace SmashTools
 		/// <param name="centerPoint"></param>
 		/// <param name="direction"></param>
 		/// <returns></returns>
-		public static List<IntVec3> PawnOccupiedCells(this Pawn pawn, IntVec3 centerPoint, Rot4 rot)
+		public static CellRect PawnOccupiedCells(this Pawn pawn, IntVec3 centerPoint, Rot4 rot)
 		{
-			return GenAdj.OccupiedRect(centerPoint, rot, pawn.def.Size).Cells.ToList();
+			return GenAdj.OccupiedRect(centerPoint, rot, pawn.def.Size);
 		}
 
 		public static CellRect MinRectShifted(this Pawn pawn, IntVec2 shift, Rot4? rot = null)

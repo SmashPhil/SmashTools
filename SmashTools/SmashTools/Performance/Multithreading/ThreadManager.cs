@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Verse;
+using UnityEngine.SceneManagement;
 
 namespace SmashTools.Performance
 {
@@ -24,6 +25,8 @@ namespace SmashTools.Performance
 
 		private static readonly ushort[] pooledThreadCounts = new ushort[MaxPooledThreads];
 
+		private static readonly List<DedicatedThread> activeThreads = new List<DedicatedThread>();
+
 		/// <summary>
 		/// Create new <see cref="DedicatedThread"/> for asynchronous 
 		/// </summary>
@@ -37,6 +40,7 @@ namespace SmashTools.Performance
 				return null;
 			}
 			DedicatedThread dedicatedThread = new DedicatedThread(nextId, DedicatedThread.ThreadType.Single);
+			activeThreads.Add(dedicatedThread);
 			threads[nextId] = dedicatedThread;
 			FindNextUsableId();
 			return dedicatedThread;
@@ -52,7 +56,9 @@ namespace SmashTools.Performance
 			int index = id + MaxThreads;
 			if (threads[index] == null)
 			{
-				threads[index] = new DedicatedThread(index, DedicatedThread.ThreadType.Shared);
+				DedicatedThread dedicatedThread = new DedicatedThread(index, DedicatedThread.ThreadType.Shared);
+				threads[index] = dedicatedThread;
+				activeThreads.Add(dedicatedThread);
 			}
 			pooledThreadCounts[id]++;
 			return threads[index];
@@ -84,6 +90,7 @@ namespace SmashTools.Performance
 		private static void DisposeThread(DedicatedThread dedicatedThread)
 		{
 			dedicatedThread.Stop();
+			activeThreads.Remove(dedicatedThread);
 			threads[dedicatedThread.id] = null;
 			FindNextUsableId();
 		}
@@ -109,6 +116,15 @@ namespace SmashTools.Performance
 			}
 			threads[id].Queue(action);
 			return true;
+		}
+
+		internal static void ReleaseAllActiveThreads()
+		{
+			for (int i = activeThreads.Count - 1; i >= 0; i--)
+			{
+				DedicatedThread dedicatedThread = activeThreads[i];
+				dedicatedThread?.Release();
+			}
 		}
 	}
 }

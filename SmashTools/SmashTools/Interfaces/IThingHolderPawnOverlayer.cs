@@ -5,11 +5,10 @@ using Verse;
 
 namespace SmashTools
 {
-	//[MustImplement("DrawPawnOverlay")]
-	public interface IThingHolderPawnOverlayer : IThingHolder
+	public interface IThingHolderPawnOverlayer : IThingHolderWithDrawnPawn
 	{
 		public Rot4 PawnRotation { get; }
 
-		public float OverlayPawnBodyAngle { get; }
+		public bool ShowBody { get; }
 	}
 }
