@@ -12,7 +12,6 @@ using RimWorld;
 using RimWorld.Planet;
 using SmashTools.Xml;
 using SmashTools.Performance;
-using LudeonTK;
 
 namespace SmashTools
 {

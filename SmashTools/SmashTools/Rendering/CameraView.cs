@@ -63,8 +63,8 @@ namespace SmashTools
 		{
 			CellRect sunShadowsViewRect = (CellRect)getSunShadowsViewRect_MethodInfo.Invoke(map.mapDrawer, new object[] { viewRect });
 			sunShadowsViewRect.ClipInsideMap(map);
-			IntVec2 intVec = SectionCoordsAt(sunShadowsViewRect.Min);
-			IntVec2 intVec2 = SectionCoordsAt(sunShadowsViewRect.Max);
+			IntVec2 intVec = SectionCoordsAt(sunShadowsViewRect.Min());
+			IntVec2 intVec2 = SectionCoordsAt(sunShadowsViewRect.Max());
 			if (intVec2.x < intVec.x || intVec2.z < intVec.z)
 			{
 				return CellRect.Empty;
@@ -351,7 +351,7 @@ namespace SmashTools
 				foreach (IntVec3 intVec in currentViewRect.CellsNoOverlap(visibleSections))
 				{
 					Section section = ___sections[intVec.x, intVec.z];
-					section.DrawSection();
+					section.DrawSection(false);
 				}
 			}
 		}
