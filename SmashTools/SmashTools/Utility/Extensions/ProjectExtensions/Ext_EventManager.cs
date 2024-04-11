@@ -14,7 +14,7 @@ namespace SmashTools
 				Log.Error($"Tried to fill IEventManager with empty events. Any attempt to execute an event's actions will throw an exception. Manager=\"{manager}\"");
 				return;
 			}
-			manager.EventRegistry = new EventManager<T>();
+			manager.EventRegistry = new Dictionary<T, EventTrigger>();
 			foreach (T value in events)
 			{
 				manager.RegisterEventType(value);
@@ -28,7 +28,7 @@ namespace SmashTools
 				Log.Error($"Tried to fill IEventManager with enum values and non-enum type. Type=\"{typeof(T)}\" Manager=\"{manager}\"");
 				return;
 			}
-			manager.EventRegistry = new EventManager<T>();
+			manager.EventRegistry = new Dictionary<T, EventTrigger>();
 			foreach (T value in Enum.GetValues(typeof(T)))
 			{
 				manager.RegisterEventType(value);
@@ -37,7 +37,7 @@ namespace SmashTools
 
 		public static void FillEvents_Def<T>(this IEventManager<T> manager) where T : Def
 		{
-			manager.EventRegistry = new EventManager<T>();
+			manager.EventRegistry = new Dictionary<T, EventTrigger>();
 			foreach (T def in DefDatabase<T>.AllDefsListForReading)
 			{
 				manager.RegisterEventType(def);
