@@ -25,9 +25,9 @@ namespace SmashTools
 					yield return instruction; //Stfld : Vector3.y from get_HeldPawnDrawPos_Y
 					instruction = instructionList[++i];
 
-					yield return new CodeInstruction(opcode: OpCodes.Ldarg_2); //showBody for address assignment
+					yield return new CodeInstruction(opcode: OpCodes.Ldarg_3); //showBody for address assignment
 					yield return new CodeInstruction(opcode: OpCodes.Ldloc_S, operand: 7); //IThingHolderWithDrawnPawn instance
-					yield return new CodeInstruction(opcode: OpCodes.Ldarg_2); //showBody arg
+					yield return new CodeInstruction(opcode: OpCodes.Ldarg_3); //showBody arg
 					yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(PawnOverlayRenderer), nameof(GetShowBody)));
 					yield return new CodeInstruction(opcode: OpCodes.Stind_I1); //stores result at showBody's address
 				}
