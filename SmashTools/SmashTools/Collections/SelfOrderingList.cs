@@ -474,8 +474,8 @@ namespace SmashTools
 			{
 			}
  
-			public bool MoveNext() {
- 
+			public bool MoveNext() 
+			{
 				SelfOrderingList<T> localList = list;
  
 				if (version == localList.version && ((uint)index < (uint)localList.size)) 

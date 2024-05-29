@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Verse;
 using RimWorld;
 
@@ -14,6 +15,12 @@ namespace SmashTools
 		static MapComponentCache()
 		{
 			priorityComponentTypes = GenTypes.AllSubclassesNonAbstract(typeof(MapComponent)).ToList();
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static T GetCachedMapComponent<T>(this Map map) where T : MapComponent
+		{
+			return MapComponentCache<T>.GetComponent(map);
 		}
 
 		internal static void ClearMap(Map map)
