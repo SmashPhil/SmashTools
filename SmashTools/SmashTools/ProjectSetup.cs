@@ -57,9 +57,6 @@ namespace SmashTools
 			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearCache)));
-			Harmony.Patch(original: AccessTools.Method(typeof(MapGenerator), nameof(MapGenerator.GenerateContentsIntoMap)),
-				prefix: new HarmonyMethod(typeof(ComponentCache),
-				nameof(ComponentCache.MapGenerated)));
 			Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
 				postfix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearMapComps), new Type[] { typeof(Map) }));
