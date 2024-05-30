@@ -76,7 +76,7 @@ namespace SmashTools
 
 			GUIState.Push();
 			{
-				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleLeft;
+				Text.Anchor = TextAnchor.MiddleLeft;
 				string buffer = value.ToString();
 				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
 
@@ -104,7 +104,7 @@ namespace SmashTools
 
 			GUIState.Push();
 			{
-				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleLeft;
+				Text.Anchor = TextAnchor.MiddleLeft;
 				string buffer = value.ToString();
 				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
 

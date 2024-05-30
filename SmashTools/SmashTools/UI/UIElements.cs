@@ -275,7 +275,7 @@ namespace SmashTools
 				}
 				Widgets.Label(rectLeft, label);
 
-				Text.CurTextFieldStyle.alignment = TextAnchor.MiddleRight;
+				Text.Anchor = TextAnchor.MiddleRight;
 				string buffer = value.ToString();
 
 				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
