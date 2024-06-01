@@ -19,8 +19,8 @@ namespace SmashTools
 		//Execution time to maintain max 1 fps impact converted from ms to seconds
 		private const float maxExecutionTimePerFrame = 1000 / (60 * 1000);
 
-		private static ConcurrentQueue<Enumerator> enumerators = new ConcurrentQueue<Enumerator>();
-		private static float executionTimeElapsed = 0;
+		private ConcurrentQueue<Enumerator> enumerators = new ConcurrentQueue<Enumerator>();
+		private float executionTimeElapsed = 0;
 
 		private static CoroutineManager instance;
 
@@ -42,12 +42,12 @@ namespace SmashTools
 
 		public static void QueueInvoke(Action action)
 		{
-			enumerators.Enqueue(new Enumerator(action));
+			Instance.enumerators.Enqueue(new Enumerator(action));
 		}
 
 		public static void QueueInvoke(Func<IEnumerator> enumerator)
 		{
-			enumerators.Enqueue(new Enumerator(enumerator));
+			Instance.enumerators.Enqueue(new Enumerator(enumerator));
 		}
 
 		public static void QueueOrInvoke(Action action, float waitSeconds = 0)
@@ -89,9 +89,9 @@ namespace SmashTools
 
 		public static void Reset()
 		{
-			while (enumerators.Count > 0)
+			while (Instance.enumerators.Count > 0)
 			{
-				enumerators.TryDequeue(out _);
+				Instance.enumerators.TryDequeue(out _);
 			}
 		}
 
