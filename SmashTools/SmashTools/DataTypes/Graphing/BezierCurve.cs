@@ -18,7 +18,7 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Bezier formula using Bernstein polynomial
+		/// Interpolation using Bernstein polynomial
 		/// </summary>
 		/// <remarks>See https://en.wikipedia.org/wiki/Bernstein_polynomial for reference</remarks>
 		/// <param name="controlPoints"></param>

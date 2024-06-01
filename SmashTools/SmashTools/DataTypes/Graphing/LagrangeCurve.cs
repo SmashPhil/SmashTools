@@ -18,7 +18,7 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Bezier formula using Bernstein polynomial
+		/// Interpolation using Lagrange polynomial
 		/// </summary>
 		/// <remarks>See https://paulbourke.net/miscellaneous/interpolation and https://en.wikipedia.org/wiki/Lagrange_polynomial for reference</remarks>
 		/// <param name="coordinates"></param>
