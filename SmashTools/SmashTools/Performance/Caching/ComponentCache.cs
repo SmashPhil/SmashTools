@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Verse;
 using RimWorld.Planet;
+using UnityEngine;
 
 namespace SmashTools
 {
@@ -16,6 +17,12 @@ namespace SmashTools
 		public static SelfOrderingList<WorldComponent> worldComps = new SelfOrderingList<WorldComponent>();
 
 		public static SelfOrderingList<GameComponent> gameComps = new SelfOrderingList<GameComponent>();
+
+		[Obsolete("Use MapComponentCache instead.")]
+		public static T GetCachedMapComponent<T>(Map map) where T : MapComponent
+		{
+			return MapComponentCache<T>.GetComponent(map);
+		}
 
 		/// <summary>
 		/// Cache Retrieval for WorldComponents
