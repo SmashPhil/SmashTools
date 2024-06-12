@@ -32,6 +32,16 @@ namespace SmashTools.Performance
 
 		public bool InLongOperation { get; set; }
 
+		public int QueueCount => queue.Count;
+
+		/// <summary>
+		/// For Debugging purposes only. Allows reading of action queue with moment-in-time snapshot.
+		/// </summary>
+		internal IEnumerator<AsyncAction> GetEnumerator() 
+		{
+			return queue.GetEnumerator();
+		}
+
 		public void Queue(AsyncAction action)
 		{
 			queue.Enqueue(action);
