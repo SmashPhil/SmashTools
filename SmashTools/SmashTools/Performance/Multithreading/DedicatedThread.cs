@@ -16,21 +16,23 @@ namespace SmashTools.Performance
 
 		private readonly ConcurrentQueue<AsyncAction> queue;
 
+		private bool shouldExit;
+		private bool inLongOperation;
+
 		public DedicatedThread(int id, ThreadType type)
 		{
 			this.id = id;
 			this.type = type;
-			ShouldExit = false;
-			InLongOperation = false;
 
 			queue = new ConcurrentQueue<AsyncAction>();
-			thread = new Thread(Execute);
+			thread = new Thread(Execute)
+			{
+				IsBackground = true
+			};
 			thread.Start();
 		}
 
-		private bool ShouldExit { get; set; }
-
-		public bool InLongOperation { get; set; }
+		public bool InLongOperation { get => inLongOperation; set => inLongOperation = value; }
 
 		public int QueueCount => queue.Count;
 
@@ -49,12 +51,12 @@ namespace SmashTools.Performance
 
 		internal void Stop()
 		{
-			ShouldExit = true;
+			shouldExit = true;
 		}
 
 		private void Execute()
 		{
-			while (!ShouldExit)
+			while (!shouldExit)
 			{
 				if (queue.TryDequeue(out AsyncAction asyncAction))
 				{
@@ -72,7 +74,7 @@ namespace SmashTools.Performance
 					}
 					asyncAction.ReturnToPool();
 				}
-				while (queue.Count == 0) Thread.Sleep(1);
+				while (queue.Count == 0) Thread.Sleep(15);
 			}
 		}
 

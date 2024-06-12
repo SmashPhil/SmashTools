@@ -11,7 +11,6 @@ namespace SmashTools
 	/// </summary>
 	/// <remarks>Cuts performance impact for component retrieval to less than half the original average</remarks>
 	[StaticConstructorOnStartup]
-	[Obsolete("Use MapComponentCache for cached comp retrieval.")]
 	public static class ComponentCache
 	{
 		public static SelfOrderingList<WorldComponent> worldComps = new SelfOrderingList<WorldComponent>();
