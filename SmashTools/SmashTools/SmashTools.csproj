@@ -142,6 +142,7 @@
     <Compile Include="DataTypes\Rot8.cs" />
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
+    <Compile Include="UI\Windows\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\Dialog_Graph.cs" />
     <Compile Include="UI\Windows\Dialog_GraphEditor.cs" />
     <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />
