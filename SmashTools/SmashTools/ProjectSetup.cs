@@ -76,9 +76,9 @@ namespace SmashTools
 				nameof(PawnOverlayRenderer.LayingFacing)));
 
 			//Unit Tests
-			Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
-				postfix: new HarmonyMethod(typeof(UnitTesting),
-				nameof(UnitTesting.DrawDebugWindowButton)));
+			//Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
+			//	postfix: new HarmonyMethod(typeof(UnitTesting),
+			//	nameof(UnitTesting.DrawDebugWindowButton)));
 			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.StartedNewGame)),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecuteNewGameTesting)));
