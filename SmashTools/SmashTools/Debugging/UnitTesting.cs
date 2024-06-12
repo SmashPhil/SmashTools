@@ -43,7 +43,7 @@ namespace SmashTools
 
 		public static void OpenMenu()
 		{
-			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Unit Testing (MODDER USE ONLY)", unitTestRadioButtons, postClose: SmashMod.Serialize));
+			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Unit Testing", unitTestRadioButtons, postClose: SmashMod.Serialize));
 		}
 
 		private static void InitializeUnitTesting()

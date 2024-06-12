@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using Verse;
+using static System.Net.Mime.MediaTypeNames;
 using Object = UnityEngine.Object;
 
 namespace SmashTools
@@ -32,6 +33,21 @@ namespace SmashTools
             modContentPack.GetContentHolder<T>().contentList[itemPath] = item;
         }
 
+        public static Texture2D CreateReadableTexture(Texture2D source, TextureWrapMode? wrapMode = null)
+        {
+			RenderTexture renderTex = ConvertToRenderTex(source);
+            Texture2D readableTexture = new Texture2D(source.width, source.height)
+            {
+                name = source.name,
+                wrapMode = wrapMode ?? source.wrapMode,
+			};
+			readableTexture.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
+			readableTexture.Apply();
+			ReleaseMemory(renderTex);
+
+            return readableTexture;
+		}
+
         /// <summary>
         /// Change <seealso cref="TextureWrapMode"/> of <paramref name="source"/> to <paramref name="wrapMode"/>
         /// </summary>
@@ -46,13 +62,9 @@ namespace SmashTools
                 return source;
             }
             RenderTexture renderTex = ConvertToRenderTex(source);
-            Texture2D wrappedTex = new Texture2D(source.width, source.height)
-            {
-                wrapMode = wrapMode,
-                name = source.name
-            };
-            
-            wrappedTex.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
+            Texture2D wrappedTex = CreateReadableTexture(source, wrapMode);
+
+			wrappedTex.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
             wrappedTex.Apply(true, true);
             ReleaseMemory(renderTex);
             return wrappedTex;
@@ -87,47 +99,40 @@ namespace SmashTools
         }
 
         /// <summary>
-        /// Rotate pixels of <paramref name="tex"/> by <paramref name="angle"/> (Counter-Clockwise)
+        /// Rotate pixels of <paramref name="source"/> by <paramref name="angle"/> (Counter-Clockwise)
         /// </summary>
-        /// <param name="tex"></param>
+        /// <param name="source"></param>
         /// <param name="angle"></param>
-        public static Texture2D Rotate(this Texture2D tex, float angle)
+        public static Texture2D Rotate(this Texture2D source, float angle)
         {
             if (angle != 90 && angle != 180 && angle != 270)
             {
-                Log.Error($"Unable to rotate {tex.name} by angle=\"{angle}\". Angle must equal 90, 180, or 270.");
-                return tex;
+                Log.Error($"Unable to rotate {source.name} by angle=\"{angle}\". Angle must equal 90, 180, or 270.");
+                return source;
             }
-            if (tex.width != tex.height)
+            if (source.width != source.height)
             {
-                Log.Warning($"Rotating patterns with non-square dimensions may result in inaccurate conversions. Tex=\"{tex.name}\" ({tex.width},{tex.height})");
+                Log.Warning($"Rotating patterns with non-square dimensions may result in inaccurate conversions. Tex=\"{source.name}\" ({source.width},{source.height})");
             }
             Texture2D readableTex;
-            if (tex.isReadable)
+            if (source.isReadable)
             {
-                readableTex = tex;
+                readableTex = source;
             }
             else
             {
-                RenderTexture renderTex = ConvertToRenderTex(tex);
-                readableTex = new Texture2D(tex.width, tex.height)
-                {
-                    name = tex.name
-                };
-                readableTex.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
-                readableTex.Apply();
-                ReleaseMemory(renderTex);
+                readableTex = CreateReadableTexture(source);
             }
 
             int width, height;
             int rWidth, rHeight;
-            width = tex.width;
-            height = tex.height;
+            width = source.width;
+            height = source.height;
             rWidth = readableTex.width;
             rHeight = readableTex.height;
             Texture2D rotImage = new Texture2D(width, height)
             {
-                name = tex.name
+                name = source.name
             };
             int x = 0, y = 0;
             Color32[] pix1 = rotImage.GetPixels32();
