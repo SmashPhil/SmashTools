@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Verse;
 using RimWorld;
 using RimWorld.Planet;
@@ -13,6 +14,16 @@ namespace SmashTools
 {
 	public static class Ext_Map
 	{
+		private static readonly FieldInfo currentEventField;
+		private static readonly FieldInfo longEventTextField;
+
+		static Ext_Map()
+		{
+			currentEventField = AccessTools.Field(typeof(LongEventHandler), "currentEvent");
+			Type longQueuedEventType = AccessTools.TypeByName("Verse.LongEventHandler+QueuedLongEvent");
+			longEventTextField = AccessTools.Field(longQueuedEventType, "eventText");
+		}
+
 		public static void DrawCell_ThreadSafe(this Map map, IntVec3 cell, float colorPct = 0, string text = null, int duration = 50)
 		{
 			if (UnityData.IsInMainThread)
