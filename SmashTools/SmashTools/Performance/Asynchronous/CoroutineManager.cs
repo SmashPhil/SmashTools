@@ -43,11 +43,13 @@ namespace SmashTools
 		public static void QueueInvoke(Action action)
 		{
 			Instance.enumerators.Enqueue(new Enumerator(action));
+			Instance.RunQueue();
 		}
 
 		public static void QueueInvoke(Func<IEnumerator> enumerator)
 		{
 			Instance.enumerators.Enqueue(new Enumerator(enumerator));
+			Instance.RunQueue();
 		}
 
 		public static void QueueOrInvoke(Action action, float waitSeconds = 0)
@@ -81,10 +83,12 @@ namespace SmashTools
 			}
 		}
 
-		[MethodImpl(MethodImplOptions.NoInlining)]
-		internal void RunQueue()
+		private void RunQueue()
 		{
-			StartCoroutine(ExecuteQueue());
+			if (NeedsRestart)
+			{
+				StartCoroutine(ExecuteQueue());
+			}
 		}
 
 		public void Clear()
@@ -115,7 +119,11 @@ namespace SmashTools
 					}
 					if (enumerator.Enumerate)
 					{
-						yield return enumerator.GetEnumerator();
+						IEnumerator subEnumerator = enumerator.GetEnumerator();
+						while (subEnumerator.MoveNext())
+						{
+							yield return subEnumerator.Current;
+						}
 					}
 					else
 					{

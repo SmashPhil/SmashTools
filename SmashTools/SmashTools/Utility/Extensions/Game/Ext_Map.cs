@@ -9,6 +9,7 @@ using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
 using HarmonyLib;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace SmashTools
 {
@@ -16,12 +17,36 @@ namespace SmashTools
 	{
 		private static readonly FieldInfo currentEventField;
 		private static readonly FieldInfo longEventTextField;
+		private static string previousEventText;
 
 		static Ext_Map()
 		{
 			currentEventField = AccessTools.Field(typeof(LongEventHandler), "currentEvent");
 			Type longQueuedEventType = AccessTools.TypeByName("Verse.LongEventHandler+QueuedLongEvent");
 			longEventTextField = AccessTools.Field(longQueuedEventType, "eventText");
+		}
+
+		public static void StashLongEventText()
+		{
+			if (!LongEventHandler.AnyEventNowOrWaiting)
+			{
+				return;
+			}
+			object currentEvent = currentEventField.GetValue(null);
+			if (currentEvent != null)
+			{
+				previousEventText = (string)longEventTextField.GetValue(currentEvent);
+			}
+		}
+
+		public static void RevertLongEventText()
+		{
+			if (previousEventText.NullOrEmpty())
+			{
+				return;
+			}
+			LongEventHandler.SetCurrentEventText(previousEventText);
+			previousEventText = null;
 		}
 
 		public static void DrawCell_ThreadSafe(this Map map, IntVec3 cell, float colorPct = 0, string text = null, int duration = 50)
