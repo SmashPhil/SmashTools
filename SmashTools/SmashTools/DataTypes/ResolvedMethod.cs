@@ -93,7 +93,14 @@ namespace SmashTools
 					else
 					{
 						string text = argStrings[argIndex];
-						args[i] = XmlParseHelper.WrapStringAndParse(argTypes[i], text, true);
+						if (text.ToUpperInvariant() == "NULL" && (argTypes[i].IsClass || Nullable.GetUnderlyingType(argTypes[i]) != null))
+						{
+							args[i] = null;
+						}
+						else
+						{
+							args[i] = XmlParseHelper.WrapStringAndParse(argTypes[i], text, true);
+						}
 					}
 				}
 			}

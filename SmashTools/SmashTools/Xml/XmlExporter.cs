@@ -24,7 +24,7 @@ namespace SmashTools.Xml
 				Indent = true,
 				IndentChars = "\t",
 				NewLineChars = "\n",
-				Encoding = Encoding.UTF8
+				Encoding = Encoding.UTF8,
 			});
 			writer.WriteStartDocument();
 		}

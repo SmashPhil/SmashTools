@@ -27,7 +27,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\</OutputPath>
+    <OutputPath>..\..\..\SteamLibrary\steamapps\common\RimWorld\Mods\Vehicles\1.5\Assemblies\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -74,9 +74,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Animating\AnimationDriver.cs" />
-    <Compile Include="Animating\AnimationEvent.cs" />
-    <Compile Include="Animating\AnimatorObject.cs" />
+    <Compile Include="Animating\AnimationClip.cs" />
+    <Compile Include="Animating\AnimationController.cs" />
+    <Compile Include="Animating\AnimationLoader.cs" />
+    <Compile Include="Animating\AnimationState.cs" />
+    <Compile Include="Animating\AnimationTransition.cs" />
+    <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
+    <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
+    <Compile Include="Animating\Obsolete\AnimatorObject.cs" />
     <Compile Include="Attributes\GraphEditableAttribute.cs" />
     <Compile Include="Attributes\HeaderTitleAttribute.cs" />
     <Compile Include="Attributes\LoadedEarlyAttribute.cs" />
@@ -91,7 +96,7 @@
     <Compile Include="Collections\SimpleDictionary.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
-    <Compile Include="Animating\AnimationManager.cs" />
+    <Compile Include="Animating\Obsolete\AnimationManager.cs" />
     <Compile Include="DataTypes\Components\DetachedMapComponent.cs" />
     <Compile Include="DataTypes\Graphing\BezierCurve.cs" />
     <Compile Include="DataTypes\Graphing\LagrangeCurve.cs" />
@@ -112,6 +117,7 @@
     <Compile Include="Events\EventTrigger.cs" />
     <Compile Include="Interfaces\IAnimationTarget.cs" />
     <Compile Include="Debugging\CameraController.cs" />
+    <Compile Include="Interfaces\IAnimator.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
     <Compile Include="Interfaces\IDefIndex.cs" />
     <Compile Include="Interfaces\IEventManager.cs" />
@@ -142,7 +148,9 @@
     <Compile Include="DataTypes\Rot8.cs" />
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
+    <Compile Include="UI\Windows\Dialog_AnimationEditor.cs" />
     <Compile Include="UI\Windows\Dialog_DedicatedThreadActivity.cs" />
+    <Compile Include="UI\Windows\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_Graph.cs" />
     <Compile Include="UI\Windows\Dialog_GraphEditor.cs" />
     <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />
@@ -151,7 +159,7 @@
     <Compile Include="UI\Windows\EditWindow_TweakFields.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
     <Compile Include="UI\Windows\SingleWindow.cs" />
-    <Compile Include="Animating\AnimationTargetHandler.cs" />
+    <Compile Include="Animating\Obsolete\AnimationTargetHandler.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Concurrency.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Queue.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Comp.cs" />

@@ -29,7 +29,7 @@ namespace SmashTools
 				return;
 			}
 			StateValues state = stack.Peek();
-			state.Reset();
+			state.Reset(); //Can still be performed on copy of StateValues. GUI settings get set with its values, state does not change
 		}
 
 		public static void Pop()
