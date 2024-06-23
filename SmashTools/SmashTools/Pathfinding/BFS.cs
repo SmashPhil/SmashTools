@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using Verse;
 
 namespace SmashTools.Pathfinding
 {
@@ -10,22 +10,7 @@ namespace SmashTools.Pathfinding
 	{
 		private readonly Queue<T> openQueue = new Queue<T>();
 
-		private readonly Dictionary<T, T> backTracker = new Dictionary<T, T>();
-
-		private readonly Func<T, bool> canEnter;
-		private readonly Func<T, IEnumerable<T>> neighbors;
-
-		public BFS(IPathfinder<T> pathfinder)
-		{
-			canEnter = pathfinder.CanEnter;
-			neighbors = pathfinder.Neighbors;
-		}
-
-		public BFS(Func<T, IEnumerable<T>> neighbors, Func<T, bool> canEnter = null)
-		{
-			this.neighbors = neighbors;
-			this.canEnter = canEnter;
-		}
+		private readonly HashSet<T> visited = new HashSet<T>();
 
 		public bool IsRunning { get; private set; }
 
@@ -37,38 +22,37 @@ namespace SmashTools.Pathfinding
 		public void Stop()
 		{
 			openQueue.Clear();
-			backTracker.Clear();
+			visited.Clear();
 		}
 
-		/// <summary>
-		/// Breadth First Traversal search algorithm
-		/// </summary>
-		public List<T> Run(T start, T destination)
+		public void FloodFill(T start, Func<T, IEnumerable<T>> neighbors, Action<T> processor, Func<T, bool> canEnter = null)
 		{
+			if (IsRunning)
+			{
+				Log.Error($"Attempting to run FloodFill while it's already in use.");
+				return;
+			}
+
 			IsRunning = true;
 			try
 			{
 				openQueue.Clear();
 				openQueue.Enqueue(start);
-
+				visited.Add(start);
 				while (openQueue.Count > 0)
 				{
 					T current = openQueue.Dequeue();
+					processor.Invoke(current);
 					foreach (T neighbor in neighbors(current))
 					{
-						if (backTracker.ContainsKey(neighbor))
+						if (visited.Contains(neighbor))
 						{
 							if (LogRetraceAttempts) SmashLog.Error($"Attempting to open closed node {neighbor}. Skipping to avoid infinite loop.");
 							continue;
 						}
-						if (canEnter is null || canEnter(neighbor))
+						if (canEnter == null || canEnter(neighbor))
 						{
-							backTracker[neighbor] = current;
-							if (neighbor.Equals(destination))
-							{
-								Stop();
-								return SolvePath(start, destination);
-							}
+							visited.Add(neighbor);
 							openQueue.Enqueue(neighbor);
 						}
 					}
@@ -76,33 +60,22 @@ namespace SmashTools.Pathfinding
 			}
 			catch (Exception ex)
 			{
-				SmashLog.Error($"Exception thrown while performing BFS search. Exception = {ex}");
+				SmashLog.Error($"Exception thrown while performing BFS FloodFill.\n{ex.Message}");
 			}
 			finally
 			{
 				IsRunning = false;
 			}
-			return null;
 		}
 
-		private List<T> SolvePath(T start, T destination)
+		public List<T> FloodFill(T start, Func<T, IEnumerable<T>> neighbors, Func<T, bool> canEnter = null)
 		{
-			List<T> result = new List<T>();
-
-			T current = destination;
-			while (!start.Equals(current))
+			List<T> nodes = new List<T>();
+			FloodFill(start, neighbors, canEnter: canEnter, processor: delegate (T current)
 			{
-				result.Add(current);
-				current = backTracker[current];
-			}
-			result.Add(start);
-			result.Reverse();
-
-			if (!result[0].Equals(start))
-			{
-				SmashLog.Error($"BFS was unable to solve path from {start} to {destination}.");
-			}
-			return result;
+				nodes.Add(current);
+			});
+			return nodes;
 		}
 	}
 }
