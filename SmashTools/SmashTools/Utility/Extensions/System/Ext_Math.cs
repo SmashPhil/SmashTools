@@ -168,6 +168,12 @@ namespace SmashTools
 			return Mathf.RoundToInt(num / roundTo) * roundTo;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static int PowTwo(int exp)
+		{
+			return 1 << exp;
+		}
+
 		/// <summary>
 		/// Math.Pow simple casting for integers
 		/// </summary>

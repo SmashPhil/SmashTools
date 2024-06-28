@@ -7,11 +7,9 @@ using Verse;
 using RimWorld;
 using UnityEngine;
 using Verse.Noise;
-using SmashTools.Animations;
 using System.Diagnostics;
-using SmashTools.Animating;
 
-namespace SmashTools
+namespace SmashTools.Animations
 {
 	public class Dialog_AnimationClipLister : Window
 	{

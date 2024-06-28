@@ -10,8 +10,10 @@ namespace SmashTools.Animations
 {
 	public interface IAnimator
 	{
-		//public AnimationController Controller { get; }
+		public AnimationController Controller { get; }
 
 		public ModContentPack ModContentPack { get; }
+
+		public IEnumerable<object> ExtraAnimators { get; }
 	}
 }

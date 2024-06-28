@@ -74,14 +74,21 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Animating\AnimationBoolState.cs" />
     <Compile Include="Animating\AnimationClip.cs" />
     <Compile Include="Animating\AnimationController.cs" />
     <Compile Include="Animating\AnimationLoader.cs" />
+    <Compile Include="Animating\AnimationProperty.cs" />
+    <Compile Include="Animating\AnimationPropertyContainer.cs" />
+    <Compile Include="Animating\AnimationPropertyRegistry.cs" />
     <Compile Include="Animating\AnimationState.cs" />
     <Compile Include="Animating\AnimationTransition.cs" />
+    <Compile Include="Animating\KeyFrame.cs" />
+    <Compile Include="Animating\KeyFrameGroup.cs" />
     <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
     <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
     <Compile Include="Animating\Obsolete\AnimatorObject.cs" />
+    <Compile Include="Attributes\AnimationPropertyAttribute.cs" />
     <Compile Include="Attributes\GraphEditableAttribute.cs" />
     <Compile Include="Attributes\HeaderTitleAttribute.cs" />
     <Compile Include="Attributes\LoadedEarlyAttribute.cs" />
@@ -154,6 +161,7 @@
     <Compile Include="UI\Windows\Dialog_Graph.cs" />
     <Compile Include="UI\Windows\Dialog_GraphEditor.cs" />
     <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />
+    <Compile Include="UI\Windows\Dialog_PropertySelect.cs" />
     <Compile Include="UI\Windows\Dialog_ToggleMenu.cs" />
     <Compile Include="UI\Windows\Dialog_RadioButtonMenu.cs" />
     <Compile Include="UI\Windows\EditWindow_TweakFields.cs" />
