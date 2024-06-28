@@ -1,5 +1,4 @@
-﻿using SmashTools.Animations;
-using SmashTools.Xml;
+﻿using SmashTools.Xml;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Verse;
 
-namespace SmashTools.Animating
+namespace SmashTools.Animations
 {
 	public static class AnimationLoader
 	{

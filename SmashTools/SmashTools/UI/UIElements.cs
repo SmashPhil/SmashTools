@@ -368,22 +368,22 @@ namespace SmashTools
 
 		public static void DrawLineHorizontal(float x, float y, float length, Color color)
 		{
-			GUIState.Push();
-			{
-				GUI.color = color;
-				GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.WhiteTex);
-			}
-			GUIState.Pop();
+			Color guiColor = GUI.color;
+
+			GUI.color = color;
+			GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.WhiteTex);
+
+			GUI.color = guiColor;
 		}
 
 		public static void DrawLineVertical(float x, float y, float length, Color color)
 		{
-			GUIState.Push();
-			{
-				GUI.color = color;
-				GUI.DrawTexture(new Rect(x, y, 1f, length), BaseContent.WhiteTex);
-			}
-			GUIState.Pop();
+			Color guiColor = GUI.color;
+
+			GUI.color = color;
+			GUI.DrawTexture(new Rect(x, y, 1f, length), BaseContent.WhiteTex);
+
+			GUI.color = guiColor;
 		}
 
 		public static void DrawLineHorizontalGrey(float x, float y, float length)
