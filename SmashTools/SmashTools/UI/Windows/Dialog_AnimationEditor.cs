@@ -10,6 +10,7 @@ using SmashTools.Xml;
 using System.IO;
 using System.Threading.Tasks;
 using Verse.Noise;
+using System.ComponentModel;
 
 namespace SmashTools.Animations
 {
@@ -23,6 +24,7 @@ namespace SmashTools.Animations
 		private const float KeyframeSize = 20;
 		private const float FrameInputWidth = 50;
 		private const float TabWidth = 110;
+		private const float PropertyEntryHeight = 24;
 		private const float PropertyBtnWidth = 180;
 
 		private const float FrameBarPadding = 40;
@@ -99,11 +101,21 @@ namespace SmashTools.Animations
 
 		private float ExtraPadding { get; set; }
 
+		public float FrameBarWidth => EditorWidth - FrameBarPadding * 2;
+
 		private int FrameCountShown { get; set; }
 
-		public int FrameCount => animation?.frameCount ?? DefaultFrameCount;
-
-		public float FrameBarWidth => EditorWidth - FrameBarPadding * 2;
+		public int FrameCount
+		{
+			get
+			{
+				if (animation == null || animation.frameCount <= 0)
+				{
+					return DefaultFrameCount;
+				}
+				return animation.frameCount;
+			}
+		}
 
 		public float FrameTickMarkSpacing
 		{
@@ -200,6 +212,15 @@ namespace SmashTools.Animations
 			tickInterval = Mathf.Clamp(interval, 1, int.MaxValue);
 		}
 
+		private void LoadAnimation(FileInfo fileInfo)
+		{
+			AnimationClip clip = AnimationLoader.LoadAnimation(fileInfo.FullName);
+			if (clip != null)
+			{
+				animation = clip;
+			}
+		}
+
 		public string TimeStamp(int frame)
 		{
 			int seconds = frame / 60;
@@ -274,6 +295,10 @@ namespace SmashTools.Animations
 
 			DoSeparatorVertical(panelRect.xMax, panelRect.y, panelRect.height);
 
+			if (animator == null)
+			{
+				GUI.enabled = false;
+			}
 			Rect buttonRect = new Rect(toggleRect.xMax, panelRect.y, WidgetBarHeight, WidgetBarHeight);
 			if (AnimationButton(buttonRect, skipToBeginningTexture, "ST_SkipFrameBeginningTooltip".Translate()))
 			{
@@ -320,9 +345,11 @@ namespace SmashTools.Animations
 
 			Rect animClipDropdownRect = new Rect(panelRect.x, buttonRect.yMax, 200, buttonRect.height);
 			Rect animClipSelectRect = new Rect(windowRect.x + Margin + animClipDropdownRect.x, windowRect.y + Margin + animClipDropdownRect.yMax, animClipDropdownRect.width, 500);
-			if (Dropdown(animClipDropdownRect, "Rotate", "Assets/SomePath/Rotation.rwa") && animator != null)
+			string animLabel = animation?.FileName ?? "[No Clip]";
+			string animPath = animation?.FilePath ?? string.Empty;
+			if (Dropdown(animClipDropdownRect, animLabel, animPath))
 			{
-				Find.WindowStack.Add(new Dialog_AnimationClipLister(animator, animClipSelectRect));
+				Find.WindowStack.Add(new Dialog_AnimationClipLister(animator, animClipSelectRect, onFilePicked: LoadAnimation));
 			}
 			DoSeparatorVertical(animClipDropdownRect.xMax, animClipDropdownRect.y, animClipDropdownRect.height);
 
@@ -344,12 +371,30 @@ namespace SmashTools.Animations
 
 			DoSeparatorHorizontal(animClipDropdownRect.x, animClipDropdownRect.yMax, panelRect.width);
 
-			Rect propertyButtonRect = new Rect(panelRect.xMax / 2 - PropertyBtnWidth / 2, animClipDropdownRect.yMax + 50, PropertyBtnWidth, WidgetBarHeight);
-			if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()) && animator != null)
+			Rect rowRect = new Rect(panelRect.x, animClipDropdownRect.yMax + PropertyEntryHeight, panelRect.width, PropertyEntryHeight);
+			if (animation != null && !animation.properties.NullOrEmpty())
+			{
+				foreach (AnimationPropertyParent propertyParent in animation.properties)
+				{
+					rowRect.y += rowRect.height;
+					Rect propertyParentRect = new Rect(rowRect.x, rowRect.y, rowRect.width, rowRect.height);
+					Widgets.Label(propertyParentRect, propertyParent.Name);
+				}
+				rowRect.y += PropertyEntryHeight; //Extra padding for add property btn
+			}
+
+			var enabled = GUI.enabled;
+			if (animation == null)
+			{
+				GUI.enabled = false;
+			}
+			Rect propertyButtonRect = new Rect(panelRect.xMax / 2 - PropertyBtnWidth / 2, rowRect.yMax, PropertyBtnWidth, WidgetBarHeight);
+			if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()))
 			{
 				Vector2 propertyDropdownPosition = new Vector2(windowRect.x + Margin + propertyButtonRect.position.x + 2, windowRect.y + Margin + propertyButtonRect.position.y);
-				Find.WindowStack.Add(new Dialog_PropertySelect(animator, propertyDropdownPosition));
+				Find.WindowStack.Add(new Dialog_PropertySelect(animator, animation, propertyDropdownPosition));
 			}
+			GUI.enabled = enabled;
 
 			Rect tabRect = new Rect(panelRect.xMax - TabWidth - 24, panelRect.yMax - WidgetBarHeight, TabWidth, WidgetBarHeight);
 			DoSeparatorHorizontal(tabRect.xMax, tabRect.y, 24);
@@ -363,6 +408,8 @@ namespace SmashTools.Animations
 				FlipTab();
 			}
 			DoSeparatorHorizontal(panelRect.x, tabRect.y, panelRect.x + tabRect.x);
+
+			GUI.enabled = true;
 
 			void FlipTab()
 			{
@@ -784,46 +831,6 @@ namespace SmashTools.Animations
 			GUI.color = Color.white;
 			Text.Anchor = anchor;
 			return pressed;
-		}
-
-		private bool ExportAnimationXml()
-		{
-			if (animation == null)
-			{
-				return false;
-			}
-			bool exported = true;
-			try
-			{
-				XmlExporter.StartDocument(animation.FilePath);
-				{
-					XmlExporter.OpenNode("Animation");
-					{
-						animation.WriteData();
-					}
-					XmlExporter.CloseNode();
-				}
-				XmlExporter.Export();
-			}
-			catch (Exception ex)
-			{
-				exported = false;
-				Log.Error($"Unable to export animation data. Exception = {ex}");
-			}
-			finally
-			{
-				XmlExporter.Close();
-			}
-
-			if (exported)
-			{
-				SoundDefOf.Click.PlayOneShotOnCamera();
-			}
-			else
-			{
-				SoundDefOf.ClickReject.PlayOneShotOnCamera();
-			}
-			return exported;
 		}
 
 		private enum Tab

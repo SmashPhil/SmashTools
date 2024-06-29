@@ -1,40 +1,48 @@
-﻿using System;
+﻿using SmashTools.Xml;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using Verse;
 
 namespace SmashTools.Animations
 {
 	public class AnimationProperty
 	{
 		private readonly string name;
-		private readonly Type parentType;
+		private readonly Type type;
+
+		[Unsaved]
+		private MemberInfo memberInfo;
 
 		public LagrangeCurve curve;
 		public List<AnimationBoolState> boolStates;
 
-		public AnimationProperty(string name, Type parentType)
+		public delegate void SetProperty(object parent, object value);
+
+		public AnimationProperty(string name, Type type, MemberInfo memberInfo)
 		{
 			this.name = name;
-			this.parentType = parentType;
+			this.type = type;
+
+			this.memberInfo = memberInfo;
 		}
 
 		public string Name => name;
 
 		public PropertyType Type {get; internal set; }
 
-		public object Parent { get; internal set; }
-
 		public void WriteData()
 		{
-
+			XmlExporter.WriteElement(nameof(name), name);
 		}
 
 		public static AnimationProperty Create(string name, FieldInfo fieldInfo)
 		{
-			AnimationProperty animationProperty = new AnimationProperty(name, fieldInfo.DeclaringType);
+			AnimationProperty animationProperty = new AnimationProperty(name, fieldInfo.FieldType, fieldInfo);
 			animationProperty.Type = PropertyTypeFrom(fieldInfo.FieldType);
 
 			return animationProperty;
@@ -42,11 +50,29 @@ namespace SmashTools.Animations
 
 		public static AnimationProperty Create(string name, PropertyInfo propertyInfo)
 		{
-			AnimationProperty animationProperty = new AnimationProperty(name, propertyInfo.DeclaringType);
+			AnimationProperty animationProperty = new AnimationProperty(name, propertyInfo.PropertyType, propertyInfo);
 			animationProperty.Type = PropertyTypeFrom(propertyInfo.PropertyType);
 
 			return animationProperty;
 		}
+
+		//private static SetProperty GetAssignmentDelegate(Type type, MemberInfo memberInfo)
+		//{
+		//	DynamicMethod method;
+		//	if (type.IsValueType)
+		//	{
+		//		method = new DynamicMethod("set", typeof(void), new Type[] { typeof(object), typeof(object) }, type, true);
+		//	}
+		//	else
+		//	{
+		//		method = new DynamicMethod("set", typeof(void), new Type[] { typeof(object), typeof(object) }, type, true);
+		//	}
+		//	ILGenerator ilg = method.GetILGenerator();
+			
+		//	ilg.Emit(OpCodes.Ldarg_0);
+		//	ilg.Emit(OpCodes.Unbox, type);
+		//	ilg.Emit(OpCodes.Ldarg_1);
+		//}
 
 		public static PropertyType PropertyTypeFrom(Type type)
 		{

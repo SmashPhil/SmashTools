@@ -20,16 +20,18 @@ namespace SmashTools.Animations
 		private static readonly Color backgroundOutlineColor = new ColorInt(74, 74, 74).ToColor;
 
 		private readonly IAnimator animator;
+		private readonly AnimationClip animation;
 
 		private Vector2 position;
 
 		private List<object> objectListOrder = new List<object>();
-		private Dictionary<object, List<AnimationPropertyContainer>> properties = new Dictionary<object, List<AnimationPropertyContainer>>();
+		private Dictionary<object, List<AnimationPropertyParent>> properties = new Dictionary<object, List<AnimationPropertyParent>>();
 		private bool[] expandedContainers;
 
-		public Dialog_PropertySelect(IAnimator animator, Vector2 position)
+		public Dialog_PropertySelect(IAnimator animator, AnimationClip animation, Vector2 position)
 		{
 			this.animator = animator;
+			this.animation = animation;
 			this.position = position;
 
 			this.closeOnClickedOutside = true;
@@ -44,13 +46,24 @@ namespace SmashTools.Animations
 
 		public override void PreOpen()
 		{
-			foreach (AnimationPropertyContainer container in AnimationPropertyRegistry.GetAnimationProperties(animator))
+			HashSet<(Type parentType, string name)> existingProperties = new HashSet<(Type parentType, string fieldName)>();
+			if (!animation.properties.NullOrEmpty())
 			{
-				if (!properties.ContainsKey(container.Parent))
+				foreach (AnimationPropertyParent container in animation.properties)
 				{
-					objectListOrder.Add(container.Parent);
+					existingProperties.Add((container.Parent.GetType(), container.Name));
 				}
-				properties.AddOrInsert(container.Parent, container);
+			}
+			foreach (AnimationPropertyParent container in AnimationPropertyRegistry.GetAnimationProperties(animator))
+			{
+				if (!existingProperties.Contains((container.Parent.GetType(), container.Name)))
+				{
+					if (!properties.ContainsKey(container.Parent))
+					{
+						objectListOrder.Add(container.Parent);
+					}
+					properties.AddOrInsert(container.Parent, container);
+				}
 			}
 			expandedContainers = new bool[properties.Count];
 			base.PreOpen();
@@ -85,63 +98,63 @@ namespace SmashTools.Animations
 		public override void DoWindowContents(Rect inRect)
 		{
 			GUIState.Push();
-
-			Widgets.DrawBoxSolidWithOutline(inRect, backgroundColor, backgroundOutlineColor, outlineThickness: 2);
-
-			Text.Font = GameFont.Small;
-
-			Rect rowRect = new Rect(inRect.x, inRect.y, inRect.width, EntryHeight).ContractedBy(3);
-
-			for (int i = 0; i < properties.Count; i++)
+			try
 			{
-				object parent = objectListOrder[i];
-				List<AnimationPropertyContainer> containers = properties[parent];
+				Widgets.DrawBoxSolidWithOutline(inRect, backgroundColor, backgroundOutlineColor, outlineThickness: 2);
 
-				AnimationPropertyContainer container = containers[i];
-				bool expanded = expandedContainers[i];
-				rowRect.SplitVertically(EntryHeight, out Rect checkboxRect, out Rect fileLabelRect);
-
-				if (!container.Children.NullOrEmpty() && Widgets.ButtonImage(checkboxRect.ContractedBy(2), expanded ? TexButton.Collapse : TexButton.Reveal))
-				{
-					expanded = !expanded;
-					expandedContainers[i] = expanded;
-
-					SoundDefOf.Click.PlayOneShotOnCamera(null);
-				}
+				Text.Font = GameFont.Small;
+				Text.WordWrap = false;
 				Text.Anchor = TextAnchor.MiddleLeft;
-				Widgets.Label(fileLabelRect, $"{container.ContainerType.Name} : {container.Name}");
-				AddPropertyButton(fileLabelRect);
 
-				if (expanded)
+				Rect rowRect = new Rect(inRect.x, inRect.y, inRect.width, EntryHeight).ContractedBy(3);
+				for (int i = 0; i < properties.Count; i++)
 				{
-					var wrapMode = Text.WordWrap;
-					Text.WordWrap = false;
-					for (int j = 0; j < container.Children.Count; j++)
+					object parent = objectListOrder[i];
+					bool expanded = expandedContainers[i];
+					rowRect.SplitVertically(EntryHeight, out Rect checkboxRect, out Rect fileLabelRect);
+
+					if (Widgets.ButtonImage(checkboxRect.ContractedBy(2), expanded ? TexButton.Collapse : TexButton.Reveal))
 					{
-						AnimationProperty property = container.Children[j];
-						rowRect.y += rowRect.height;
-						Rect subPropertyRect = new Rect(fileLabelRect.x + SubPropertyPadding, rowRect.y, fileLabelRect.width - SubPropertyPadding, fileLabelRect.height);
-						Widgets.Label(subPropertyRect, $"{container.Name}.{property.Name}");
-						AddPropertyButton(subPropertyRect);
+						expanded = !expanded;
+						expandedContainers[i] = expanded;
+
+						SoundDefOf.Click.PlayOneShotOnCamera(null);
 					}
-					Text.WordWrap = wrapMode;
+
+					Widgets.Label(fileLabelRect, parent.GetType().Name);
+
+					if (expanded)
+					{
+						List<AnimationPropertyParent> containers = properties[parent];
+						foreach (AnimationPropertyParent container in containers)
+						{
+							rowRect.y += rowRect.height;
+							Rect propertyParentRect = new Rect(fileLabelRect.x + SubPropertyPadding, rowRect.y, fileLabelRect.width - SubPropertyPadding, fileLabelRect.height);
+							Widgets.Label(propertyParentRect, container.Name);
+							if (AddPropertyButton(propertyParentRect))
+							{
+								Log.Message($"Adding property: {container} to {animation} properties: {animation?.properties?.Count}");
+								animation.properties.Add(container);
+								Close();
+								break;
+							}
+						}
+					}
+
+					rowRect.y += rowRect.height;
 				}
-
-				rowRect.y += rowRect.height;
 			}
-
-			GUIState.Pop();
+			finally
+			{
+				GUIState.Pop();
+			}
 		}
 
-		private void AddPropertyButton(Rect rect)
+		private bool AddPropertyButton(Rect rect)
 		{
 			float size = rect.height;
 			Rect buttonRect = new Rect(rect.xMax - size, rect.y, size, size);
-			if (Widgets.ButtonImage(buttonRect.ContractedBy(2), TexButton.Plus))
-			{
-				//Add property to editor
-				Close();
-			}
+			return Widgets.ButtonImage(buttonRect.ContractedBy(2), TexButton.Plus);
 		}
 	}
 }

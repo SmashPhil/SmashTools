@@ -10,34 +10,23 @@ namespace SmashTools.Animations
 {
 	public sealed class AnimationClip
 	{
-		public const string FileExtension = "rwa";
+		public const string FileExtension = ".rwa"; //RimWorld Animation
 
 		public int frameCount;
-		
-		public List<AnimationProperty> properties;
 
-		public string FileName { get; internal set; }
+		public List<AnimationPropertyParent> properties = new List<AnimationPropertyParent>();
 
-		public string FilePath { get; internal set; }
 
-		public void WriteData()
-		{
-			XmlExporter.WriteElement(nameof(frameCount), frameCount.ToString());
-			if (properties != null)
-			{
-				XmlExporter.OpenNode(nameof(properties));
-				{
-					foreach (AnimationProperty property in properties)
-					{
-						XmlExporter.OpenNode("li");
-						{
-							property.WriteData();
-						}
-						XmlExporter.CloseNode();
-					}
-				}
-				XmlExporter.CloseNode();
-			}
-		}
+		//Can't use auto-properties or RimWorld will try to serialize their backing fields
+		[Unsaved]
+		private string fileName;
+		[Unsaved]
+		private string filePath;
+
+		public string FilePath { get => filePath; internal set => filePath = value; }
+
+		public string FileName { get => fileName; internal set => fileName = value; }
+
+		public string FileNameWithExtension => fileName + FileExtension;
 	}
 }
