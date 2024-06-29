@@ -19,17 +19,19 @@ namespace SmashTools.Animations
 
 		private readonly IAnimator animator;
 		private readonly float width;
+		private readonly Action<FileInfo> onFilePicked;
 
 		private Vector2 windowSize;
 		private Vector2 position;
 
 		private List<FileInfo> files;
 
-		public Dialog_AnimationClipLister(IAnimator animator, Rect rect)
+		public Dialog_AnimationClipLister(IAnimator animator, Rect rect, Action<FileInfo> onFilePicked = null)
 		{
 			this.animator = animator;
 			this.width = rect.width;
 			this.position = rect.position;
+			this.onFilePicked = onFilePicked;
 
 			this.closeOnClickedOutside = true;
 			this.absorbInputAroundWindow = false;
@@ -56,6 +58,7 @@ namespace SmashTools.Animations
 		private Vector2 CalculateWindowSize()
 		{
 			files = AnimationLoader.GetAnimationClipFileInfo(animator.ModContentPack);
+			Log.Message($"Files: {files.Count}");
 			return new Vector2(width, EntryHeight * files.Count + EntryHeight); //Make room for additional row for 'create' button
 		}
 
@@ -107,7 +110,14 @@ namespace SmashTools.Animations
 			}
 			if (Widgets.ButtonText(createFileBtnRect, "ST_CreateNewClip".Translate(), false, false, Color.black, overrideTextAnchor: TextAnchor.MiddleLeft))
 			{
-				Log.Message("CREATING ANIMATION");
+				DirectoryInfo directoryInfo = AnimationLoader.AnimationDirectory(animator.ModContentPack);
+				if (directoryInfo == null || !directoryInfo.Exists)
+				{
+					directoryInfo = Directory.CreateDirectory(Path.Combine(animator.ModContentPack.RootDir, AnimationLoader.AnimationFolderName));
+				}
+				FileInfo fileInfo = AnimationLoader.CreateEmptyAnimFile(directoryInfo);
+				onFilePicked?.Invoke(fileInfo);
+				Close();
 			}
 
 			GUIState.Pop();

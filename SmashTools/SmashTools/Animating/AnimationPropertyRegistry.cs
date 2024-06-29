@@ -21,9 +21,9 @@ namespace SmashTools.Animations
 			RegisterType<Vector3>((typeof(float), nameof(Vector3.x)), (typeof(float), nameof(Vector3.y)), (typeof(float), nameof(Vector3.z)));
 		}
 
-		public static List<AnimationPropertyContainer> GetAnimationProperties(this IAnimator animator)
+		public static List<AnimationPropertyParent> GetAnimationProperties(this IAnimator animator)
 		{
-			List<AnimationPropertyContainer> result = new List<AnimationPropertyContainer>();
+			List<AnimationPropertyParent> result = new List<AnimationPropertyParent>();
 
 			GetAnimationProperties(animator, result);
 			foreach (object obj in animator.ExtraAnimators)
@@ -34,7 +34,7 @@ namespace SmashTools.Animations
 			return result;
 		}
 
-		private static void GetAnimationProperties(object parent, List<AnimationPropertyContainer> result)
+		private static void GetAnimationProperties(object parent, List<AnimationPropertyParent> result)
 		{
 			Type type = parent.GetType();
 			foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
@@ -51,17 +51,16 @@ namespace SmashTools.Animations
 					{
 						name = fieldInfo.Name;
 					}
+					AnimationPropertyParent container = new AnimationPropertyParent(name, type);
+					container.Parent = parent;
 					if (IsSupportedPrimitive(fieldInfo.FieldType))
 					{
 						AnimationProperty property = AnimationProperty.Create(name, fieldInfo);
-						AnimationPropertyContainer container = new AnimationPropertyContainer(name, parent);
 						container.Single = property;
 						result.Add(container);
 					}
 					else if (IsContainerProperty(fieldInfo.FieldType))
 					{
-						object fieldParent = fieldInfo.GetValue(parent);
-						AnimationPropertyContainer container = new AnimationPropertyContainer(name, fieldParent);
 						foreach (FieldInfo innerFieldInfo in fieldInfo.FieldType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 						{
 							if (!HandlesType(innerFieldInfo.FieldType) || !IsSupportedPrimitive(innerFieldInfo.FieldType))
@@ -69,7 +68,7 @@ namespace SmashTools.Animations
 								Log.Error($"Type {innerFieldInfo.FieldType} is not supported as an animation property. Nested fields must be a supported primitive type {{ int, float, bool }}");
 								continue;
 							}
-							AnimationProperty property = AnimationProperty.Create(fieldInfo.Name, innerFieldInfo);
+							AnimationProperty property = AnimationProperty.Create(innerFieldInfo.Name, innerFieldInfo);
 							container.Children.Add(property);
 						}
 						result.Add(container);
@@ -98,7 +97,7 @@ namespace SmashTools.Animations
 							name = propertyInfo.Name;
 						}
 						AnimationProperty property = AnimationProperty.Create(name, propertyInfo);
-						AnimationPropertyContainer container = new AnimationPropertyContainer(name, type);
+						AnimationPropertyParent container = new AnimationPropertyParent(name, type);
 						container.Single = property;
 						result.Add(container);
 					}
