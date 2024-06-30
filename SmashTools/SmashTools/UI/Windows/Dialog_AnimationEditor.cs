@@ -17,7 +17,7 @@ namespace SmashTools.Animations
 	[StaticConstructorOnStartup]
 	public class Dialog_AnimationEditor : Window
 	{
-		private const float MinLeftWindowSize = 260;
+		private const float MinLeftWindowSize = 300;
 		private const float MinRightWindowSize = 250;
 		
 		private const float WidgetBarHeight = 24;
@@ -36,9 +36,6 @@ namespace SmashTools.Animations
 		private const int DefaultFrameCount = 60;
 		private const float SecondsPerFrame = 1 / 60f;
 
-		private static readonly Texture2D pauseTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoPause");
-		private static readonly Texture2D playTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoPlay");
-
 		private static readonly Texture2D skipToBeginningTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToBeginning");
 		private static readonly Texture2D skipToPreviousTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToPrevious");
 		private static readonly Texture2D skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
@@ -49,12 +46,14 @@ namespace SmashTools.Animations
 		private static readonly Texture2D addAnimationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AddEvent");
 		private static readonly Texture2D addKeyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/AddKeyFrame");
 
+		private static readonly Color backgroundLightColor = new ColorInt(63, 63, 63).ToColor;
 		private static readonly Color backgroundDopesheetColor = new ColorInt(56, 56, 56).ToColor;
 		private static readonly Color backgroundCurvesColor = new ColorInt(40, 40, 40).ToColor;
 		
 		private static readonly Color separatorColor = new ColorInt(35, 35, 35).ToColor;
 		private static readonly Color propertyButtonColor = new ColorInt(88, 88, 88).ToColor;
 		private static readonly Color propertyButtonPressedColor = new ColorInt(70, 96, 124).ToColor;
+		private static readonly Color propertyExpandedNameColor = new ColorInt(123, 123, 123).ToColor;
 
 		private static readonly Color animationEventBarColor = new ColorInt(49, 49, 49).ToColor;
 		private static readonly Color animationKeyFrameBarColor = new ColorInt(47, 47, 47).ToColor;
@@ -73,17 +72,21 @@ namespace SmashTools.Animations
 		private IAnimator animator;
 
 		private AnimationClip animation;
-		private bool previewInGame = false;
 		private float frameZoom = 1;
 
 		private Tab tab;
 		private int frame = 0;
 		private bool isPlaying;
 		private int tickInterval = 1;
+		private Dictionary<AnimationPropertyParent, bool> propertyExpanded = new Dictionary<AnimationPropertyParent, bool>();
+
+		private Dialog_CameraView previewWindow;
 
 		private Vector2 editorScrollPos;
 		private float realTimeToTick;
 		private bool dragging = false;
+
+		private readonly List<AnimationPropertyParent> propertiesToRemove = new List<AnimationPropertyParent>();
 
 		/* ----- Left Panel Resizing ----- */
 
@@ -185,6 +188,21 @@ namespace SmashTools.Animations
 			}
 		}
 
+		private bool DisableCameraView()
+		{
+			if (animator is Thing thing)
+			{
+				return !thing.Spawned;
+			}
+			return animator == null;
+		}
+
+		public override void PostOpen()
+		{
+			base.PostOpen();
+			LoadAnimator(animator);
+		}
+
 		private void SetWindowProperties()
 		{
 			this.resizeable = true;
@@ -193,6 +211,15 @@ namespace SmashTools.Animations
 			this.draggable = true;
 			this.absorbInputAroundWindow = false;
 			this.preventCameraMotion = false;
+		}
+
+		private void RemoveFlaggedProperties()
+		{
+			foreach (AnimationPropertyParent propertyParent in propertiesToRemove)
+			{
+				animation.properties.Remove(propertyParent);
+			}
+			propertiesToRemove.Clear();
 		}
 
 		private int FrameAtMousePos(Rect rect)
@@ -214,10 +241,12 @@ namespace SmashTools.Animations
 
 		private void LoadAnimation(FileInfo fileInfo)
 		{
+			propertyExpanded.Clear();
 			AnimationClip clip = AnimationLoader.LoadAnimation(fileInfo.FullName);
-			if (clip != null)
+			animation = clip;
+			if (clip == null)
 			{
-				animation = clip;
+				Messages.Message($"Unable to load animation file at {fileInfo.FullName}.", MessageTypeDefOf.RejectInput);
 			}
 		}
 
@@ -226,6 +255,42 @@ namespace SmashTools.Animations
 			int seconds = frame / 60;
 			int frames = frame % 60;
 			return $"{seconds}:{frames:00}";
+		}
+
+		private void LoadAnimator(IAnimator animator)
+		{
+			if (CameraView.InUse)
+			{
+				CameraView.Close();
+			}
+			if (previewWindow != null && previewWindow.IsOpen)
+			{
+				previewWindow.Close();
+			}
+
+			this.animator = animator;
+			
+			if (this.animator != null)
+			{
+				previewWindow = new Dialog_CameraView(DisableCameraView, () => animator.DrawPos, new Vector2(windowRect.xMax - 50, windowRect.yMax - 50));
+				if (animator is Thing thing)
+				{
+					CameraJumper.TryJump(thing, mode: CameraJumper.MovementMode.Cut);
+				}
+				CameraView.Start(orthographicSize: CameraView.animationSettings.orthographicSize);
+				Find.Selector.ClearSelection();
+			}
+		}
+
+		public override void PostClose()
+		{
+			base.PostClose();
+			CameraView.Close();
+
+			if (previewWindow.IsOpen)
+			{
+				previewWindow.Close();
+			}
 		}
 
 		public override void WindowUpdate()
@@ -281,12 +346,21 @@ namespace SmashTools.Animations
 		{
 			DrawBackground(panelRect);
 
+			bool previewInGame = previewWindow.IsOpen;
+
 			string previewLabel = "ST_PreviewAnimation".Translate();
 			float width = Text.CalcSize(previewLabel).x;
 			Rect toggleRect = new Rect(panelRect.x, panelRect.y, width + 20, WidgetBarHeight);
 			if (ToggleText(toggleRect, previewLabel, "ST_PreviewAnimationTooltip".Translate(), previewInGame))
 			{
-				previewInGame = !previewInGame;
+				if (previewInGame)
+				{
+					previewWindow.Close();
+				}
+				else
+				{
+					Find.WindowStack.Add(previewWindow);
+				}
 			}
 
 			DoSeparatorHorizontal(panelRect.x, panelRect.y + WidgetBarHeight, panelRect.width);
@@ -316,7 +390,7 @@ namespace SmashTools.Animations
 			buttonRect.x += 1;
 
 			buttonRect.x += buttonRect.width;
-			if (AnimationButton(buttonRect, IsPlaying ? pauseTexture : playTexture, IsPlaying ? "ST_PauseAnimationTooltip".Translate() : "ST_PlayAnimationTooltip".Translate()))
+			if (AnimationButton(buttonRect, IsPlaying ? CameraView.pauseTexture : CameraView.playTexture, IsPlaying ? "ST_PauseAnimationTooltip".Translate() : "ST_PlayAnimationTooltip".Translate()))
 			{
 				IsPlaying = !IsPlaying;
 			}
@@ -349,7 +423,7 @@ namespace SmashTools.Animations
 			string animPath = animation?.FilePath ?? string.Empty;
 			if (Dropdown(animClipDropdownRect, animLabel, animPath))
 			{
-				Find.WindowStack.Add(new Dialog_AnimationClipLister(animator, animClipSelectRect, onFilePicked: LoadAnimation));
+				Find.WindowStack.Add(new Dialog_AnimationClipLister(animator, animClipSelectRect, animation, onFilePicked: LoadAnimation));
 			}
 			DoSeparatorVertical(animClipDropdownRect.xMax, animClipDropdownRect.y, animClipDropdownRect.height);
 
@@ -371,17 +445,130 @@ namespace SmashTools.Animations
 
 			DoSeparatorHorizontal(animClipDropdownRect.x, animClipDropdownRect.yMax, panelRect.width);
 
-			Rect rowRect = new Rect(panelRect.x, animClipDropdownRect.yMax + PropertyEntryHeight, panelRect.width, PropertyEntryHeight);
+			Rect rowRect = new Rect(panelRect.x + 4, animClipDropdownRect.yMax + PropertyEntryHeight / 2, panelRect.width - 10, PropertyEntryHeight);
 			if (animation != null && !animation.properties.NullOrEmpty())
 			{
+				float collapseBtnSize = rowRect.height;
+				float propertyBtnSize = rowRect.height;
+				float expandedIndent = collapseBtnSize;
+
+				bool lightBg = false;
 				foreach (AnimationPropertyParent propertyParent in animation.properties)
 				{
+					if (lightBg)
+					{
+						Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
+					}
+
+					Rect collapseBtnRect = new Rect(rowRect.x, rowRect.y, collapseBtnSize, collapseBtnSize).ContractedBy(3);
+					bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
+					if (!propertyParent.Children.NullOrEmpty() && Widgets.ButtonImage(collapseBtnRect, expanded ? TexButton.Collapse : TexButton.Reveal))
+					{
+						expanded = !expanded; //modify local variable so expanded state can be used for drawing inner properties
+						propertyExpanded[propertyParent] = expanded;
+
+						if (expanded)
+						{
+							SoundDefOf.TabOpen.PlayOneShotOnCamera();
+						}
+						else
+						{
+							SoundDefOf.TabClose.PlayOneShotOnCamera();
+						}
+					}
+					else if (propertyParent.Single != null)
+					{
+						float inputBoxWidth = PropertyEntryHeight * 3;
+						Rect inputRect = new Rect(rowRect.xMax - collapseBtnSize - inputBoxWidth, rowRect.y, inputBoxWidth, rowRect.height);
+						KeyFrameInput(inputRect, propertyParent.Single);
+					}
+					
+					Rect propertyPropertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
+					if (Widgets.ButtonImage(propertyPropertyBtnRect, keyFrameTexture))
+					{
+						List<FloatMenuOption> options = new List<FloatMenuOption>();
+						var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
+						{
+							propertiesToRemove.Add(propertyParent);
+						});
+						options.Add(removePropsOption);
+
+						var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
+						{
+							//Add all keyframes for property
+						});
+						addKeyOption.Disabled = true;
+						options.Add(addKeyOption);
+
+						var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
+						{
+							//Remove all keyframes for property
+						});
+						removeKeyOption.Disabled = true;
+						options.Add(removeKeyOption);
+
+						Find.WindowStack.Add(new FloatMenu(options));
+					}
+
+					Rect propertyParentRect = new Rect(collapseBtnRect.xMax, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
+					Widgets.Label(propertyParentRect, $"{propertyParent.Type.Name} : {propertyParent.Name}");
+
+					if (expanded)
+					{
+						foreach (AnimationProperty property in propertyParent.Children)
+						{
+							lightBg = !lightBg;
+							rowRect.y += rowRect.height;
+
+							if (lightBg)
+							{
+								Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
+							}
+
+							Rect propertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
+							if (Widgets.ButtonImage(propertyBtnRect, keyFrameTexture))
+							{
+								List<FloatMenuOption> options = new List<FloatMenuOption>();
+								var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
+								{
+									propertiesToRemove.Add(propertyParent);
+								});
+								options.Add(removePropsOption);
+
+								var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
+								{
+									//Add single keyframe for property
+								});
+								addKeyOption.Disabled = true;
+								options.Add(addKeyOption);
+
+								var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
+								{
+									//Remove single keyframe for property
+								});
+								removeKeyOption.Disabled = true;
+								options.Add(removeKeyOption);
+
+								Find.WindowStack.Add(new FloatMenu(options));
+							}
+
+							float inputBoxWidth = PropertyEntryHeight * 3;
+							Rect inputRect = new Rect(rowRect.xMax - collapseBtnSize - inputBoxWidth, rowRect.y, inputBoxWidth, rowRect.height);
+							KeyFrameInput(inputRect, property);
+
+							GUI.color = propertyExpandedNameColor;
+							Rect propertyRect = new Rect(propertyParentRect.x + expandedIndent, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
+							Widgets.Label(propertyRect, $"{propertyParent.Name}.{property.Name}");
+							GUI.color = Color.white;
+						}
+					}
+					lightBg = !lightBg;
 					rowRect.y += rowRect.height;
-					Rect propertyParentRect = new Rect(rowRect.x, rowRect.y, rowRect.width, rowRect.height);
-					Widgets.Label(propertyParentRect, propertyParent.Name);
 				}
-				rowRect.y += PropertyEntryHeight; //Extra padding for add property btn
+				rowRect.y += PropertyEntryHeight / 2; //Extra padding for add property btn
 			}
+
+			RemoveFlaggedProperties();
 
 			var enabled = GUI.enabled;
 			if (animation == null)
@@ -391,7 +578,7 @@ namespace SmashTools.Animations
 			Rect propertyButtonRect = new Rect(panelRect.xMax / 2 - PropertyBtnWidth / 2, rowRect.yMax, PropertyBtnWidth, WidgetBarHeight);
 			if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()))
 			{
-				Vector2 propertyDropdownPosition = new Vector2(windowRect.x + Margin + propertyButtonRect.position.x + 2, windowRect.y + Margin + propertyButtonRect.position.y);
+				Vector2 propertyDropdownPosition = new Vector2(windowRect.x + Margin + propertyButtonRect.xMax + 2, windowRect.y + Margin + propertyButtonRect.y + 1);
 				Find.WindowStack.Add(new Dialog_PropertySelect(animator, animation, propertyDropdownPosition));
 			}
 			GUI.enabled = enabled;
@@ -419,6 +606,43 @@ namespace SmashTools.Animations
 					Tab.Curves => Tab.Dopesheet,
 					_ => throw new NotImplementedException(),
 				};
+			}
+		}
+
+		private void KeyFrameInput(Rect inputRect, AnimationProperty property)
+		{
+			inputRect = inputRect.ContractedBy(2);
+			string buffer = string.Empty;
+			switch (property.Type)
+			{
+				case AnimationProperty.PropertyType.Float:
+					{
+						float value = property.curve[frame];
+						float valueBefore = value;
+						Widgets.TextFieldNumeric(inputRect, ref value, ref buffer, float.MinValue, float.MaxValue);
+						if (value != valueBefore)
+						{
+
+						}
+					}
+					break;
+				case AnimationProperty.PropertyType.Int:
+					{
+						int value = Mathf.RoundToInt(property.curve[frame]);
+						int valueBefore = value;
+						Widgets.TextFieldNumeric(inputRect, ref value, ref buffer, float.MinValue, float.MaxValue);
+						if (value != valueBefore)
+						{
+
+						}
+					}
+					break;
+				case AnimationProperty.PropertyType.Bool:
+					{
+						//bool value = Mathf.Approximately(propertyParent.Single.curve.Evaluate(frame / FrameCount), 1);
+						//Widgets.Checkbox(inputBox, ref value, float.MinValue, float.MaxValue);
+					}
+					break;
 			}
 		}
 

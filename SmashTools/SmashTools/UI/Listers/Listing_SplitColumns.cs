@@ -117,6 +117,7 @@ namespace SmashTools
 			GUIState.Push();
 			try
 			{
+				Text.Font = fontSize;
 				Rect rect = GetSplitRect(Text.CalcHeight(header, ColumnWidth));
 				UIElements.Header(rect, header, ListingExtension.BannerColor, fontSize: fontSize, anchor: anchor);
 			}

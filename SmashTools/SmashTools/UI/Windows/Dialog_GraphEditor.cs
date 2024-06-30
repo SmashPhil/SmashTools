@@ -41,6 +41,8 @@ namespace SmashTools
 
 		private static readonly Texture2D dragHandleIcon = ContentFinder<Texture2D>.Get("SmashTools/ViewHandle", false) ?? ContentFinder<Texture2D>.Get("UI/Icons/LifeStage/Adult", true);
 
+		private event Action SomeEvent;
+
 		private Graph.GraphType graphType;
 		private LinearCurve curve;
 
@@ -50,7 +52,6 @@ namespace SmashTools
 		private bool drawCoordLabels = true;
 
 		private Vector2 scrollPos;
-		public static AnimationSettings animationSettings = new AnimationSettings();
 		private Listing_SplitColumns lister = new Listing_SplitColumns();
 		private List<IAnimationTarget> potentialAnimationTargets = new List<IAnimationTarget>();
 
@@ -188,7 +189,7 @@ namespace SmashTools
 			{
 				RecacheAnimationTargetCurves();
 				CameraJumper.TryJump(animationTarget.Thing, mode: CameraJumper.MovementMode.Cut);
-				CameraView.Start(orthographicSize: animationSettings.orthographicSize);
+				CameraView.Start(orthographicSize: CameraView.animationSettings.orthographicSize);
 				Find.Selector.ClearSelection();
 				AnimationManager.Reset();
 				AnimationManager.SetDriver(null);
@@ -307,7 +308,7 @@ namespace SmashTools
 			base.WindowUpdate();
 			if (!DisableCameraView)
 			{
-				if (animationSettings.drawCellGrid)
+				if (CameraView.animationSettings.drawCellGrid)
 				{
 					CameraView.DrawMapGridInView();
 				}
@@ -328,7 +329,7 @@ namespace SmashTools
 				if (AnimationManager.TicksPassed >= AnimationManager.CurrentDriver.AnimationLength)
 				{
 					AnimationManager.Reset();
-					AnimationManager.Paused = !animationSettings.loop;
+					AnimationManager.Paused = !CameraView.animationSettings.loop;
 				}
 				else
 				{
@@ -627,17 +628,15 @@ namespace SmashTools
 								lister.Gap(4);
 
 								//lister.CheckboxLabeled("Pause Transition", ref animationSettings.pauseOnTransition, "Pause the viewer when transitioning between animation curves.", string.Empty, false);
-								lister.CheckboxLabeled("Loop", ref animationSettings.loop, "Loop the viewer when reaching the end of the animation.", string.Empty, false);
-								lister.CheckboxLabeled("Display Ticks", ref animationSettings.displayTicks, "Display the time remaining in ticks, rather than seconds.", string.Empty, false);
-								lister.CheckboxLabeled("Draw Cell Grid", ref animationSettings.drawCellGrid, "Draw lines along edges of the map's cells.", string.Empty, false);
+								lister.CheckboxLabeled("Loop", ref CameraView.animationSettings.loop, "Loop the viewer when reaching the end of the animation.", string.Empty, false);
+								lister.CheckboxLabeled("Display Ticks", ref CameraView.animationSettings.displayTicks, "Display the time remaining in ticks, rather than seconds.", string.Empty, false);
+								lister.CheckboxLabeled("Draw Cell Grid", ref CameraView.animationSettings.drawCellGrid, "Draw lines along edges of the map's cells.", string.Empty, false);
 								//lister.Button("Curve", )
 							}
 							lister.End();
 
 							if (Mouse.IsOver(cameraRect))
 							{
-								CameraView.HandleZoom();
-
 								Widgets.DrawTextureFitted(cameraRect, UIData.TransparentBlackBG, 1);
 
 								float buttonSpacing = PlaybackRectHeight / 2;
@@ -665,10 +664,10 @@ namespace SmashTools
 								Text.Anchor = TextAnchor.MiddleCenter;
 								Text.Font = GameFont.Small;
 
-								string timeCount = animationSettings.displayTicks ? "0 / 0" : "0:00/0:00";
+								string timeCount = CameraView.animationSettings.displayTicks ? "0 / 0" : "0:00/0:00";
 								if (AnimationManager.CurrentDriver != null)
 								{
-									if (animationSettings.displayTicks)
+									if (CameraView.animationSettings.displayTicks)
 									{
 										timeCount = $"{AnimationManager.TicksPassed} / {AnimationManager.CurrentDriver.AnimationLength}";
 									}

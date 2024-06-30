@@ -21,6 +21,8 @@ namespace SmashTools.Animations
 
 		public string Name => name;
 
+		public Type Type => type;
+
 		public object Parent { get; internal set; }
 
 		public AnimationProperty Single { get; internal set; }

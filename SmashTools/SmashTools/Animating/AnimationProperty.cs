@@ -12,14 +12,13 @@ namespace SmashTools.Animations
 {
 	public class AnimationProperty
 	{
-		private readonly string name;
-		private readonly Type type;
+		private string name;
+		private Type type;
 
 		[Unsaved]
 		private MemberInfo memberInfo;
 
-		public LagrangeCurve curve;
-		public List<AnimationBoolState> boolStates;
+		public AnimationCurve curve = new AnimationCurve();
 
 		public delegate void SetProperty(object parent, object value);
 
@@ -37,7 +36,9 @@ namespace SmashTools.Animations
 
 		public void WriteData()
 		{
-			XmlExporter.WriteElement(nameof(name), name);
+			Scribe_Values.Look(ref name, nameof(name));
+			Scribe_Values.Look(ref type, nameof(type));
+			Scribe_Deep.Look(ref curve, nameof(curve));
 		}
 
 		public static AnimationProperty Create(string name, FieldInfo fieldInfo)

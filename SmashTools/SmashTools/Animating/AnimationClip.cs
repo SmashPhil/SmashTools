@@ -12,7 +12,7 @@ namespace SmashTools.Animations
 	{
 		public const string FileExtension = ".rwa"; //RimWorld Animation
 
-		public int frameCount;
+		public int frameCount = 60;
 
 		public List<AnimationPropertyParent> properties = new List<AnimationPropertyParent>();
 

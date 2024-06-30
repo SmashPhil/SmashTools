@@ -77,14 +77,13 @@
     <Compile Include="Animating\AnimationBoolState.cs" />
     <Compile Include="Animating\AnimationClip.cs" />
     <Compile Include="Animating\AnimationController.cs" />
+    <Compile Include="Animating\AnimationCurve.cs" />
     <Compile Include="Animating\AnimationLoader.cs" />
     <Compile Include="Animating\AnimationProperty.cs" />
     <Compile Include="Animating\AnimationPropertyParent.cs" />
     <Compile Include="Animating\AnimationPropertyRegistry.cs" />
     <Compile Include="Animating\AnimationState.cs" />
     <Compile Include="Animating\AnimationTransition.cs" />
-    <Compile Include="Animating\KeyFrame.cs" />
-    <Compile Include="Animating\KeyFrameGroup.cs" />
     <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
     <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
     <Compile Include="Animating\Obsolete\AnimatorObject.cs" />
@@ -156,6 +155,7 @@
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
     <Compile Include="UI\Windows\Dialog_AnimationEditor.cs" />
+    <Compile Include="UI\Windows\Dialog_CameraView.cs" />
     <Compile Include="UI\Windows\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_FolderPicker.cs" />

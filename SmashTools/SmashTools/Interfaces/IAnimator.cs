@@ -2,9 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Verse;
+using UnityEngine;
 
 namespace SmashTools.Animations
 {
@@ -15,5 +14,7 @@ namespace SmashTools.Animations
 		public ModContentPack ModContentPack { get; }
 
 		public IEnumerable<object> ExtraAnimators { get; }
+
+		public Vector3 DrawPos { get; }
 	}
 }

@@ -38,9 +38,10 @@ namespace SmashTools.Animations
 			this.absorbInputAroundWindow = false;
 			this.preventCameraMotion = false;
 			this.doWindowBackground = false;
+			this.layer = WindowLayer.Super;
 		}
 
-		public override Vector2 InitialSize => new Vector2(300, 500);
+		public override Vector2 InitialSize => new Vector2(300, 350);
 
 		protected override float Margin => 0;
 
@@ -133,7 +134,6 @@ namespace SmashTools.Animations
 							Widgets.Label(propertyParentRect, container.Name);
 							if (AddPropertyButton(propertyParentRect))
 							{
-								Log.Message($"Adding property: {container} to {animation} properties: {animation?.properties?.Count}");
 								animation.properties.Add(container);
 								Close();
 								break;
