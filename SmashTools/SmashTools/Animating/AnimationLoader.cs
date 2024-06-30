@@ -41,7 +41,7 @@ namespace SmashTools.Animations
 				return null;
 			}
 			animationClip.FilePath = filePath;
-			animationClip.FileName = Path.GetFileName(filePath);
+			animationClip.FileName = Path.GetFileNameWithoutExtension(filePath);
 			return animationClip;
 		}
 

@@ -15,10 +15,11 @@ namespace SmashTools.Animations
 	{
 		private const float EntryHeight = 30;
 
-		private static readonly Color highlightColor = new ColorInt(70, 96, 124, 50).ToColor;
+		private static readonly Color highlightColor = new ColorInt(150, 150, 150, 40).ToColor;
 
 		private readonly IAnimator animator;
 		private readonly float width;
+		private readonly AnimationClip animation;
 		private readonly Action<FileInfo> onFilePicked;
 
 		private Vector2 windowSize;
@@ -26,17 +27,19 @@ namespace SmashTools.Animations
 
 		private List<FileInfo> files;
 
-		public Dialog_AnimationClipLister(IAnimator animator, Rect rect, Action<FileInfo> onFilePicked = null)
+		public Dialog_AnimationClipLister(IAnimator animator, Rect rect, AnimationClip animation, Action<FileInfo> onFilePicked = null)
 		{
 			this.animator = animator;
 			this.width = rect.width;
 			this.position = rect.position;
+			this.animation = animation;
 			this.onFilePicked = onFilePicked;
 
 			this.closeOnClickedOutside = true;
 			this.absorbInputAroundWindow = false;
 			this.preventCameraMotion = false;
 			this.doWindowBackground = false;
+			this.layer = WindowLayer.Super;
 		}
 
 		public override Vector2 InitialSize => windowSize;
@@ -58,7 +61,6 @@ namespace SmashTools.Animations
 		private Vector2 CalculateWindowSize()
 		{
 			files = AnimationLoader.GetAnimationClipFileInfo(animator.ModContentPack);
-			Log.Message($"Files: {files.Count}");
 			return new Vector2(width, EntryHeight * files.Count + EntryHeight); //Make room for additional row for 'create' button
 		}
 
@@ -79,7 +81,7 @@ namespace SmashTools.Animations
 		{
 			GUIState.Push();
 
-			Widgets.DrawBoxSolid(inRect, Color.white);
+			Widgets.DrawMenuSection(inRect);
 
 			Text.Font = GameFont.Small;
 
@@ -88,27 +90,35 @@ namespace SmashTools.Animations
 			{
 				FileInfo file = files[i];
 				Rect entryRect = rowRect.ContractedBy(3);
-				entryRect.SplitVertically(50, out Rect checkboxRect, out Rect fileLabelRect);
+				entryRect.SplitVertically(EntryHeight, out Rect leftRect, out Rect fileLabelRect);
 
-				Widgets.ButtonText(fileLabelRect, file.Name, false, false, Color.black, overrideTextAnchor: TextAnchor.MiddleLeft);
-				GUI.color = Color.white;
+				Rect checkboxRect = new Rect(leftRect.x, leftRect.y, leftRect.height, leftRect.height).ContractedBy(3);
+				if (animation != null && animation.FilePath == file.FullName)
+				{
+					GUI.DrawTexture(checkboxRect, Widgets.CheckboxOnTex);
+				}
+				if (Widgets.ButtonText(fileLabelRect, Path.GetFileNameWithoutExtension(file.Name), drawBackground: false))
+				{
+					onFilePicked?.Invoke(file);
+					Close();
+				}
 
 				if (Mouse.IsOver(entryRect))
 				{
-					//Widgets.DrawBoxSolid(entryRect, highlightColor);
+					Widgets.DrawBoxSolid(fileLabelRect, highlightColor);
 				}
 
 				rowRect.y += rowRect.height;
 			}
 
 			Rect createFileRect = rowRect.ContractedBy(3);
-			createFileRect.SplitVertically(EntryHeight + 10, out Rect _, out Rect createFileBtnRect);
+			createFileRect.SplitVertically(EntryHeight, out Rect _, out Rect createFileBtnRect);
 
 			if (!files.NullOrEmpty())
 			{
 				UIElements.DrawLineHorizontalGrey(createFileBtnRect.x, createFileBtnRect.y, createFileBtnRect.width);
 			}
-			if (Widgets.ButtonText(createFileBtnRect, "ST_CreateNewClip".Translate(), false, false, Color.black, overrideTextAnchor: TextAnchor.MiddleLeft))
+			if (Widgets.ButtonText(createFileBtnRect, "ST_CreateNewClip".Translate(), drawBackground: false))
 			{
 				DirectoryInfo directoryInfo = AnimationLoader.AnimationDirectory(animator.ModContentPack);
 				if (directoryInfo == null || !directoryInfo.Exists)
@@ -118,6 +128,10 @@ namespace SmashTools.Animations
 				FileInfo fileInfo = AnimationLoader.CreateEmptyAnimFile(directoryInfo);
 				onFilePicked?.Invoke(fileInfo);
 				Close();
+			}
+			if (Mouse.IsOver(createFileBtnRect))
+			{
+				Widgets.DrawBoxSolid(createFileBtnRect, highlightColor);
 			}
 
 			GUIState.Pop();
