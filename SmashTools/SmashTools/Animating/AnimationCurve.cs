@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RimWorld;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +31,26 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void SetValue(int frame, float value)
+		public bool Add(int frame, float value)
+		{
+			for (int i = 0; i < points.Count; i++)
+			{
+				KeyFrame point = points[i];
+				if (point.frame == frame)
+				{
+					return false;
+				}
+			}
+			points.Add(new KeyFrame()
+			{
+				frame = frame,
+				value = value,
+			});
+			points.Sort();
+			return true;
+		}
+
+		public void Set(int frame, float value)
 		{
 			for (int i = 0; i < points.Count; i++)
 			{
@@ -42,18 +62,48 @@ namespace SmashTools.Animations
 						frame = point.frame,
 						value = value,
 					};
-					break;
+					return;
 				}
-				else if (point.frame > frame)
+				if (point.frame > frame) 
 				{
 					points.Insert(i, new KeyFrame()
 					{
 						frame = frame,
 						value = value,
 					});
+					return;
+				}
+			}
+			Add(frame, value); //Only adds if insert attempt failed
+		}
+
+		public void Remove(int frame)
+		{
+			for (int i = 0; i < points.Count; i++)
+			{
+				KeyFrame point = points[i];
+				if (point.frame == frame)
+				{
+					points.RemoveAt(i);
 					break;
 				}
 			}
+		}
+
+		public bool KeyFrameAt(int frame)
+		{
+			foreach (KeyFrame keyFrame in points)
+			{
+				if (keyFrame.frame == frame)
+				{
+					return true;
+				}
+				else if (keyFrame.frame > frame)
+				{
+					return false; //If past the frame check point, it won't be found at future points. Curve is kept sorted at all times
+				}
+			}
+			return false;
 		}
 
 		private float Function(int frame)
@@ -110,7 +160,7 @@ namespace SmashTools.Animations
 			return y;
 		}
 
-		public struct KeyFrame : IExposable
+		public struct KeyFrame : IExposable, IComparable<KeyFrame>
 		{
 			public int frame;
 			public float value;
@@ -119,6 +169,11 @@ namespace SmashTools.Animations
 			{
 				Scribe_Values.Look(ref frame, nameof(frame));
 				Scribe_Values.Look(ref value, nameof(value));
+			}
+
+			int IComparable<KeyFrame>.CompareTo(KeyFrame other)
+			{
+				return frame.CompareTo(other.frame);
 			}
 		}
 	}

@@ -127,6 +127,7 @@
     <Compile Include="Interfaces\IDefaultValue.cs" />
     <Compile Include="Interfaces\IDefIndex.cs" />
     <Compile Include="Interfaces\IEventManager.cs" />
+    <Compile Include="Interfaces\IHighPriorityOnGUI.cs" />
     <Compile Include="Interfaces\IInspectable.cs" />
     <Compile Include="Interfaces\IPathfinder.cs" />
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
@@ -152,6 +153,7 @@
     <Compile Include="SmashSettings.cs" />
     <Compile Include="DataTypes\RimWorldTime.cs" />
     <Compile Include="DataTypes\Rot8.cs" />
+    <Compile Include="UI\HighPriorityInputs.cs" />
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
     <Compile Include="UI\Windows\Dialog_AnimationEditor.cs" />

@@ -29,10 +29,55 @@ namespace SmashTools.Animations
 
 		public List<AnimationProperty> Children { get; private set; } = new List<AnimationProperty>();
 
+		public bool IsValid => Single != null || !Children.NullOrEmpty();
+
 		public void WriteData()
 		{
-			XmlExporter.WriteElement(nameof(name), name);
-			XmlExporter.WriteElement(nameof(type), type.FullName);
+			if (IsValid)
+			{
+				XmlExporter.WriteElement(nameof(name), name);
+				XmlExporter.WriteElement(nameof(type), type.FullName);
+			}
+		}
+
+		public bool AllKeyFramesAt(int frame)
+		{
+			if (Single != null)
+			{
+				return Single.curve.KeyFrameAt(frame);
+			}
+			else if (!Children.NullOrEmpty())
+			{
+				foreach (AnimationProperty property in Children)
+				{
+					if (!property.curve.KeyFrameAt(frame))
+					{
+						return false;
+					}
+				}
+				return true;
+			}
+			return false;
+		}
+
+		public bool AnyKeyFrameAt(int frame)
+		{
+			if (Single != null)
+			{
+				return Single.curve.KeyFrameAt(frame);
+			}
+			else if (!Children.NullOrEmpty())
+			{
+				foreach (AnimationProperty property in Children)
+				{
+					if (property.curve.KeyFrameAt(frame))
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+			return false;
 		}
 	}
 }

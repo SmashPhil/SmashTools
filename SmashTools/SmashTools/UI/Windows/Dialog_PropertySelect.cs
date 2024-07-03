@@ -23,16 +23,18 @@ namespace SmashTools.Animations
 		private readonly AnimationClip animation;
 
 		private Vector2 position;
+		private Action<AnimationPropertyParent> propertyAdded;
 
 		private List<object> objectListOrder = new List<object>();
 		private Dictionary<object, List<AnimationPropertyParent>> properties = new Dictionary<object, List<AnimationPropertyParent>>();
 		private bool[] expandedContainers;
 
-		public Dialog_PropertySelect(IAnimator animator, AnimationClip animation, Vector2 position)
+		public Dialog_PropertySelect(IAnimator animator, AnimationClip animation, Vector2 position, Action<AnimationPropertyParent> propertyAdded = null)
 		{
 			this.animator = animator;
 			this.animation = animation;
 			this.position = position;
+			this.propertyAdded = propertyAdded;
 
 			this.closeOnClickedOutside = true;
 			this.absorbInputAroundWindow = false;
@@ -135,6 +137,7 @@ namespace SmashTools.Animations
 							if (AddPropertyButton(propertyParentRect))
 							{
 								animation.properties.Add(container);
+								propertyAdded?.Invoke(container);
 								Close();
 								break;
 							}

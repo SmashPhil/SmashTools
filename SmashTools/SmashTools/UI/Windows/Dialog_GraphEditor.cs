@@ -41,8 +41,6 @@ namespace SmashTools
 
 		private static readonly Texture2D dragHandleIcon = ContentFinder<Texture2D>.Get("SmashTools/ViewHandle", false) ?? ContentFinder<Texture2D>.Get("UI/Icons/LifeStage/Adult", true);
 
-		private event Action SomeEvent;
-
 		private Graph.GraphType graphType;
 		private LinearCurve curve;
 

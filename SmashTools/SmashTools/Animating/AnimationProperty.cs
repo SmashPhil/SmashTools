@@ -34,11 +34,15 @@ namespace SmashTools.Animations
 
 		public PropertyType Type {get; internal set; }
 
+		public bool IsValid => curve != null;
+
 		public void WriteData()
 		{
 			Scribe_Values.Look(ref name, nameof(name));
 			Scribe_Values.Look(ref type, nameof(type));
 			Scribe_Deep.Look(ref curve, nameof(curve));
+
+			curve ??= new AnimationCurve(); //Ensure animation curve is never null after scribe process
 		}
 
 		public static AnimationProperty Create(string name, FieldInfo fieldInfo)
