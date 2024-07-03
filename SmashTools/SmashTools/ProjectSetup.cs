@@ -13,6 +13,7 @@ using RimWorld.Planet;
 using SmashTools.Xml;
 using SmashTools.Performance;
 using LudeonTK;
+using static RimWorld.ColonistBar;
 
 namespace SmashTools
 {
@@ -96,6 +97,15 @@ namespace SmashTools
 			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI)),
 				prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
 				nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
+			Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.Add)),
+				postfix: new HarmonyMethod(typeof(HighPriorityInputs),
+				nameof(HighPriorityInputs.WindowAddedToStack)));
+			Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.TryRemove), parameters: new Type[] { typeof(Window), typeof(bool) }),
+				postfix: new HarmonyMethod(typeof(HighPriorityInputs),
+				nameof(HighPriorityInputs.WindowRemovedFromStack)));
+			Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.HandleEventsHighPriority)),
+				postfix: new HarmonyMethod(typeof(HighPriorityInputs),
+				nameof(HighPriorityInputs.HighPriorityOnGUI)));
 
 			//UI
 			Harmony.Patch(original: AccessTools.Method(typeof(MainTabWindow_Inspect), nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),

@@ -16,7 +16,9 @@ namespace SmashTools
 	[StaticConstructorOnStartup]
 	public static class CameraView
 	{
-		private const float DefaultCameraSize = 24;
+		private const float MinZoom = 2;
+		private const float MaxZoom = 60;
+		private const float DefaultCameraSize = 8;
 		private const float PageKeyZoomRate = 4;
 		private const float ZoomScaleFromAltDenominator = 35;
 		private const float CameraViewerZoomRate = 0.55f;
@@ -87,23 +89,24 @@ namespace SmashTools
 				Event.current.Use();
 			}
 			desiredSize -= zoom * cameraConfig.zoomSpeed * rootSize / ZoomScaleFromAltDenominator;
-			desiredSize = Mathf.Clamp(desiredSize, cameraConfig.sizeRange.min, cameraConfig.sizeRange.max);
+			desiredSize = Mathf.Clamp(desiredSize, MinZoom, MaxZoom);
 		}
 
 		public static void Update(Vector3 position)
 		{
 			if (InUse)
 			{
-				rootPos = new Vector3(position.x, rootPos.y, position.z);
-				rootPos.y = 15f + (rootSize - cameraConfig.sizeRange.min) / (cameraConfig.sizeRange.max - cameraConfig.sizeRange.min) * 50f;
+				rootPos = new Vector3(position.x, 15f + (rootSize - cameraConfig.sizeRange.min) / (cameraConfig.sizeRange.max - cameraConfig.sizeRange.min) * 50f, position.z);
 
-				camera.orthographicSize = orthographicSize;
+				OrthographicSize = Mathf.Lerp(OrthographicSize, desiredSize, 0.05f);
+
+				camera.orthographicSize = OrthographicSize;
 				camera.transform.position = rootPos;
 
 				if (LockedToMainCamera)
 				{
 					Find.Camera.transform.position = camera.transform.position;
-					Find.Camera.orthographicSize = orthographicSize;
+					Find.Camera.orthographicSize = OrthographicSize;
 				}
 			}
 		}

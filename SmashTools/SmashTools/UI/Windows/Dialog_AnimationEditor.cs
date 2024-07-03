@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using Verse;
 using RimWorld;
 using UnityEngine;
 using Verse.Sound;
-using System.Reflection.Emit;
-using SmashTools.Xml;
-using System.IO;
-using System.Threading.Tasks;
-using Verse.Noise;
-using System.ComponentModel;
 
 namespace SmashTools.Animations
 {
 	[StaticConstructorOnStartup]
-	public class Dialog_AnimationEditor : Window
+	public class Dialog_AnimationEditor : Window, IHighPriorityOnGUI
 	{
 		private const float MinLeftWindowSize = 300;
 		private const float MinRightWindowSize = 250;
@@ -29,7 +24,6 @@ namespace SmashTools.Animations
 
 		private const float FrameBarPadding = 40;
 		private const float CollapseFrameDistance = 100;
-		private const float MaxFrameSpacing = 250; //Max amount of space between two frames in the editor window
 		private const float MaxFrameZoom = 1000;
 		private const float ZoomRate = 0.01f;
 
@@ -41,7 +35,7 @@ namespace SmashTools.Animations
 		private static readonly Texture2D skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
 		private static readonly Texture2D skipToEndTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToEnd");
 
-		private static readonly Texture2D animationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/KeyFrame");
+		private static readonly Texture2D animationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AnimationEvent");
 		private static readonly Texture2D keyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/KeyFrame");
 		private static readonly Texture2D addAnimationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AddEvent");
 		private static readonly Texture2D addKeyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/AddKeyFrame");
@@ -54,6 +48,8 @@ namespace SmashTools.Animations
 		private static readonly Color propertyButtonColor = new ColorInt(88, 88, 88).ToColor;
 		private static readonly Color propertyButtonPressedColor = new ColorInt(70, 96, 124).ToColor;
 		private static readonly Color propertyExpandedNameColor = new ColorInt(123, 123, 123).ToColor;
+		private static readonly Color propertyLabelHighlightColor = new ColorInt(255, 255, 255, 10).ToColor;
+		private static readonly Color itemSelectedColor = new ColorInt(87, 133, 217).ToColor;
 
 		private static readonly Color animationEventBarColor = new ColorInt(49, 49, 49).ToColor;
 		private static readonly Color animationKeyFrameBarColor = new ColorInt(47, 47, 47).ToColor;
@@ -62,6 +58,13 @@ namespace SmashTools.Animations
 		private static readonly Color frameTimeBarColor = new ColorInt(40, 64, 75).ToColor;
 		private static readonly Color frameTimeBarColorDisabled = new ColorInt(10, 10, 10, 100).ToColor;
 		private static readonly Color frameTickColor = new ColorInt(140, 140, 140).ToColor;
+		private static readonly Color frameBarHighlightColor = new ColorInt(255, 255, 255, 5).ToColor;
+		private static readonly Color frameBarHighlightMinorColor = new ColorInt(255, 255, 255, 2).ToColor;
+		private static readonly Color frameBarHighlightOutlineColor = new ColorInt(68, 68, 68).ToColor;
+
+		private static readonly Color keyFrameColor = new ColorInt(153, 153, 153).ToColor;
+		private static readonly Color keyFrameTopColor = new ColorInt(108, 108, 108).ToColor;
+		private static readonly Color keyFrameHighlightColor = new ColorInt(200, 200, 200).ToColor;
 
 		private static readonly Color frameLineMajorDopesheetColor = new ColorInt(75, 75, 75).ToColor;
 		private static readonly Color frameLineMinorDopesheetColor = new ColorInt(66, 66, 66).ToColor;
@@ -79,14 +82,19 @@ namespace SmashTools.Animations
 		private bool isPlaying;
 		private int tickInterval = 1;
 		private Dictionary<AnimationPropertyParent, bool> propertyExpanded = new Dictionary<AnimationPropertyParent, bool>();
+		private Selector selector = new Selector();
 
 		private Dialog_CameraView previewWindow;
 
 		private Vector2 editorScrollPos;
 		private float realTimeToTick;
-		private bool dragging = false;
+
+		private Vector3 dragPos;
+		private DragItem dragging = DragItem.None;
 
 		private readonly List<AnimationPropertyParent> propertiesToRemove = new List<AnimationPropertyParent>();
+		private readonly HashSet<int> framesToDraw = new HashSet<int>();
+		private readonly HashSet<int> parentFramesToDraw = new HashSet<int>();
 
 		/* ----- Left Panel Resizing ----- */
 
@@ -101,6 +109,8 @@ namespace SmashTools.Animations
 			SetWindowProperties();
 			this.animator = animator;
 		}
+
+		private bool UnsavedChanges { get; set; }
 
 		private float ExtraPadding { get; set; }
 
@@ -176,6 +186,7 @@ namespace SmashTools.Animations
 				if (isPlaying != value)
 				{
 					isPlaying = value;
+					SoundDefOf.Clock_Stop.PlayOneShotOnCamera();
 				}
 			}
 		}
@@ -207,10 +218,13 @@ namespace SmashTools.Animations
 		{
 			this.resizeable = true;
 			this.doCloseX = true;
+			this.closeOnAccept = false;
 			this.closeOnClickedOutside = false;
+			this.closeOnCancel = false;
 			this.draggable = true;
 			this.absorbInputAroundWindow = false;
 			this.preventCameraMotion = false;
+			this.forcePause = true;
 		}
 
 		private void RemoveFlaggedProperties()
@@ -318,6 +332,31 @@ namespace SmashTools.Animations
 			}
 		}
 
+		public void OnGUIHighPriority()
+		{
+			if (KeyBindingDefOf.Cancel.KeyDownEvent)
+			{
+				IsPlaying = false;
+				Event.current.Use();
+				if (UnsavedChanges)
+				{
+					Find.WindowStack.Add(new Dialog_Confirm($"You have unsaved changes. Close anyways?", delegate ()
+					{
+						Close();
+					}));
+				}
+				else
+				{
+					Close();
+				}
+			}
+			else if (KeyBindingDefOf.TogglePause.KeyDownEvent)
+			{
+				Event.current.Use();
+				IsPlaying = !IsPlaying;
+			}
+		}
+
 		public override void DoWindowContents(Rect inRect)
 		{
 			GUIState.Push();
@@ -359,6 +398,7 @@ namespace SmashTools.Animations
 				}
 				else
 				{
+					CameraView.ResetSize();
 					Find.WindowStack.Add(previewWindow);
 				}
 			}
@@ -384,7 +424,7 @@ namespace SmashTools.Animations
 			buttonRect.x += buttonRect.width;
 			if (AnimationButton(buttonRect, skipToPreviousTexture, "ST_SkipFramePreviousTooltip".Translate()))
 			{
-
+				//TODO
 			}
 			DoSeparatorVertical(buttonRect.x, buttonRect.y, buttonRect.height);
 			buttonRect.x += 1;
@@ -400,7 +440,7 @@ namespace SmashTools.Animations
 			buttonRect.x += buttonRect.width;
 			if (AnimationButton(buttonRect, skipToNextTexture, "ST_SkipFrameNextTooltip".Translate()))
 			{
-
+				//TODO
 			}
 			DoSeparatorVertical(buttonRect.x, buttonRect.y, buttonRect.height);
 			buttonRect.x += 1;
@@ -416,7 +456,7 @@ namespace SmashTools.Animations
 			Rect frameNumberRect = new Rect(panelRect.xMax - FrameInputWidth, panelRect.y, FrameInputWidth, buttonRect.height).ContractedBy(2);
 			string buffer = null;
 			Widgets.TextFieldNumeric(frameNumberRect, ref frame, ref buffer);
-
+			
 			Rect animClipDropdownRect = new Rect(panelRect.x, buttonRect.yMax, 200, buttonRect.height);
 			Rect animClipSelectRect = new Rect(windowRect.x + Margin + animClipDropdownRect.x, windowRect.y + Margin + animClipDropdownRect.yMax, animClipDropdownRect.width, 500);
 			string animLabel = animation?.FileName ?? "[No Clip]";
@@ -430,22 +470,36 @@ namespace SmashTools.Animations
 			Rect animButtonRect = new Rect(panelRect.xMax - buttonRect.height, animClipDropdownRect.y, buttonRect.height, buttonRect.height);
 			if (AnimationButton(animButtonRect, addAnimationEventTexture, "ST_AddAnimationEvent".Translate()))
 			{
-
+				UnsavedChanges = true;
 			}
 			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
 			animButtonRect.x -= 1;
 
 			animButtonRect.x -= animButtonRect.height;
+
+			var enabled = GUI.enabled;
+			if (enabled && (animation == null || animation.properties.NullOrEmpty() || IsPlaying))
+			{
+				GUI.enabled = false;
+			}
 			if (AnimationButton(animButtonRect, addKeyFrameTexture, "ST_AddKeyFrame".Translate()))
 			{
-
+				foreach (AnimationPropertyParent propertyParent in animation.properties)
+				{
+					AddKeyFramesForParent(propertyParent);
+				}
+				animation.RecacheFrameCount();
+				UnsavedChanges = true;
 			}
+			GUI.enabled = enabled;
 			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
 			animButtonRect.x -= 1;
 
 			DoSeparatorHorizontal(animClipDropdownRect.x, animClipDropdownRect.yMax, panelRect.width);
 
-			Rect rowRect = new Rect(panelRect.x + 4, animClipDropdownRect.yMax + PropertyEntryHeight / 2, panelRect.width - 10, PropertyEntryHeight);
+			//Add KeyframeSize to keep keyframe bars aligned with their properties
+			Rect rowRect = new Rect(panelRect.x + 4, animClipDropdownRect.yMax + KeyframeSize, panelRect.width - 10, PropertyEntryHeight);
+			Rect fullPropertyRect = rowRect;
 			if (animation != null && !animation.properties.NullOrEmpty())
 			{
 				float collapseBtnSize = rowRect.height;
@@ -455,14 +509,24 @@ namespace SmashTools.Animations
 				bool lightBg = false;
 				foreach (AnimationPropertyParent propertyParent in animation.properties)
 				{
-					if (lightBg)
+					if (selector.IsSelected(propertyParent))
+					{
+						Widgets.DrawBoxSolid(rowRect, itemSelectedColor);
+					}
+					else if (lightBg)
 					{
 						Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
 					}
 
+					Rect selectParentRect = new Rect(rowRect.x + collapseBtnSize, rowRect.y, rowRect.width - PropertyEntryHeight * 3 - propertyBtnSize * 2 - collapseBtnSize, PropertyEntryHeight);
+					if (Widgets.ButtonInvisible(selectParentRect, doMouseoverSound: false))
+					{
+						selector.Select(propertyParent, clear: !Input.GetKey(KeyCode.LeftControl));
+					}
+
 					Rect collapseBtnRect = new Rect(rowRect.x, rowRect.y, collapseBtnSize, collapseBtnSize).ContractedBy(3);
 					bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
-					if (!propertyParent.Children.NullOrEmpty() && Widgets.ButtonImage(collapseBtnRect, expanded ? TexButton.Collapse : TexButton.Reveal))
+					if (!propertyParent.Children.NullOrEmpty() && Widgets.ButtonImage(collapseBtnRect, expanded ? TexButton.Collapse : TexButton.Reveal, keyFrameColor, keyFrameHighlightColor))
 					{
 						expanded = !expanded; //modify local variable so expanded state can be used for drawing inner properties
 						propertyExpanded[propertyParent] = expanded;
@@ -484,69 +548,90 @@ namespace SmashTools.Animations
 					}
 					
 					Rect propertyPropertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
-					if (Widgets.ButtonImage(propertyPropertyBtnRect, keyFrameTexture))
+					if (Widgets.ButtonImage(propertyPropertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
 					{
 						List<FloatMenuOption> options = new List<FloatMenuOption>();
 						var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
 						{
 							propertiesToRemove.Add(propertyParent);
+							UnsavedChanges = true;
 						});
 						options.Add(removePropsOption);
 
 						var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
 						{
-							//Add all keyframes for property
+							AddKeyFramesForParent(propertyParent);
+							UnsavedChanges = true;
 						});
-						addKeyOption.Disabled = true;
+						addKeyOption.Disabled = propertyParent.AllKeyFramesAt(frame);
 						options.Add(addKeyOption);
 
 						var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
 						{
-							//Remove all keyframes for property
+							RemoveKeyFramesForParent(propertyParent);
+							UnsavedChanges = true;
 						});
-						removeKeyOption.Disabled = true;
+						removeKeyOption.Disabled = !propertyParent.AnyKeyFrameAt(frame);
 						options.Add(removeKeyOption);
 
 						Find.WindowStack.Add(new FloatMenu(options));
 					}
 
 					Rect propertyParentRect = new Rect(collapseBtnRect.xMax, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
+					if (Mouse.IsOver(propertyParentRect))
+					{
+						Widgets.DrawBoxSolid(propertyParentRect, propertyLabelHighlightColor);
+					}
 					Widgets.Label(propertyParentRect, $"{propertyParent.Type.Name} : {propertyParent.Name}");
-
+					
 					if (expanded)
 					{
 						foreach (AnimationProperty property in propertyParent.Children)
 						{
 							lightBg = !lightBg;
 							rowRect.y += rowRect.height;
+							fullPropertyRect.height += rowRect.height;
 
-							if (lightBg)
+							if (selector.IsSelected(property))
+							{
+								Widgets.DrawBoxSolid(rowRect, itemSelectedColor);
+							}
+							else if (lightBg)
 							{
 								Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
 							}
 
+							Rect selectPropertyRect = new Rect(rowRect.x + collapseBtnSize, rowRect.y, rowRect.width - PropertyEntryHeight * 3 - propertyBtnSize * 2 - collapseBtnSize, PropertyEntryHeight);
+							if (Widgets.ButtonInvisible(selectPropertyRect, doMouseoverSound: false))
+							{
+								selector.Select(property, clear: !Input.GetKey(KeyCode.LeftControl));
+							}
+
 							Rect propertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
-							if (Widgets.ButtonImage(propertyBtnRect, keyFrameTexture))
+							if (Widgets.ButtonImage(propertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
 							{
 								List<FloatMenuOption> options = new List<FloatMenuOption>();
 								var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
 								{
 									propertiesToRemove.Add(propertyParent);
+									UnsavedChanges = true;
 								});
 								options.Add(removePropsOption);
 
 								var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
 								{
-									//Add single keyframe for property
+									property.curve.Add(frame, 0);
+									UnsavedChanges = true;
 								});
-								addKeyOption.Disabled = true;
+								addKeyOption.Disabled = property.curve.KeyFrameAt(frame);
 								options.Add(addKeyOption);
 
 								var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
 								{
-									//Remove single keyframe for property
+									property.curve.Remove(frame);
+									UnsavedChanges = true;
 								});
-								removeKeyOption.Disabled = true;
+								removeKeyOption.Disabled = !property.curve.KeyFrameAt(frame);
 								options.Add(removeKeyOption);
 
 								Find.WindowStack.Add(new FloatMenu(options));
@@ -558,19 +643,29 @@ namespace SmashTools.Animations
 
 							GUI.color = propertyExpandedNameColor;
 							Rect propertyRect = new Rect(propertyParentRect.x + expandedIndent, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
+							if (Mouse.IsOver(propertyRect))
+							{
+								Widgets.DrawBoxSolid(propertyRect, propertyLabelHighlightColor);
+							}
 							Widgets.Label(propertyRect, $"{propertyParent.Name}.{property.Name}");
 							GUI.color = Color.white;
 						}
 					}
 					lightBg = !lightBg;
 					rowRect.y += rowRect.height;
+					fullPropertyRect.height += rowRect.height;
 				}
 				rowRect.y += PropertyEntryHeight / 2; //Extra padding for add property btn
 			}
 
+			if (!Mouse.IsOver(fullPropertyRect) && Input.GetMouseButton(0))
+			{
+				selector.ClearSelectedProperties();
+			}
+
 			RemoveFlaggedProperties();
 
-			var enabled = GUI.enabled;
+			enabled = GUI.enabled;
 			if (animation == null)
 			{
 				GUI.enabled = false;
@@ -579,7 +674,7 @@ namespace SmashTools.Animations
 			if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()))
 			{
 				Vector2 propertyDropdownPosition = new Vector2(windowRect.x + Margin + propertyButtonRect.xMax + 2, windowRect.y + Margin + propertyButtonRect.y + 1);
-				Find.WindowStack.Add(new Dialog_PropertySelect(animator, animation, propertyDropdownPosition));
+				Find.WindowStack.Add(new Dialog_PropertySelect(animator, animation, propertyDropdownPosition, propertyAdded: InjectKeyFramesNewProperty));
 			}
 			GUI.enabled = enabled;
 
@@ -609,10 +704,10 @@ namespace SmashTools.Animations
 			}
 		}
 
-		private void KeyFrameInput(Rect inputRect, AnimationProperty property)
+		private void KeyFrameInput(Rect inputRect, AnimationProperty property) //TODO - change input boxes to not use vanilla
 		{
 			inputRect = inputRect.ContractedBy(2);
-			string buffer = string.Empty;
+			string buffer = null;
 			switch (property.Type)
 			{
 				case AnimationProperty.PropertyType.Float:
@@ -620,9 +715,11 @@ namespace SmashTools.Animations
 						float value = property.curve[frame];
 						float valueBefore = value;
 						Widgets.TextFieldNumeric(inputRect, ref value, ref buffer, float.MinValue, float.MaxValue);
-						if (value != valueBefore)
+						if (!Mathf.Approximately(value, valueBefore))
 						{
-
+							property.curve.Set(frame, value);
+							animation.RecacheFrameCount();
+							UnsavedChanges = true;
 						}
 					}
 					break;
@@ -633,7 +730,9 @@ namespace SmashTools.Animations
 						Widgets.TextFieldNumeric(inputRect, ref value, ref buffer, float.MinValue, float.MaxValue);
 						if (value != valueBefore)
 						{
-
+							property.curve.Set(frame, value);
+							animation.RecacheFrameCount();
+							UnsavedChanges = true;
 						}
 					}
 					break;
@@ -641,6 +740,8 @@ namespace SmashTools.Animations
 					{
 						//bool value = Mathf.Approximately(propertyParent.Single.curve.Evaluate(frame / FrameCount), 1);
 						//Widgets.Checkbox(inputBox, ref value, float.MinValue, float.MaxValue);
+						animation.RecacheFrameCount();
+						UnsavedChanges = true;
 					}
 					break;
 			}
@@ -660,7 +761,7 @@ namespace SmashTools.Animations
 				{
 					ExtraPadding = editorViewRect.width - EditorWidth; //Pad all the way to the edge of the screen if necessary
 				}
-
+				
 				Widgets.BeginScrollView(editorOutRect, ref editorScrollPos, editorViewRect);
 				{
 					editorViewRect.height += 16; //Should still render editor background + frame ticks underneath scrollbar
@@ -694,13 +795,22 @@ namespace SmashTools.Animations
 									keyFrameTopBarFadeRect.y += fadeHeight;
 								}
 
-								Rect keyFrameTopBarRect = new Rect(editorViewRect.x, keyFrameTopBarFadeRect.y, editorViewRect.width, KeyframeSize - keyFrameTopBarFadeRect.height);
+								Rect keyFrameTopBarRect = new Rect(editorViewRect.x, keyFrameTopBarFadeRect.y, editorViewRect.width, KeyframeSize - fadeSize);
 								Widgets.DrawBoxSolid(keyFrameTopBarRect, animationKeyFrameBarColor);
 
 								Rect dopeSheetRect = new Rect(editorViewRect.x, keyFrameTopBarRect.yMax, editorViewRect.width, editorViewRect.height - keyFrameTopBarRect.yMax);
 								DrawBackground(dopeSheetRect);
 
-								DoDopesheetFrameTicks(dopeSheetRect);
+								DrawDopesheetFrameTicks(dopeSheetRect);
+
+								DrawKeyFrameMarkers(dopeSheetRect);
+
+								//if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
+								//{
+								//	float mouseDiff = dragPos.x - Input.mousePosition.x;
+								//	dragPos = Input.mousePosition;
+								//	editorScrollPos.x += mouseDiff / dopeSheetRect.width;
+								//}
 							}
 							break;
 						case Tab.Curves:
@@ -747,8 +857,7 @@ namespace SmashTools.Animations
 			Widgets.DrawBoxSolid(rightFrameBarPadding, frameTimeBarColorDisabled);
 			UIElements.DrawLineVertical(rightFrameBarPadding.x, rightFrameBarPadding.y, rightFrameBarPadding.height, frameTickColor);
 
-			Rect frameInputRect = new Rect(frameBarRect.x, frameBarRect.y, frameBarRect.width, frameBarRect.height);
-			DoFrameSliderHandle(frameInputRect);
+			DoFrameSliderHandle(frameBarRect);
 
 			DoSeparatorHorizontal(editorViewRect.x, frameBarRect.yMax, editorViewRect.width);
 			frameBarRect.yMax += 1;
@@ -816,33 +925,13 @@ namespace SmashTools.Animations
 
 		private void DoFrameSliderHandle(Rect rect)
 		{
-			if (UnityGUIBugsFixer.IsLeftMouseButtonPressed())
+			if (DragWindow(rect, DragItem.FrameBar))
 			{
-				if (Mouse.IsOver(rect))
-				{
-					dragging = true;
-					frame = FrameAtMousePos(rect);
-					if (Event.current.type == EventType.MouseDown)
-					{
-						Event.current.Use();
-					}
-				}
-				if (dragging && UnityGUIBugsFixer.MouseDrag(0))
-				{
-					frame = FrameAtMousePos(rect);
-					if (Event.current.type == EventType.MouseDrag)
-					{
-						Event.current.Use();
-					}
-				}
-			}
-			else
-			{
-				dragging = false;
+				frame = FrameAtMousePos(rect);
 			}
 		}
 
-		private void DoDopesheetFrameTicks(Rect rect)
+		private void DrawDopesheetFrameTicks(Rect rect)
 		{
 			Widgets.BeginGroup(rect);
 			{
@@ -866,6 +955,173 @@ namespace SmashTools.Animations
 				GUI.color = Color.white;
 			}
 			Widgets.EndGroup();
+		}
+
+		private void DrawKeyFrameMarkers(Rect rect)
+		{
+			if (animation != null && !animation.properties.NullOrEmpty())
+			{
+				if ((Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Delete)) && selector.AnyKeyFramesSelected())
+				{
+					foreach ((AnimationProperty property, int frame) in  selector.selPropKeyFrames)
+					{
+						property.curve.Remove(frame);
+					}
+				}
+
+				bool clearSelect = Input.GetMouseButtonUp(0) && !Input.GetKeyUp(KeyCode.LeftControl);
+				framesToDraw.Clear();
+				Rect rowRect = new Rect(rect.x, rect.y, rect.width, PropertyEntryHeight);
+				float parentIconY = rowRect.y - KeyframeSize; //Next bar up
+				foreach (AnimationPropertyParent propertyParent in animation.properties)
+				{
+					float propertyIconY = rowRect.y;
+
+					parentFramesToDraw.Clear();
+					Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightColor, frameBarHighlightOutlineColor);
+					if (propertyParent.Single?.curve != null && !propertyParent.Single.curve.points.NullOrEmpty())
+					{
+						foreach (AnimationCurve.KeyFrame keyFrame in propertyParent.Single.curve.points)
+						{
+							framesToDraw.Add(keyFrame.frame);
+							if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(propertyParent.Single, keyFrame.frame), ref clearSelect))
+							{
+								selector.SelectFrame(propertyParent, keyFrame.frame);
+							}
+						}
+					}
+					else if (!propertyParent.Children.NullOrEmpty())
+					{
+						Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(2), frameBarHighlightColor, frameBarHighlightOutlineColor);
+
+						bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
+						foreach (AnimationProperty property in propertyParent.Children)
+						{
+							if (expanded)
+							{
+								rowRect.y += rowRect.height;
+								Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightMinorColor, frameBarHighlightOutlineColor);
+							}
+
+							foreach (AnimationCurve.KeyFrame keyFrame in property.curve.points)
+							{
+								framesToDraw.Add(keyFrame.frame);
+								parentFramesToDraw.Add(keyFrame.frame);
+								if (expanded)
+								{
+									if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(property, keyFrame.frame), ref clearSelect))
+									{
+										clearSelect = false;
+										selector.SelectFrame(property, keyFrame.frame);
+									}
+								}
+							}
+						}
+					}
+
+					if (parentFramesToDraw.Count > 0)
+					{
+						foreach (int frame in parentFramesToDraw)
+						{
+							if (KeyFrameButton(propertyIconY, frame, keyFrameColor, selector.IsSelected(propertyParent, frame), ref clearSelect))
+							{
+								clearSelect = false;
+								selector.SelectFrame(propertyParent, frame);
+							}
+						}
+					}
+
+					rowRect.y += rowRect.height;
+				}
+				if (framesToDraw.Count > 0)
+				{
+					foreach (int frame in framesToDraw)
+					{
+						if (KeyFrameButton(parentIconY, frame, keyFrameTopColor, selector.IsSelected(frame), ref clearSelect))
+						{
+							clearSelect = false;
+							selector.SelectAll(animation, frame);
+						}
+					}
+				}
+
+				if (clearSelect)
+				{
+					selector.ClearSelectedKeyFrames();
+				}
+			}
+
+			bool KeyFrameButton(float y, int frame, Color color, bool selected, ref bool clearSelect)
+			{
+				bool result = false;
+
+				GUI.color = selected ? itemSelectedColor : color;
+				float tickMarkPos = FrameBarPadding + frame * FrameTickMarkSpacing;
+				Rect keyFrameRect = new Rect(tickMarkPos - PropertyEntryHeight / 2 + 0.5f, y, PropertyEntryHeight, PropertyEntryHeight).ContractedBy(4);
+				clearSelect &= !Mouse.IsOver(keyFrameRect); //Only allow clear select if mouse is not over any key frame button
+				GUI.DrawTexture(keyFrameRect, keyFrameTexture);
+				if (Widgets.ButtonInvisible(keyFrameRect, doMouseoverSound: false))
+				{
+					result = true;
+				}
+				GUI.color = Color.white;
+
+				return result;
+			}
+		}
+		
+		private void InjectKeyFramesNewProperty(AnimationPropertyParent propertyParent)
+		{
+			if (propertyParent.Single != null)
+			{
+				Inject(propertyParent.Single);
+			}
+			else if (!propertyParent.Children.NullOrEmpty())
+			{
+				foreach (AnimationProperty property in propertyParent.Children)
+				{
+					Inject(property);
+				}
+			}
+
+			void Inject(AnimationProperty property)
+			{
+				property.curve.Set(0, 0);
+				property.curve.Set(FrameCount, 0);
+				UnsavedChanges = true;
+			}
+		}
+
+		private void AddKeyFramesForParent(AnimationPropertyParent propertyParent)
+		{
+			if (propertyParent.Single != null)
+			{
+				propertyParent.Single.curve.Add(frame, 0);
+			}
+			else if (!propertyParent.Children.NullOrEmpty())
+			{
+				foreach (AnimationProperty property in propertyParent.Children)
+				{
+					property.curve.Add(frame, 0);
+				}
+			}
+			UnsavedChanges = true;
+		}
+
+		private void RemoveKeyFramesForParent(AnimationPropertyParent propertyParent)
+		{
+			if (propertyParent.Single != null)
+			{
+				propertyParent.Single.curve.Remove(frame);
+			}
+			else if (!propertyParent.Children.NullOrEmpty())
+			{
+				foreach (AnimationProperty property in propertyParent.Children)
+				{
+					property.curve.Remove(frame);
+				}
+			}
+			UnsavedChanges = true;
 		}
 
 		private int SubTickCount()
@@ -1055,6 +1311,195 @@ namespace SmashTools.Animations
 			GUI.color = Color.white;
 			Text.Anchor = anchor;
 			return pressed;
+		}
+
+		private bool DragWindow(Rect rect, DragItem dragItem, int button = 0)
+		{
+			if (Mouse.IsOver(rect) && Input.GetMouseButtonDown(button))
+			{
+				dragging = dragItem;
+				dragPos = Input.mousePosition;
+				return true;
+			}
+			if (dragging == dragItem)
+			{
+				if (Input.GetMouseButton(button))
+				{
+					if (UnityGUIBugsFixer.MouseDrag(button))
+					{
+						Event.current.Use();
+					}
+				}
+				else
+				{
+					dragging = DragItem.None;
+					if (Input.GetMouseButtonUp(button))
+					{
+						Event.current.Use();
+					}
+				}
+				return true;
+			}
+			return false;
+		}
+
+		private class Selector
+		{
+			public List<(AnimationProperty property, int frame)> selPropKeyFrames = new List<(AnimationProperty property, int frame)>();
+
+			public HashSet<AnimationPropertyParent> selectedParents = new HashSet<AnimationPropertyParent>();
+			public HashSet<AnimationProperty> selectedProperties = new HashSet<AnimationProperty>();
+
+			public bool AnyPropertiesSelected()
+			{
+				return selectedParents.Count > 0 || selectedProperties.Count > 0;
+			}
+
+			public bool AnyKeyFramesSelected()
+			{
+				return selPropKeyFrames.Count > 0;
+			}
+
+			public bool IsSelected(int frame)
+			{
+				return selPropKeyFrames.Any(selection => selection.frame == frame);
+			}
+
+			public bool IsSelected(AnimationPropertyParent propertyParent, int frame)
+			{
+				if (propertyParent == null || !propertyParent.IsValid)
+				{
+					return false;
+				}
+				if (propertyParent.Single != null)
+				{
+					return IsSelected(propertyParent.Single, frame);
+				}
+				else if (!propertyParent.Children.NullOrEmpty())
+				{
+					foreach (AnimationProperty property in propertyParent.Children)
+					{
+						if (IsSelected(property, frame))
+						{
+							return true;
+						}
+					}
+				}
+				return false;
+			}
+
+			public bool IsSelected(AnimationProperty property, int frame)
+			{
+				if (property == null || !property.IsValid)
+				{
+					return false;
+				}
+				return selPropKeyFrames.Contains((property, frame));
+			}
+
+			public bool IsSelected(AnimationPropertyParent propertyParent)
+			{
+				if (propertyParent == null || !propertyParent.IsValid)
+				{
+					return false;
+				}
+				return selectedParents.Contains(propertyParent);
+			}
+
+			public bool IsSelected(AnimationProperty property)
+			{
+				if (property == null || !property.IsValid)
+				{
+					return false;
+				}
+				return selectedProperties.Contains(property);
+			}
+
+			public void SelectAll(AnimationClip clip, int frame)
+			{
+				if (!Input.GetKey(KeyCode.LeftControl))
+				{
+					ClearSelectedKeyFrames();
+				}
+				foreach (AnimationPropertyParent propertyParent in clip.properties)
+				{
+					SelectFrame(propertyParent, frame, clear: false);
+				}
+			}
+
+			public void SelectFrame(AnimationPropertyParent propertyParent, int frame, bool clear = true)
+			{
+				if (clear && !Input.GetKey(KeyCode.LeftControl))
+				{
+					ClearSelectedKeyFrames();
+				}
+				if (propertyParent.Single != null)
+				{
+					SelectFrame(propertyParent.Single, frame);
+				}
+				else if (!propertyParent.Children.NullOrEmpty())
+				{
+					foreach (AnimationProperty property in propertyParent.Children)
+					{
+						SelectFrame(property, frame, clear: false, sort: false);
+					}
+					selPropKeyFrames.SortBy(selProp => selProp.frame);
+				}
+			}
+
+			public void SelectFrame(AnimationProperty property, int frame, bool clear = true, bool sort = true)
+			{
+				if (clear && !Input.GetKey(KeyCode.LeftControl))
+				{
+					ClearSelectedKeyFrames();
+				}
+				if (selPropKeyFrames.Contains((property, frame)))
+				{
+					return;
+				}
+
+				selPropKeyFrames.Add((property, frame));
+				if (sort)
+				{
+					selPropKeyFrames.SortBy(selProp => selProp.frame);
+				}
+			}
+
+			public void Select(AnimationPropertyParent propertyParent, bool clear = true)
+			{
+				if (clear)
+				{
+					ClearSelectedProperties();
+				}
+				selectedParents.Add(propertyParent);
+			}
+
+			public void Select(AnimationProperty property, bool clear = true)
+			{
+				if (clear)
+				{
+					ClearSelectedProperties();
+				}
+				selectedProperties.Add(property);
+			}
+
+			public void ClearSelectedKeyFrames()
+			{
+				selPropKeyFrames.Clear();
+			}
+
+			public void ClearSelectedProperties()
+			{
+				selectedParents.Clear();
+				selectedProperties.Clear();
+			}
+		}
+
+		private enum DragItem
+		{
+			None,
+			FrameBar,
+			KeyFrameWindow,
 		}
 
 		private enum Tab
