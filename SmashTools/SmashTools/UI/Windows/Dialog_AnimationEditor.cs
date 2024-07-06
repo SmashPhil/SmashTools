@@ -805,12 +805,12 @@ namespace SmashTools.Animations
 
 								DrawKeyFrameMarkers(dopeSheetRect);
 
-								//if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
-								//{
-								//	float mouseDiff = dragPos.x - Input.mousePosition.x;
-								//	dragPos = Input.mousePosition;
-								//	editorScrollPos.x += mouseDiff / dopeSheetRect.width;
-								//}
+								if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
+								{
+									Vector2 mouseDiff = dragPos - Input.mousePosition;
+									dragPos = Input.mousePosition;
+									editorScrollPos += mouseDiff;
+								}
 							}
 							break;
 						case Tab.Curves:
