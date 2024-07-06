@@ -340,6 +340,8 @@ namespace SmashTools
 
 		public static void SliderLabeled(Rect rect, string label, string tooltip, string endSymbol, ref float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
 		{
+			var font = Text.Font;
+			Text.Font = GameFont.Tiny;
 			Rect fullRect = rect;
 			rect.y += rect.height / 2;
 			rect.height /= 2;
@@ -364,6 +366,7 @@ namespace SmashTools
 			{
 				value = endValue;
 			}
+			Text.Font = font;
 		}
 
 		public static void DrawLineHorizontal(float x, float y, float length, Color color)
