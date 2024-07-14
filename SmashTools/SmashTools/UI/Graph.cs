@@ -45,6 +45,17 @@ namespace SmashTools
 			}
 		}
 
+		public static void DrawAnimationCurve(Rect rect, Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null, float progress = -1, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
+		{
+			Rect axisRect = rect.ContractedBy(5);
+			DrawAxis(axisRect, xRange, yRange, drawAxisT: !simplified);
+			if (function != null && !plotPoints.NullOrEmpty())
+			{
+				PlotFunction(axisRect, function, xRange, yRange, plotPoints, progress: progress, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
+				//DrawLegend(graphRect);
+			}
+		}
+
 		private static void DrawAxis(Rect rect, FloatRange xRange, FloatRange yRange, bool drawAxisT = false)
 		{
 			float xAxisPos = 0;
