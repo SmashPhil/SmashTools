@@ -312,22 +312,11 @@ namespace SmashTools
 		/// <param name="pos"></param>
 		/// <param name="point"></param>
 		/// <param name="map"></param>
-		public static float AngleToCell(this IntVec3 pos, IntVec3 point, Map map)
+		public static float AngleToCell(this IntVec3 pos, IntVec3 point)
 		{
 			Vector3 posVector = pos.ToVector3Shifted();
 			Vector3 pointVector = point.ToVector3Shifted();
 			return AngleToPoint(posVector, pointVector);
-			//float xPrime = posVector.x - pointVector.x;
-			//float yPrime = posVector.z - pointVector.z;
-			//float angleRadians = Mathf.Atan2(xPrime, yPrime);
-			//float angle = Mathf.Abs(angleRadians * Mathf.Rad2Deg);
-			//return Quadrant.QuadrantRelativeToPoint(pos, point, map).AsInt switch
-			//{
-			//	2 => 360 - angle,
-			//	3 => 180 + angle,
-			//	4 => 180 - angle,
-			//	_ => angle,
-			//};
 		}
 
 		/// <summary>
