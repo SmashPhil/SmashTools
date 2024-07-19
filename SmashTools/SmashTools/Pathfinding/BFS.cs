@@ -65,6 +65,7 @@ namespace SmashTools.Pathfinding
 			finally
 			{
 				IsRunning = false;
+				Stop();
 			}
 		}
 
