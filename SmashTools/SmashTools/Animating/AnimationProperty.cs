@@ -10,17 +10,22 @@ using Verse;
 
 namespace SmashTools.Animations
 {
-	public class AnimationProperty
+	public class AnimationProperty : IXmlExport
 	{
 		private string name;
 		private Type type;
+		private PropertyType propertyType;
+
+		public AnimationCurve curve = new AnimationCurve();
 
 		[Unsaved]
 		private MemberInfo memberInfo;
 
-		public AnimationCurve curve = new AnimationCurve();
-
 		public delegate void SetProperty(object parent, object value);
+
+		public AnimationProperty()
+		{
+		}
 
 		public AnimationProperty(string name, Type type, MemberInfo memberInfo)
 		{
@@ -32,7 +37,7 @@ namespace SmashTools.Animations
 
 		public string Name => name;
 
-		public PropertyType Type {get; internal set; }
+		public PropertyType PropType => propertyType;
 
 		public bool IsValid => curve != null;
 
@@ -40,6 +45,7 @@ namespace SmashTools.Animations
 		{
 			Scribe_Values.Look(ref name, nameof(name));
 			Scribe_Values.Look(ref type, nameof(type));
+			Scribe_Values.Look(ref propertyType, nameof(propertyType));
 			Scribe_Deep.Look(ref curve, nameof(curve));
 
 			curve ??= new AnimationCurve(); //Ensure animation curve is never null after scribe process
@@ -48,7 +54,7 @@ namespace SmashTools.Animations
 		public static AnimationProperty Create(string name, FieldInfo fieldInfo)
 		{
 			AnimationProperty animationProperty = new AnimationProperty(name, fieldInfo.FieldType, fieldInfo);
-			animationProperty.Type = PropertyTypeFrom(fieldInfo.FieldType);
+			animationProperty.propertyType = PropertyTypeFrom(fieldInfo.FieldType);
 
 			return animationProperty;
 		}
@@ -56,7 +62,7 @@ namespace SmashTools.Animations
 		public static AnimationProperty Create(string name, PropertyInfo propertyInfo)
 		{
 			AnimationProperty animationProperty = new AnimationProperty(name, propertyInfo.PropertyType, propertyInfo);
-			animationProperty.Type = PropertyTypeFrom(propertyInfo.PropertyType);
+			animationProperty.propertyType = PropertyTypeFrom(propertyInfo.PropertyType);
 
 			return animationProperty;
 		}
@@ -94,6 +100,14 @@ namespace SmashTools.Animations
 				return PropertyType.Bool;
 			}
 			throw new NotImplementedException($"{type} is not a supported PropertyType for keyframe-level animation properties.");
+		}
+
+		void IXmlExport.Export()
+		{
+			XmlExporter.WriteElement(nameof(name), name);
+			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
+			XmlExporter.WriteElement(nameof(propertyType), propertyType.ToString());
+			XmlExporter.WriteElement(nameof(curve), curve);
 		}
 
 		public enum PropertyType

@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using HarmonyLib;
 using Verse;
+using KeyFrame = SmashTools.Animations.AnimationCurve.KeyFrame;
 
 namespace SmashTools.Xml
 {
@@ -24,6 +25,7 @@ namespace SmashTools.Xml
 		{
 			ParseHelper.Parsers<ValueTuple<float, float>>.Register(ParseValueTuple2_float);
 			ParseHelper.Parsers<ValueTuple<CurvePoint, CurvePoint>>.Register(ParseValueTuple2_CurvePoint);
+			ParseHelper.Parsers<KeyFrame>.Register(ParseKeyFrame);
 		}
 
 		private static ValueTuple<float, float> ParseValueTuple2_float(string entry)
@@ -50,6 +52,11 @@ namespace SmashTools.Xml
 				return (curvePoint1, curvePoint2);
 			}
 			throw new InvalidOperationException();
+		}
+
+		private static KeyFrame ParseKeyFrame(string entry)
+		{
+			return KeyFrame.FromString(entry);
 		}
 
 		/// <summary>

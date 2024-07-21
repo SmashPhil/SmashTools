@@ -52,7 +52,6 @@ namespace SmashTools.Animations
 						name = fieldInfo.Name;
 					}
 					AnimationPropertyParent container = new AnimationPropertyParent(name, type);
-					container.Parent = parent;
 					if (IsSupportedPrimitive(fieldInfo.FieldType))
 					{
 						AnimationProperty property = AnimationProperty.Create(name, fieldInfo);

@@ -25,8 +25,8 @@ namespace SmashTools.Animations
 		private Vector2 position;
 		private Action<AnimationPropertyParent> propertyAdded;
 
-		private List<object> objectListOrder = new List<object>();
-		private Dictionary<object, List<AnimationPropertyParent>> properties = new Dictionary<object, List<AnimationPropertyParent>>();
+		private List<Type> propertyListOrder = new List<Type>();
+		private Dictionary<Type, List<AnimationPropertyParent>> properties = new Dictionary<Type, List<AnimationPropertyParent>>();
 		private bool[] expandedContainers;
 
 		public Dialog_PropertySelect(IAnimator animator, AnimationClip animation, Vector2 position, Action<AnimationPropertyParent> propertyAdded = null)
@@ -54,18 +54,18 @@ namespace SmashTools.Animations
 			{
 				foreach (AnimationPropertyParent container in animation.properties)
 				{
-					existingProperties.Add((container.Parent.GetType(), container.Name));
+					existingProperties.Add((container.Type, container.Name));
 				}
 			}
 			foreach (AnimationPropertyParent container in AnimationPropertyRegistry.GetAnimationProperties(animator))
 			{
-				if (!existingProperties.Contains((container.Parent.GetType(), container.Name)))
+				if (!existingProperties.Contains((container.Type, container.Name)))
 				{
-					if (!properties.ContainsKey(container.Parent))
+					if (!properties.ContainsKey(container.Type))
 					{
-						objectListOrder.Add(container.Parent);
+						propertyListOrder.Add(container.Type);
 					}
-					properties.AddOrInsert(container.Parent, container);
+					properties.AddOrInsert(container.Type, container);
 				}
 			}
 			expandedContainers = new bool[properties.Count];
@@ -112,7 +112,7 @@ namespace SmashTools.Animations
 				Rect rowRect = new Rect(inRect.x, inRect.y, inRect.width, EntryHeight).ContractedBy(3);
 				for (int i = 0; i < properties.Count; i++)
 				{
-					object parent = objectListOrder[i];
+					Type parentType = propertyListOrder[i];
 					bool expanded = expandedContainers[i];
 					rowRect.SplitVertically(EntryHeight, out Rect checkboxRect, out Rect fileLabelRect);
 
@@ -124,11 +124,11 @@ namespace SmashTools.Animations
 						SoundDefOf.Click.PlayOneShotOnCamera(null);
 					}
 
-					Widgets.Label(fileLabelRect, parent.GetType().Name);
+					Widgets.Label(fileLabelRect, parentType.Name);
 
 					if (expanded)
 					{
-						List<AnimationPropertyParent> containers = properties[parent];
+						List<AnimationPropertyParent> containers = properties[parentType];
 						foreach (AnimationPropertyParent container in containers)
 						{
 							rowRect.y += rowRect.height;

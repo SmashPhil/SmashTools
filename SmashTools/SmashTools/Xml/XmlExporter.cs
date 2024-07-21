@@ -106,11 +106,76 @@ namespace SmashTools.Xml
 			}
 		}
 
+		public static void WriteElement(string localName, IXmlExport value)
+		{
+			try
+			{
+				OpenNode(localName);
+				{
+					value.Export();
+				}
+				CloseNode();
+			}
+			catch (Exception ex)
+			{
+				Close();
+				throw ex;
+			}
+		}
+
 		public static void WriteString(string text)
 		{
 			try
 			{
 				writer.WriteString(text);
+			}
+			catch (Exception ex)
+			{
+				Close();
+				throw ex;
+			}
+		}
+
+		public static void WriteList<T>(string localName, IList<T> value) where T : IXmlExport
+		{
+			try
+			{
+				OpenNode(localName);
+				{
+					foreach (T item in value)
+					{
+						OpenNode("li");
+						{
+							item.Export();
+						}
+						CloseNode();
+					}
+				}
+				CloseNode();
+			}
+			catch (Exception ex)
+			{
+				Close();
+				throw ex;
+			}
+		}
+
+		public static void WriteList<T>(string localName, IList<T> value, Action<T> itemWriter)
+		{
+			try
+			{
+				OpenNode(localName);
+				{
+					foreach (T item in value)
+					{
+						OpenNode("li");
+						{
+							itemWriter(item);
+						}
+						CloseNode();
+					}
+				}
+				CloseNode();
 			}
 			catch (Exception ex)
 			{

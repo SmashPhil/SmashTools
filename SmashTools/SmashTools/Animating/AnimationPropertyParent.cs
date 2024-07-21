@@ -5,13 +5,21 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Verse;
 
 namespace SmashTools.Animations
 {
-	public class AnimationPropertyParent
+	public class AnimationPropertyParent : IXmlExport
 	{
-		private readonly string name;
-		private readonly Type type;
+		private string name;
+		private Type type;
+
+		private AnimationProperty single;
+		private List<AnimationProperty> children = new List<AnimationProperty>();
+
+		public AnimationPropertyParent()
+		{
+		}
 
 		public AnimationPropertyParent(string name, Type type)
 		{
@@ -23,22 +31,11 @@ namespace SmashTools.Animations
 
 		public Type Type => type;
 
-		public object Parent { get; internal set; }
+		public AnimationProperty Single { get => single; internal set => single = value; }
 
-		public AnimationProperty Single { get; internal set; }
-
-		public List<AnimationProperty> Children { get; private set; } = new List<AnimationProperty>();
+		public List<AnimationProperty> Children => children;
 
 		public bool IsValid => Single != null || !Children.NullOrEmpty();
-
-		public void WriteData()
-		{
-			if (IsValid)
-			{
-				XmlExporter.WriteElement(nameof(name), name);
-				XmlExporter.WriteElement(nameof(type), type.FullName);
-			}
-		}
 
 		public bool AllKeyFramesAt(int frame)
 		{
@@ -78,6 +75,20 @@ namespace SmashTools.Animations
 				return false;
 			}
 			return false;
+		}
+
+		void IXmlExport.Export()
+		{
+			XmlExporter.WriteElement(nameof(name), name);
+			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
+			if (single != null)
+			{
+				XmlExporter.WriteElement(nameof(single), single);
+			}
+			if (!children.NullOrEmpty())
+			{
+				XmlExporter.WriteList(nameof(children), children);
+			}
 		}
 	}
 }

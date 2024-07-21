@@ -1,17 +1,14 @@
-﻿using RimWorld;
+﻿using SmashTools.Xml;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 
 namespace SmashTools.Animations
 {
-	public class AnimationCurve
+	public class AnimationCurve : IXmlExport
 	{
 		public List<KeyFrame> points = new List<KeyFrame>();
 
@@ -106,7 +103,7 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		private float Function(int frame)
+		public float Function(int frame)
 		{
 			if (points.NullOrEmpty() || RightBound.frame <= 0)
 			{
@@ -160,20 +157,49 @@ namespace SmashTools.Animations
 			return y;
 		}
 
-		public struct KeyFrame : IExposable, IComparable<KeyFrame>
+		void IXmlExport.Export()
+		{
+			XmlExporter.WriteList(nameof(points), points);
+		}
+
+		public struct KeyFrame : IExposable, IXmlExport, IComparable<KeyFrame>
 		{
 			public int frame;
 			public float value;
 
-			public void ExposeData()
+			void IExposable.ExposeData()
 			{
 				Scribe_Values.Look(ref frame, nameof(frame));
 				Scribe_Values.Look(ref value, nameof(value));
 			}
 
-			int IComparable<KeyFrame>.CompareTo(KeyFrame other)
+			readonly void IXmlExport.Export()
+			{
+				XmlExporter.WriteString($"({frame},{Ext_Math.RoundTo(value, 0.0001f)})");
+			}
+
+			readonly int IComparable<KeyFrame>.CompareTo(KeyFrame other)
 			{
 				return frame.CompareTo(other.frame);
+			}
+
+			public static KeyFrame FromString(string entry)
+			{
+				entry = entry.Replace("(", "");
+				entry = entry.Replace(")", "");
+				string[] array = entry.Split(',');
+
+				if (array.Length == 2)
+				{
+					CultureInfo invariantCulture = CultureInfo.InvariantCulture;
+					KeyFrame keyFrame = new KeyFrame
+					{
+						frame = Convert.ToInt32(array[0], invariantCulture),
+						value = Convert.ToSingle(array[1], invariantCulture)
+					};
+					return keyFrame;
+				}
+				throw new InvalidOperationException();
 			}
 		}
 	}
