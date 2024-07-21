@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 using Verse;
+using SmashTools.Animations;
+using AnimationCurve = SmashTools.Animations.AnimationCurve;
 
 namespace SmashTools
 {
@@ -21,6 +24,8 @@ namespace SmashTools
 
 		// f(x) = y, can be any function that matches the input and output types
 		public delegate Vector2 Function(float x);
+
+		public delegate float FrameFunction(int frame);
 
 		/// <summary>
 		/// Draw graph given function
@@ -41,22 +46,18 @@ namespace SmashTools
 			if (function != null && !plotPoints.NullOrEmpty())
 			{
 				PlotFunction(axisRect, function, xRange, yRange, plotPoints, progress: progress, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
-				//DrawLegend(graphRect);
 			}
 		}
 
-		public static void DrawAnimationCurve(Rect rect, Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null, float progress = -1, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
+		public static void DrawAnimationCurve(Rect rect, AnimationCurve curve, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
 		{
-			Rect axisRect = rect.ContractedBy(5);
-			DrawAxis(axisRect, xRange, yRange, drawAxisT: !simplified);
-			if (function != null && !plotPoints.NullOrEmpty())
+			if (curve != null && !plotPoints.NullOrEmpty())
 			{
-				PlotFunction(axisRect, function, xRange, yRange, plotPoints, progress: progress, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
-				//DrawLegend(graphRect);
+				//PlotFunction(rect, curve.Function, xRange, yRange, plotPoints, progress: -1, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
 			}
 		}
 
-		private static void DrawAxis(Rect rect, FloatRange xRange, FloatRange yRange, bool drawAxisT = false)
+		public static void DrawAxis(Rect rect, FloatRange xRange, FloatRange yRange, bool drawAxisT = false)
 		{
 			float xAxisPos = 0;
 			float yAxisPos = 0;
@@ -125,120 +126,140 @@ namespace SmashTools
 
 		private static void PlotFunction(Rect rect, Function function, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints, float progress = -1, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
 		{
-			if (!plotPoints.NullOrEmpty() && plotPoints.Count > 1)
-			{
-				float step = Mathf.Abs((xRange.max - xRange.min) / (AxisNotchCount * 10));
-				if (step > 0)
-				{
-					float i = xRange.min;
-					Vector2 point = function(i);
-					if (simplified)
-					{
-						point.x = i;
-					}
-					Vector2 coordLeft = GraphCoordToScreenPos(rect, point, xRange, yRange);
-
-					float start = xRange.min + step;
-					for (i = start; i <= xRange.max; i += step) //start 1 step in
-					{
-						point = function(i);
-						if (simplified)
-						{
-							point.x = i;
-						}
-						if (!float.IsNaN(point.y) && !float.IsNaN(point.x) && xRange.InRange(point.x) && yRange.InRange(point.y))
-						{
-							Vector2 coordRight = GraphCoordToScreenPos(rect, point, xRange, yRange);
-							if (xRange.InRange(point.x) && yRange.InRange(point.y))
-							{
-								Widgets.DrawLine(coordLeft, coordRight, Color.white, 1);
-
-								if (progress >= 0 && progress <= 1)
-								{
-									float percent = (i - start) / (xRange.max - start);
-									float percentHigh = (i + step - start) / (xRange.max - start);
-									if (percent < progress && percentHigh > progress)
-									{
-										float width = coordLeft.x - rect.x;
-										if (width > 0)
-										{
-											UIElements.DrawLineHorizontal(rect.x, coordLeft.y, width, progressColor);
-										}
-										
-										float height = -(rect.yMax - coordLeft.y);
-										if (height < 0) //negative since it goes from bottom to top
-										{
-											UIElements.DrawLineVertical(coordLeft.x, rect.yMax, height, progressColor);
-										}
-									}
-								}
-							}
-							coordLeft = coordRight;
-						}
-					}
-				}
-			}
-
 			bool mouseOverAnyPlotPoint = false;
+
 			if (!plotPoints.NullOrEmpty())
 			{
-				for (int i = 0; i < plotPoints.Count; i++)
+				if (plotPoints.Count > 1)
 				{
-					CurvePoint curvePoint = plotPoints[i];
-					Vector2 graphPosEdit = GraphCoordToScreenPos(rect, curvePoint, xRange, yRange);
-					if (xRange.InRange(curvePoint.x))
+					DrawCurve(rect, function, xRange, yRange, progress: progress, simplified: simplified);
+				}
+
+				mouseOverAnyPlotPoint = DoDrawHandles(rect, xRange, yRange, plotPoints, editable, drawCoordLabels);
+			}
+			DrawCoordLabels(rect, function, xRange, yRange, mouseOverAnyPlotPoint, simplified: simplified);
+		}
+
+		private static void DrawCurve(Rect rect, Function function, FloatRange xRange, FloatRange yRange, float progress = -1, bool simplified = false)
+		{
+			float step = Mathf.Abs((xRange.max - xRange.min) / (AxisNotchCount * 10));
+			if (step <= 0)
+			{
+				return;
+			}
+
+			float i = xRange.min;
+			Vector2 point = function(i);
+			if (simplified)
+			{
+				point.x = i;
+			}
+			Vector2 coordLeft = GraphCoordToScreenPos(rect, point, xRange, yRange);
+
+			float start = xRange.min + step;
+			for (i = start; i <= xRange.max; i += step) //start 1 step in
+			{
+				point = function(i);
+				if (simplified)
+				{
+					point.x = i;
+				}
+				if (float.IsNaN(point.y) || float.IsNaN(point.x) || !xRange.InRange(point.x) || !yRange.InRange(point.y))
+				{
+					continue;
+				}
+				Vector2 coordRight = GraphCoordToScreenPos(rect, point, xRange, yRange);
+				if (xRange.InRange(point.x) && yRange.InRange(point.y))
+				{
+					Widgets.DrawLine(coordLeft, coordRight, Color.white, 1);
+
+					if (progress >= 0 && progress <= 1)
 					{
-						Rect texRect = new Rect(graphPosEdit.x - GraphNodeSize / 2, graphPosEdit.y - GraphNodeSize / 2, GraphNodeSize, GraphNodeSize);
-						bool mouseOverThisPlotPoint = Mouse.IsOver(texRect);
-						if (!mouseOverAnyPlotPoint)
+						float percent = (i - start) / (xRange.max - start);
+						float percentHigh = (i + step - start) / (xRange.max - start);
+						if (percent < progress && percentHigh > progress)
 						{
-							mouseOverAnyPlotPoint = mouseOverThisPlotPoint;
-						}
-						GUI.DrawTexture(texRect, BaseContent.WhiteTex);
-
-						if (drawCoordLabels)
-						{
-							string coordLabel = $" P{i} ({curvePoint.x:0.##}, {curvePoint.y:0.##}) ";
-							Vector2 labelSize = Text.CalcSize(coordLabel);
-							(float x, float y) coordLabelPos = curvePoint.x <= (xRange.min + xRange.max / 2) ? (graphPosEdit.x + texRect.width, graphPosEdit.y - texRect.height / 2) :
-																										  (graphPosEdit.x - texRect.width - labelSize.x, graphPosEdit.y - texRect.height / 2);
-
-							Rect coordLabelRect = new Rect(coordLabelPos.x, coordLabelPos.y, labelSize.x, labelSize.y);
-							Widgets.DrawMenuSection(coordLabelRect);
-							Widgets.Label(coordLabelRect, coordLabel);
-						}
-
-						if (editable)
-						{
-							if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && mouseOverThisPlotPoint)
+							float width = coordLeft.x - rect.x;
+							if (width > 0)
 							{
-								draggingPlotPointIndex = i;
-								Event.current.Use();
+								UIElements.DrawLineHorizontal(rect.x, coordLeft.y, width, progressColor);
 							}
-							if (Event.current.type == EventType.MouseDrag && Event.current.button == 0 && draggingPlotPointIndex == i)
-							{
-								Vector2 mousePositionDrag = Event.current.mousePosition;
-								(float x, float y) coordDrag = ScreenPosToGraphCoord(rect, mousePositionDrag, xRange, yRange);
-								FloatRange clampX = new FloatRange(Mathf.Min(xRange.min, xRange.max), Mathf.Max(xRange.min, xRange.max));
-								FloatRange clampY = new FloatRange(Mathf.Min(yRange.min, yRange.max), Mathf.Max(yRange.min, yRange.max));
-								coordDrag.x = coordDrag.x.Clamp(clampX.min, clampX.max);
-								coordDrag.y = coordDrag.y.Clamp(clampY.min, clampY.max);
-								plotPoints[i] = new CurvePoint(coordDrag.x, coordDrag.y);
 
-								//ForceSequentialPoints(plotPoints, i);
-
-								Event.current.Use();
-							}
-							if (Event.current.type == EventType.MouseUp && Event.current.button == 0 && draggingPlotPointIndex >= 0)
+							float height = -(rect.yMax - coordLeft.y);
+							if (height < 0) //negative since it goes from bottom to top
 							{
-								draggingPlotPointIndex = -1;
-								Event.current.Use();
+								UIElements.DrawLineVertical(coordLeft.x, rect.yMax, height, progressColor);
 							}
 						}
 					}
 				}
+				coordLeft = coordRight;
 			}
+		}
 
+		private static bool DoDrawHandles(Rect rect, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints, bool editable = true, bool drawCoordLabels = true)
+		{
+			bool mouseOverAnyPlotPoint = false;
+			for (int i = 0; i < plotPoints.Count; i++)
+			{
+				CurvePoint curvePoint = plotPoints[i];
+				Vector2 graphPosEdit = GraphCoordToScreenPos(rect, curvePoint, xRange, yRange);
+				if (!xRange.InRange(curvePoint.x))
+				{
+					continue;
+				}
+
+				Rect texRect = new Rect(graphPosEdit.x - GraphNodeSize / 2, graphPosEdit.y - GraphNodeSize / 2, GraphNodeSize, GraphNodeSize);
+				bool mouseOverThisPlotPoint = Mouse.IsOver(texRect);
+				mouseOverAnyPlotPoint |= mouseOverThisPlotPoint;
+				GUI.DrawTexture(texRect, BaseContent.WhiteTex);
+
+				if (drawCoordLabels)
+				{
+					string coordLabel = $" P{i} ({curvePoint.x:0.##}, {curvePoint.y:0.##}) ";
+					Vector2 labelSize = Text.CalcSize(coordLabel);
+					(float x, float y) coordLabelPos = curvePoint.x <= (xRange.min + xRange.max / 2) ? 
+						(graphPosEdit.x + texRect.width, graphPosEdit.y - texRect.height / 2) :  
+						(graphPosEdit.x - texRect.width - labelSize.x, graphPosEdit.y - texRect.height / 2);
+
+					Rect coordLabelRect = new Rect(coordLabelPos.x, coordLabelPos.y, labelSize.x, labelSize.y);
+					Widgets.DrawMenuSection(coordLabelRect);
+					Widgets.Label(coordLabelRect, coordLabel);
+				}
+
+				if (editable)
+				{
+					if (Event.current.type == EventType.MouseDown && Event.current.button == 0 && mouseOverThisPlotPoint)
+					{
+						draggingPlotPointIndex = i;
+						Event.current.Use();
+					}
+					if (Event.current.type == EventType.MouseDrag && Event.current.button == 0 && draggingPlotPointIndex == i)
+					{
+						Vector2 mousePositionDrag = Event.current.mousePosition;
+						(float x, float y) coordDrag = ScreenPosToGraphCoord(rect, mousePositionDrag, xRange, yRange);
+						FloatRange clampX = new FloatRange(Mathf.Min(xRange.min, xRange.max), Mathf.Max(xRange.min, xRange.max));
+						FloatRange clampY = new FloatRange(Mathf.Min(yRange.min, yRange.max), Mathf.Max(yRange.min, yRange.max));
+						coordDrag.x = coordDrag.x.Clamp(clampX.min, clampX.max);
+						coordDrag.y = coordDrag.y.Clamp(clampY.min, clampY.max);
+						plotPoints[i] = new CurvePoint(coordDrag.x, coordDrag.y);
+
+						//ForceSequentialPoints(plotPoints, i);
+
+						Event.current.Use();
+					}
+					if (Event.current.type == EventType.MouseUp && Event.current.button == 0 && draggingPlotPointIndex >= 0)
+					{
+						draggingPlotPointIndex = -1;
+						Event.current.Use();
+					}
+				}
+			}
+			return mouseOverAnyPlotPoint;
+		}
+
+		private static void DrawCoordLabels(Rect rect, Function function, FloatRange xRange, FloatRange yRange, bool mouseOverAnyPlotPoint, bool simplified = false)
+		{
 			Vector2 mousePosition = Event.current.mousePosition;
 			(float x, float y) screenToCoord = ScreenPosToGraphCoord(rect, mousePosition, xRange, yRange);
 			Vector2 coord = function(screenToCoord.x);

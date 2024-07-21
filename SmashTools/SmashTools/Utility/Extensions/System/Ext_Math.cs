@@ -151,6 +151,7 @@ namespace SmashTools
 		/// <summary>
 		/// Round to nearest n digits
 		/// </summary>
+		/// <remarks><paramref name="roundTo"/> is representative of the decimal place. Eg. 0.01 for 2 decimal places</remarks>
 		/// <param name="num"></param>
 		/// <param name="roundTo"></param>
 		public static float RoundTo(this float num, float roundTo)

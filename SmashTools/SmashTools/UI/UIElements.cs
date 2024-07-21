@@ -224,12 +224,21 @@ namespace SmashTools
 			return value;
 		}
 
-		public static void NumericBox<T>(Rect rect, ref T value, string label, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
+		public static void NumericBox<T>(Rect rect, ref T value, string label, string tooltip, string disabledTooltip, 
+			float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
 		{
 			value = NumericBox(rect, value, label, tooltip, disabledTooltip, min: min, max: max, labelProportion: labelProportion);
 		}
 
-		public static T NumericBox<T>(Rect rect, T value, string label, string tooltip, string disabledTooltip, float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
+		public static T NumericBox<T>(Rect rect, T value, string label, string tooltip, string disabledTooltip, 
+			float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
+		{
+			string buffer = value.ToString();
+			return NumericBox(rect, value, ref buffer, label, tooltip, disabledTooltip, min: min, max: max, labelProportion: labelProportion);
+		}
+
+		public static T NumericBox<T>(Rect rect, T value, ref string buffer, string label, string tooltip, string disabledTooltip, 
+			float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
 		{
 			GUIState.Push();
 			{
@@ -255,29 +264,9 @@ namespace SmashTools
 					}
 					TooltipHandler.TipRegion(rect, tooltip);
 				}
-				if (!disabled && mouseOver)
-				{
-					if (Event.current.type == EventType.MouseDown && Event.current.button == 1)
-					{
-						//Event.current.Use();
-						//List<FloatMenuOption> options = new List<FloatMenuOption>();
-						//options.Add(new FloatMenuOption("ResetButton".Translate(), delegate ()
-						//{
-						//	ActionOnSettingsInputAttribute.InvokeIfApplicable(field.FieldInfo);
-						//	VehicleMod.settings.vehicles.fieldSettings[def.defName].Remove(field);
-						//}));
-						//FloatMenu floatMenu = new FloatMenu(options)
-						//{
-						//	vanishIfMouseDistant = true
-						//};
-						//Find.WindowStack.Add(floatMenu);
-					}
-				}
 				Widgets.Label(rectLeft, label);
 
 				Text.Anchor = TextAnchor.MiddleRight;
-				string buffer = value.ToString();
-
 				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
 			}
 			GUIState.Pop();

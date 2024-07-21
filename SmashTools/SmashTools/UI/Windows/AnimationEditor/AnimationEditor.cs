@@ -1,0 +1,265 @@
+﻿using RimWorld;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UnityEngine;
+using Verse;
+using Verse.Sound;
+
+namespace SmashTools.Animations
+{
+	public abstract class AnimationEditor
+	{
+		protected Dialog_AnimationEditor parent;
+
+		//Blend
+		protected const float fadeSize = 10;
+		protected const int fadeLines = 10;
+		protected const float fadeHeight = fadeSize / fadeLines;
+
+		protected static readonly Color backgroundLightColor = new ColorInt(63, 63, 63).ToColor;
+		protected static readonly Color backgroundDopesheetColor = new ColorInt(56, 56, 56).ToColor;
+		protected static readonly Color backgroundCurvesColor = new ColorInt(40, 40, 40).ToColor;
+		protected static readonly Color separatorColor = new ColorInt(35, 35, 35).ToColor;
+
+		private static readonly Color buttonColor = new ColorInt(88, 88, 88).ToColor;
+		private static readonly Color buttonPressedColor = new ColorInt(70, 96, 124).ToColor;
+
+		/* ----- Left Panel Resizing ----- */
+		private bool resizing = false;
+		private float startingWidth;
+		/* ------------------------------- */
+
+		public AnimationEditor(Dialog_AnimationEditor parent)
+		{
+			this.parent = parent;
+		}
+
+		public abstract void Draw(Rect rect);
+
+		public virtual void Update()
+		{
+		}
+
+		public virtual void OnClose()
+		{
+		}
+
+		public virtual void OnGUIHighPriority()
+		{
+		}
+
+		public virtual void AnimatorLoaded(IAnimator animator)
+		{
+		}
+
+		protected void DrawBackground(Rect rect)
+		{
+			Widgets.DrawBoxSolidWithOutline(rect, backgroundDopesheetColor, separatorColor);
+		}
+
+		protected void DrawBackgroundDark(Rect rect)
+		{
+			Widgets.DrawBoxSolidWithOutline(rect, backgroundCurvesColor, separatorColor);
+		}
+
+		protected void DoSeparatorHorizontal(float x, float y, float length)
+		{
+			UIElements.DrawLineHorizontal(x, y, length, separatorColor);
+		}
+
+		protected void DoSeparatorVertical(float x, float y, float height)
+		{
+			UIElements.DrawLineVertical(x, y, height, separatorColor);
+		}
+
+		protected bool AnimationButton(Rect rect, Texture2D texture, string tooltip)
+		{
+			GUI.color = Mouse.IsOver(rect) ? GenUI.MouseoverColor : Color.white;
+			Rect imageRect = rect.ContractedBy(3);
+			GUI.DrawTexture(imageRect, texture);
+			GUI.color = Color.white;
+
+			if (!tooltip.NullOrEmpty())
+			{
+				TooltipHandler.TipRegion(rect, tooltip);
+			}
+			bool result = Widgets.ButtonInvisible(rect);
+			if (result)
+			{
+				SoundDefOf.Click.PlayOneShotOnCamera();
+			}
+			return result;
+		}
+
+		/// <returns>xMax</returns>
+		protected bool ToggleText(Rect rect, string label, string tooltip, bool enabled)
+		{
+			bool pressed = false;
+			var anchor = Text.Anchor;
+			Text.Anchor = TextAnchor.MiddleCenter;
+
+			DoSeparatorHorizontal(rect.x, rect.y, rect.width);
+			DoSeparatorHorizontal(rect.x, rect.yMax, rect.width);
+			DoSeparatorVertical(rect.x, rect.y, rect.height);
+			DoSeparatorVertical(rect.xMax, rect.y, rect.height);
+
+			if (Mouse.IsOver(rect))
+			{
+				GUI.color = new Color(0.75f, 0.75f, 0.75f);
+			}
+			Widgets.Label(rect, label);
+			if (enabled)
+			{
+				Widgets.DrawBoxSolid(rect.ContractedBy(1), new Color(0.75f, 0.75f, 0.75f, 0.25f));
+			}
+			if (!tooltip.NullOrEmpty())
+			{
+				TooltipHandler.TipRegion(rect, tooltip);
+			}
+			if (Widgets.ButtonInvisible(rect))
+			{
+				pressed = true;
+				SoundDefOf.Click.PlayOneShotOnCamera();
+			}
+			GUI.color = Color.white;
+			Text.Anchor = anchor;
+			return pressed;
+		}
+
+		protected bool ButtonText(Rect rect, string label)
+		{
+			bool pressed = false;
+			var anchor = Text.Anchor;
+			Text.Anchor = TextAnchor.MiddleCenter;
+			var font = Text.Font;
+			Text.Font = GameFont.Small;
+
+			Color color = buttonColor;
+			if (Mouse.IsOver(rect))
+			{
+				GUI.color = new Color(0.75f, 0.75f, 0.75f);
+				if (Input.GetMouseButton(0))
+				{
+					color = buttonPressedColor;
+				}
+			}
+			Widgets.DrawBoxSolidWithOutline(rect, color, separatorColor);
+			Widgets.Label(rect, label);
+			if (Widgets.ButtonInvisible(rect))
+			{
+				pressed = true;
+				SoundDefOf.Click.PlayOneShotOnCamera();
+			}
+			GUI.color = Color.white;
+			Text.Anchor = anchor;
+			Text.Font = font;
+			return pressed;
+		}
+
+		protected bool Dropdown(Rect rect, string label, string tooltip)
+		{
+			bool pressed = false;
+			var anchor = Text.Anchor;
+			Text.Anchor = TextAnchor.MiddleCenter;
+
+			if (Mouse.IsOver(rect))
+			{
+				GUI.color = new Color(0.75f, 0.75f, 0.75f);
+			}
+			float dropdownSize = rect.height;
+			rect.SplitVertically(rect.width - dropdownSize, out Rect labelRect, out Rect dropdownRect);
+			Widgets.Label(labelRect, label);
+
+			GUIState.Push();
+			{
+				UI.RotateAroundPivot(90, dropdownRect.center);
+				GUI.DrawTexture(dropdownRect, TexButton.Reveal);
+			}
+			GUIState.Pop();
+			if (!tooltip.NullOrEmpty())
+			{
+				TooltipHandler.TipRegion(rect, tooltip);
+			}
+			if (Widgets.ButtonInvisible(rect))
+			{
+				pressed = true;
+				SoundDefOf.Click.PlayOneShotOnCamera();
+			}
+			GUI.color = Color.white;
+			Text.Anchor = anchor;
+			return pressed;
+		}
+
+		protected void DoResizerButton(Rect rect, ref float leftWindowSize, float minLeft, float minRight)
+		{
+			float currentWidth = rect.width;
+
+			Rect resizeButtonRect = new Rect(rect.xMax - 24, rect.yMax - 24, 24, 24);
+			Vector2 mousePosition = Event.current.mousePosition;
+			if (Event.current.type == EventType.MouseDown && Mouse.IsOver(resizeButtonRect))
+			{
+				resizing = true;
+				startingWidth = mousePosition.x;
+			}
+			if (resizing)
+			{
+				rect.width = startingWidth + (mousePosition.x - startingWidth);
+				rect.width = Mathf.Clamp(rect.width, minLeft, parent.windowRect.width - minRight);
+
+				if (Event.current.type == EventType.MouseUp)
+				{
+					resizing = false;
+				}
+			}
+			Widgets.ButtonImage(resizeButtonRect, TexUI.WinExpandWidget);
+
+			if (rect.width != currentWidth)
+			{
+				leftWindowSize = rect.width;
+			}
+		}
+
+		protected void CheckTextFieldControlFocus(Rect rect)
+		{
+			string name = $"TextField{rect.y:F0}{rect.x:F0}";
+			bool focused = GUI.GetNameOfFocusedControl() == name;
+			if (focused && Input.GetMouseButtonDown(0) && !Mouse.IsOver(rect))
+			{
+				UI.UnfocusCurrentControl();
+			}
+		}
+
+		protected bool DragWindow(Rect rect, ref Vector2 dragPos, Action dragAction, Func<bool> isDragging, Action dragStopped, int button = 0)
+		{
+			if (Mouse.IsOver(rect) && Input.GetMouseButtonDown(button))
+			{
+				dragAction();
+				dragPos = Input.mousePosition;
+				return true;
+			}
+			if (isDragging())
+			{
+				if (Input.GetMouseButton(button))
+				{
+					if (UnityGUIBugsFixer.MouseDrag(button))
+					{
+						Event.current.Use();
+					}
+				}
+				else
+				{
+					dragStopped();
+					if (Input.GetMouseButtonUp(button))
+					{
+						Event.current.Use();
+					}
+				}
+				return true;
+			}
+			return false;
+		}
+	}
+}

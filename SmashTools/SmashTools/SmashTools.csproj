@@ -44,6 +44,7 @@
     <Reference Include="System" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
@@ -132,6 +133,7 @@
     <Compile Include="Interfaces\IPathfinder.cs" />
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Interfaces\ITweakFields.cs" />
+    <Compile Include="Interfaces\IXmlExport.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\Harmony\Compatibility_RimHUD.cs" />
@@ -156,6 +158,9 @@
     <Compile Include="UI\HighPriorityInputs.cs" />
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\AnimationClipEditor.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\AnimationEditor.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\AnimationControllerEditor.cs" />
     <Compile Include="UI\Windows\Dialog_AnimationEditor.cs" />
     <Compile Include="UI\Windows\Dialog_CameraView.cs" />
     <Compile Include="UI\Windows\Dialog_DedicatedThreadActivity.cs" />

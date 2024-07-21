@@ -69,21 +69,23 @@ namespace SmashTools.Animations
 			bool exported = true;
 			try
 			{
-				DirectXmlSaver.SaveDataObject(animationClip, animationClip.FilePath);
+				XmlExporter.StartDocument(animationClip.FilePath);
+				XmlExporter.WriteElement(nameof(AnimationClip), animationClip);
 			}
 			catch (Exception ex)
 			{
 				exported = false;
-				Log.Error($"Unable to export animation data. Exception = {ex}");
+				Log.Error($"Unable to export animation data.\nException = {ex}");
+				Messages.Message($"Failed to save {animationClip.FileName}.", MessageTypeDefOf.RejectInput);
+			}
+			finally
+			{
+				XmlExporter.Close();
 			}
 
 			if (exported)
 			{
-				SoundDefOf.Click.PlayOneShotOnCamera();
-			}
-			else
-			{
-				SoundDefOf.ClickReject.PlayOneShotOnCamera();
+				Messages.Message($"{animationClip.FileName} successfully saved at {animationClip.FilePath}", MessageTypeDefOf.TaskCompletion);
 			}
 			return exported;
 		}
