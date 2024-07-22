@@ -17,6 +17,7 @@ namespace SmashTools.Animations
 		private DialogTab dialogTab = DialogTab.Controller;
 
 		public IAnimator animator;
+		public AnimationController controller;
 
 		private AnimationControllerEditor controllerEditor;
 		private AnimationClipEditor clipEditor;
@@ -87,6 +88,7 @@ namespace SmashTools.Animations
 				CameraView.Close();
 			}
 			this.animator = animator;
+			controller = animator.Controller;
 
 			controllerEditor.AnimatorLoaded(animator);
 			clipEditor.AnimatorLoaded(animator);
@@ -134,10 +136,12 @@ namespace SmashTools.Animations
 			tabs.Add(new TabRecord("ST_ControllerWindow".Translate(), delegate ()
 			{
 				dialogTab = DialogTab.Controller;
+				ActiveTab.OnTabOpen();
 			}, () => dialogTab == DialogTab.Controller));
 			tabs.Add(new TabRecord("ST_AnimationWindow".Translate(), delegate ()
 			{
 				dialogTab = DialogTab.Animator;
+				ActiveTab.OnTabOpen();
 			}, () => dialogTab == DialogTab.Animator));
 		}
 

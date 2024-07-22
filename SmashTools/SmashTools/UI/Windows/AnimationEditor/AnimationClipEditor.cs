@@ -670,7 +670,7 @@ namespace SmashTools.Animations
 				Rect editorRect = rect.AtZero();
 				Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
 				float viewWidth = Mathf.Clamp(EditorWidth, editorOutRect.width, EditorWidth);
-				Rect editorViewRect = new Rect(editorRect.x, editorRect.y, viewWidth, editorOutRect.height * 2 - 16);
+				Rect editorViewRect = new Rect(editorRect.x, editorRect.y, viewWidth, editorOutRect.height - 16);
 
 				ExtraPadding = 0;
 				if (EditorWidth < editorViewRect.width)
@@ -711,6 +711,10 @@ namespace SmashTools.Animations
 								{
 									SetDragPos();
 								}
+								if (SelectionBox(rect.position, dopeSheetRect, out Rect dragRect))
+								{
+
+								}
 							}
 							break;
 						case EditTab.Curves:
@@ -731,6 +735,10 @@ namespace SmashTools.Animations
 								{
 									SetDragPos();
 								}
+								if (SelectionBox(rect.position, curveBackgroundRect, out Rect dragRect))
+								{
+
+								}
 							}
 							break;
 					}
@@ -738,9 +746,7 @@ namespace SmashTools.Animations
 					float frameLinePos = frameBarRect.x + frame * FrameTickMarkSpacing;
 					UIElements.DrawLineVertical(frameLinePos, frameBarRect.y, editorViewRect.height, Color.white);
 				}
-				//Must use GUI implementation and not Widgets, in order to disable scrollwheel handling
-				Widgets.mouseOverScrollViewStack.Pop();
-				GUI.EndScrollView(false);
+				EndScrollViewNoScrollbarControls();
 			}
 			Widgets.EndGroup();
 
@@ -774,28 +780,6 @@ namespace SmashTools.Animations
 				Vector2 mouseDiff = dragPos - mousePos;
 				dragPos = mousePos;
 				editorScrollPos += new Vector2(mouseDiff.x, -mouseDiff.y);
-			}
-
-			static float DrawBlend(Rect rect, Color colorOne, Color colorTwo)
-			{
-				Color fadeColor;
-				for (int i = 0; i < fadeLines; i++)
-				{
-					float t = (float)i / fadeLines;
-					float r = Mathf.Lerp(colorOne.r, colorTwo.r, t);
-					float g = Mathf.Lerp(colorOne.g, colorTwo.g, t);
-					float b = Mathf.Lerp(colorOne.b, colorTwo.b, t);
-					float a = colorOne.a;
-					if (colorOne.a != colorTwo.a)
-					{
-						a = Mathf.Lerp(colorOne.a, colorTwo.a, t);
-					}
-					fadeColor = new Color(r, g, b, a);
-
-					Widgets.DrawBoxSolid(rect, fadeColor);
-					rect.y += fadeHeight;
-				}
-				return rect.y;
 			}
 		}
 
@@ -956,9 +940,9 @@ namespace SmashTools.Animations
 		private void LoadAnimation(FileInfo fileInfo)
 		{
 			propertyExpanded.Clear();
-			AnimationClip clip = AnimationLoader.LoadAnimation(fileInfo.FullName);
+			AnimationClip clip = AnimationLoader.LoadFile<AnimationClip>(fileInfo.FullName);
 			animation = clip;
-			if (clip == null)
+			if (!clip)
 			{
 				Messages.Message($"Unable to load animation file at {fileInfo.FullName}.", MessageTypeDefOf.RejectInput);
 			}

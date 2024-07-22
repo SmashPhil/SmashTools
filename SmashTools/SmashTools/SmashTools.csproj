@@ -84,6 +84,7 @@
     <Compile Include="Animating\AnimationPropertyParent.cs" />
     <Compile Include="Animating\AnimationPropertyRegistry.cs" />
     <Compile Include="Animating\AnimationState.cs" />
+    <Compile Include="Animating\AnimationSubState.cs" />
     <Compile Include="Animating\AnimationTransition.cs" />
     <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
     <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
@@ -122,6 +123,7 @@
     <Compile Include="Enums\UISettingsType.cs" />
     <Compile Include="Events\EventManager.cs" />
     <Compile Include="Events\EventTrigger.cs" />
+    <Compile Include="Interfaces\IAnimationFile.cs" />
     <Compile Include="Interfaces\IAnimationTarget.cs" />
     <Compile Include="Debugging\CameraController.cs" />
     <Compile Include="Interfaces\IAnimator.cs" />

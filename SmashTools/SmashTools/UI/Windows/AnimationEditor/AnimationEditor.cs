@@ -27,10 +27,19 @@ namespace SmashTools.Animations
 		private static readonly Color buttonColor = new ColorInt(88, 88, 88).ToColor;
 		private static readonly Color buttonPressedColor = new ColorInt(70, 96, 124).ToColor;
 
+		private static readonly Color selectBoxFillColor = new ColorInt(85, 145, 245, 15).ToColor;
+		private static readonly Color selectBoxBorderColor = new ColorInt(125, 175, 245, 75).ToColor;
+
+		protected bool draggingSelectionBox = false;
+
 		/* ----- Left Panel Resizing ----- */
 		private bool resizing = false;
 		private float startingWidth;
 		/* ------------------------------- */
+
+		/* ----- Selection Box ----- */
+		private Vector2 selectionBoxPos;
+		/* ------------------------- */
 
 		public AnimationEditor(Dialog_AnimationEditor parent)
 		{
@@ -52,6 +61,10 @@ namespace SmashTools.Animations
 		}
 
 		public virtual void AnimatorLoaded(IAnimator animator)
+		{
+		}
+
+		public virtual void OnTabOpen()
 		{
 		}
 
@@ -234,7 +247,7 @@ namespace SmashTools.Animations
 
 		protected bool DragWindow(Rect rect, ref Vector2 dragPos, Action dragAction, Func<bool> isDragging, Action dragStopped, int button = 0)
 		{
-			if (Mouse.IsOver(rect) && Input.GetMouseButtonDown(button))
+			if (Input.GetMouseButtonDown(button) && Mouse.IsOver(rect))
 			{
 				dragAction();
 				dragPos = Input.mousePosition;
@@ -260,6 +273,77 @@ namespace SmashTools.Animations
 				return true;
 			}
 			return false;
+		}
+
+		protected bool SelectionBox(Vector2 groupPos, Rect clickArea, out Rect dragRect)
+		{
+			dragRect = Rect.zero;
+			if (Input.GetMouseButtonDown(0) && Mouse.IsOver(clickArea))
+			{
+				selectionBoxPos = MouseUIPos(groupPos);
+				draggingSelectionBox = true;
+			}
+			
+			if (draggingSelectionBox)
+			{
+				if (Input.GetMouseButton(0))
+				{
+					if (UnityGUIBugsFixer.MouseDrag(0))
+					{
+						Event.current.Use();
+					}
+				}
+				else
+				{
+					if (Input.GetMouseButtonUp(0))
+					{
+						Event.current.Use();
+					}
+					draggingSelectionBox = false;
+					return true;
+				}
+				Vector2 mousePos = MouseUIPos(groupPos);
+				Vector2 diff = new Vector2(mousePos.x, mousePos.y) - selectionBoxPos;
+				dragRect = new Rect(selectionBoxPos, diff);
+				Widgets.DrawBoxSolidWithOutline(dragRect, selectBoxFillColor, selectBoxBorderColor);
+			}
+			return false;
+		}
+
+		protected static float DrawBlend(Rect rect, Color colorOne, Color colorTwo)
+		{
+			Color fadeColor;
+			for (int i = 0; i < fadeLines; i++)
+			{
+				float t = (float)i / fadeLines;
+				float r = Mathf.Lerp(colorOne.r, colorTwo.r, t);
+				float g = Mathf.Lerp(colorOne.g, colorTwo.g, t);
+				float b = Mathf.Lerp(colorOne.b, colorTwo.b, t);
+				float a = colorOne.a;
+				if (colorOne.a != colorTwo.a)
+				{
+					a = Mathf.Lerp(colorOne.a, colorTwo.a, t);
+				}
+				fadeColor = new Color(r, g, b, a);
+
+				Widgets.DrawBoxSolid(rect, fadeColor);
+				rect.y += fadeHeight;
+			}
+			return rect.y;
+		}
+
+		protected Vector2 MouseUIPos(Vector2 groupPos)
+		{
+			Vector2 mousePos = new Vector2(UI.MousePositionOnUIInverted.x, UI.MousePositionOnUIInverted.y);
+			Vector2 marginSize = new Vector2(parent.EditorMargin, parent.EditorMargin);
+			return mousePos - parent.windowRect.position - groupPos - marginSize;
+		}
+
+		protected void EndScrollViewNoScrollbarControls()
+		{
+			//Must use GUI implementation and not Widgets, in order to disable scrollwheel handling
+			Widgets.mouseOverScrollViewStack.Pop();
+			GUI.EndScrollView(false);
 		}
 	}
 }
