@@ -8,7 +8,7 @@ using Verse;
 
 namespace SmashTools.Animations
 {
-	public sealed class AnimationClip : IXmlExport
+	public sealed class AnimationClip : IAnimationFile
 	{
 		public const int DefaultFrameCount = 60;
 		public const string FileExtension = ".rwa"; //RimWorld Animation
@@ -17,9 +17,9 @@ namespace SmashTools.Animations
 
 		public List<AnimationPropertyParent> properties = new List<AnimationPropertyParent>();
 
-		public string FilePath { get; internal set; }
+		public string FilePath { get; set; }
 
-		public string FileName { get; internal set; }
+		public string FileName { get; set; }
 
 		public string FileNameWithExtension => FileName + FileExtension;
 
