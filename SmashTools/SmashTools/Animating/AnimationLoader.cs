@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using Verse;
@@ -48,7 +49,7 @@ namespace SmashTools.Animations
 
 		public static FileInfo CreateEmptyAnimFile(DirectoryInfo directoryInfo)
 		{
-			string fileName = GetAvailableDefaultName(directoryInfo, DefaultAnimName, AnimationClip.FileExtension);
+			string fileName = GetAvailableFileName(directoryInfo, DefaultAnimName, AnimationClip.FileExtension);
 			string fileNameWithExtension = fileName + AnimationClip.FileExtension;
 			string filePath = Path.Combine(directoryInfo.FullName, fileNameWithExtension);
 			AnimationClip animationClip = new AnimationClip();
@@ -63,10 +64,10 @@ namespace SmashTools.Animations
 
 		public static FileInfo CreateEmptyControllerFile(DirectoryInfo directoryInfo)
 		{
-			string fileName = GetAvailableDefaultName(directoryInfo, DefaultControllerName, AnimationController.FileExtension);
+			string fileName = GetAvailableFileName(directoryInfo, DefaultControllerName, AnimationController.FileExtension);
 			string fileNameWithExtension = fileName + AnimationController.FileExtension;
 			string filePath = Path.Combine(directoryInfo.FullName, fileNameWithExtension);
-			AnimationController controller = new AnimationController();
+			AnimationController controller = AnimationController.EmptyController();
 			controller.FileName = fileName;
 			controller.FilePath = filePath;
 			if (ExportControllerXml(controller))
@@ -170,7 +171,7 @@ namespace SmashTools.Animations
 			return files;
 		}
 
-		private static string GetAvailableDefaultName(DirectoryInfo directoryInfo, string defaultName, string fileExtension)
+		public static string GetAvailableFileName(DirectoryInfo directoryInfo, string defaultName, string fileExtension)
 		{
 			string name = defaultName;
 			for (int i = 0; i < 100; i++)
@@ -192,6 +193,30 @@ namespace SmashTools.Animations
 				name = $"{defaultName}({i})";
 			}
 			return $"{defaultName}-{Rand.Range(10000, 99999)}";
+		}
+
+		public static string GetAvailableName(IEnumerable<string> takenNames, string defaultName)
+		{
+			string name = defaultName;
+			for (int i = 0; i < 100; i++)
+			{
+				bool result = true;
+				foreach (string takenName in takenNames)
+				{
+					if (takenName == name)
+					{
+						result = false;
+						break;
+					}
+				}
+
+				if (result)
+				{
+					return name;
+				}
+				name = $"{defaultName} {i}";
+			}
+			return $"{defaultName} {Rand.Range(10000, 99999)}";
 		}
 	}
 }

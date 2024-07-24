@@ -67,6 +67,12 @@ namespace SmashTools.Animations
 		private static readonly Color frameLineMinorDopesheetColor = new ColorInt(66, 66, 66).ToColor;
 		private static readonly Color frameLineCurvesColor = new ColorInt(51, 51, 51).ToColor;
 
+		private readonly Selector selector = new Selector();
+
+		private readonly List<AnimationPropertyParent> propertiesToRemove = new List<AnimationPropertyParent>();
+		private readonly HashSet<int> framesToDraw = new HashSet<int>();
+		private readonly HashSet<int> parentFramesToDraw = new HashSet<int>();
+
 		private AnimationClip animation;
 		private float zoomX = 1;
 		private float zoomY = 1;
@@ -76,7 +82,6 @@ namespace SmashTools.Animations
 		private int tickInterval = 1;
 		private float curveTickInterval = 0.5f;
 		private Dictionary<AnimationPropertyParent, bool> propertyExpanded = new Dictionary<AnimationPropertyParent, bool>();
-		private Selector selector = new Selector();
 
 		private Dialog_CameraView previewWindow;
 
@@ -85,17 +90,16 @@ namespace SmashTools.Animations
 		private Vector2 editorScrollPos;
 		private float realTimeToTick;
 
+		private float curveTickCenter = 0;
 		private Vector2 dragPos;
 		private DragItem dragging = DragItem.None;
 		private EditTab tab = EditTab.Dopesheet;
 
-		private readonly List<AnimationPropertyParent> propertiesToRemove = new List<AnimationPropertyParent>();
-		private readonly HashSet<int> framesToDraw = new HashSet<int>();
-		private readonly HashSet<int> parentFramesToDraw = new HashSet<int>();
-
 		public AnimationClipEditor(Dialog_AnimationEditor parent) : base(parent)
 		{
 		}
+
+		private bool UnsavedChanges { get; set; }
 
 		private float ExtraPadding { get; set; }
 
@@ -211,6 +215,12 @@ namespace SmashTools.Animations
 					SoundDefOf.Clock_Stop.PlayOneShotOnCamera();
 				}
 			}
+		}
+
+		private void ChangeMade()
+		{
+			parent.ChangeMade();
+			UnsavedChanges = true;
 		}
 
 		public override void AnimatorLoaded(IAnimator animator)
@@ -382,7 +392,7 @@ namespace SmashTools.Animations
 			Rect animButtonRect = new Rect(rect.xMax - buttonRect.height, animClipDropdownRect.y, buttonRect.height, buttonRect.height);
 			if (AnimationButton(animButtonRect, addAnimationEventTexture, "ST_AddAnimationEvent".Translate()))
 			{
-				parent.ChangeMade();
+				ChangeMade();
 			}
 			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
 			animButtonRect.x -= 1;
@@ -401,7 +411,7 @@ namespace SmashTools.Animations
 					AddKeyFramesForParent(propertyParent);
 				}
 				animation.RecacheFrameCount();
-				parent.ChangeMade();
+				ChangeMade();
 			}
 			GUI.enabled = enabled;
 			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
@@ -466,14 +476,14 @@ namespace SmashTools.Animations
 						var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
 						{
 							propertiesToRemove.Add(propertyParent);
-							parent.ChangeMade();
+							ChangeMade();
 						});
 						options.Add(removePropsOption);
 
 						var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
 						{
 							AddKeyFramesForParent(propertyParent);
-							parent.ChangeMade();
+							ChangeMade();
 						});
 						addKeyOption.Disabled = propertyParent.AllKeyFramesAt(frame);
 						options.Add(addKeyOption);
@@ -481,7 +491,7 @@ namespace SmashTools.Animations
 						var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
 						{
 							RemoveKeyFramesForParent(propertyParent);
-							parent.ChangeMade();
+							ChangeMade();
 						});
 						removeKeyOption.Disabled = !propertyParent.AnyKeyFrameAt(frame);
 						options.Add(removeKeyOption);
@@ -526,14 +536,14 @@ namespace SmashTools.Animations
 								var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
 								{
 									propertiesToRemove.Add(propertyParent);
-									parent.ChangeMade();
+									ChangeMade();
 								});
 								options.Add(removePropsOption);
 
 								var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
 								{
 									property.curve.Add(frame, 0);
-									parent.ChangeMade();
+									ChangeMade();
 								});
 								addKeyOption.Disabled = property.curve.KeyFrameAt(frame);
 								options.Add(addKeyOption);
@@ -541,7 +551,7 @@ namespace SmashTools.Animations
 								var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
 								{
 									property.curve.Remove(frame);
-									parent.ChangeMade();
+									ChangeMade();
 								});
 								removeKeyOption.Disabled = !property.curve.KeyFrameAt(frame);
 								options.Add(removeKeyOption);
@@ -634,7 +644,7 @@ namespace SmashTools.Animations
 						{
 							property.curve.Set(frame, value);
 							animation.RecacheFrameCount();
-							parent.ChangeMade();
+							ChangeMade();
 						}
 					}
 					break;
@@ -647,7 +657,7 @@ namespace SmashTools.Animations
 						{
 							property.curve.Set(frame, value);
 							animation.RecacheFrameCount();
-							parent.ChangeMade();
+							ChangeMade();
 						}
 					}
 					break;
@@ -656,7 +666,7 @@ namespace SmashTools.Animations
 						//bool value = Mathf.Approximately(propertyParent.Single.curve.Evaluate(frame / FrameCount), 1);
 						//Widgets.Checkbox(inputBox, ref value, float.MinValue, float.MaxValue);
 						animation.RecacheFrameCount();
-						parent.ChangeMade();
+						ChangeMade();
 					}
 					break;
 			}
@@ -711,7 +721,7 @@ namespace SmashTools.Animations
 								{
 									SetDragPos();
 								}
-								if (SelectionBox(rect.position, dopeSheetRect, out Rect dragRect))
+								if (SelectionBox(rect.position, Rect.zero, dopeSheetRect, out Rect dragRect))
 								{
 
 								}
@@ -733,9 +743,9 @@ namespace SmashTools.Animations
 
 								if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
 								{
-									SetDragPos();
+									SetDragPos(vertical: false);
 								}
-								if (SelectionBox(rect.position, curveBackgroundRect, out Rect dragRect))
+								if (SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out Rect dragRect))
 								{
 
 								}
@@ -774,12 +784,13 @@ namespace SmashTools.Animations
 				}
 			}
 
-			void SetDragPos()
+			void SetDragPos(bool horizontal = true, bool vertical = true)
 			{
 				Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
 				Vector2 mouseDiff = dragPos - mousePos;
-				dragPos = mousePos;
-				editorScrollPos += new Vector2(mouseDiff.x, -mouseDiff.y);
+				dragPos = mousePos; 
+				if (horizontal) editorScrollPos.x += mouseDiff.x;
+				if (vertical) editorScrollPos.y += -mouseDiff.y;
 			}
 		}
 
@@ -1100,11 +1111,9 @@ namespace SmashTools.Animations
 			{
 				if (!selector.AnyPropertiesSelected)
 				{
-					//TODO
 					foreach (AnimationPropertyParent propertyParent in animation.properties)
 					{
 						DrawPropertyParent(propertyParent);
-						//Graph.DrawAnimationCurve(rect, func, xRange, yRange);
 					}
 				}
 				else
@@ -1153,15 +1162,19 @@ namespace SmashTools.Animations
 				Text.Font = GameFont.Tiny;
 
 				float height = CurveAxisSpacing * TickInterval;
-				for (float i = 0; i <= CurveAxisSpacing; i += CurveTickInterval)
+				float tick = 0;
+
+				for (float i = curveTickCenter - CurveAxisSpacing / 2; i <= curveTickCenter + CurveAxisSpacing / 2; i += CurveTickInterval)
 				{
-					float tickMarkPos = i * CurveAxisSpacing;
+					float tickMarkPos = tick * CurveAxisSpacing;
 
 					UIElements.DrawLineHorizontal(rect.x, tickMarkPos, rect.width, frameBarCurveColor);
 
 					GUI.color = curveAxisColor;
 					Rect labelRect = new Rect(rect.x, tickMarkPos - height, rect.width, height).ContractedBy(3); //Subtract height since y axis is top to bottom
 					Widgets.Label(labelRect, AxisStamp(i));
+
+					tick += CurveTickInterval;
 				}
 
 				GUI.color = Color.white;
@@ -1208,7 +1221,7 @@ namespace SmashTools.Animations
 			{
 				property.curve.Set(0, 0);
 				property.curve.Set(FrameCount, 0);
-				parent.ChangeMade();
+				ChangeMade();
 			}
 		}
 
@@ -1225,7 +1238,7 @@ namespace SmashTools.Animations
 					property.curve.Add(frame, 0);
 				}
 			}
-			parent.ChangeMade();
+			ChangeMade();
 		}
 
 		private void RemoveKeyFramesForParent(AnimationPropertyParent propertyParent)
@@ -1241,7 +1254,7 @@ namespace SmashTools.Animations
 					property.curve.Remove(frame);
 				}
 			}
-			parent.ChangeMade();
+			ChangeMade();
 		}
 
 		private int SubTickCount()

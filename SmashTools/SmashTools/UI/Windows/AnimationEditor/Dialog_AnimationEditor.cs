@@ -17,6 +17,8 @@ namespace SmashTools.Animations
 		private DialogTab dialogTab = DialogTab.Controller;
 
 		public IAnimator animator;
+
+		public AnimationLayer animLayer;
 		public AnimationController controller;
 
 		private AnimationControllerEditor controllerEditor;
@@ -89,6 +91,11 @@ namespace SmashTools.Animations
 			}
 			this.animator = animator;
 			controller = animator.Controller;
+			if (!controller)
+			{
+				controller = AnimationController.EmptyController();
+			}
+			animLayer = controller?.layers.FirstOrDefault();
 
 			controllerEditor.AnimatorLoaded(animator);
 			clipEditor.AnimatorLoaded(animator);
@@ -111,6 +118,10 @@ namespace SmashTools.Animations
 
 		public void OnGUIHighPriority()
 		{
+			if (Input.GetKeyDown(KeyCode.F))
+			{
+				ActiveTab.ResetToCenter();
+			}
 			if (KeyBindingDefOf.Cancel.KeyDownEvent)
 			{
 				Event.current.Use();

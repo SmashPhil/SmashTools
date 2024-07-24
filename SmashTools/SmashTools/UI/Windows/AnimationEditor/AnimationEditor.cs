@@ -68,6 +68,11 @@ namespace SmashTools.Animations
 		{
 		}
 
+		public virtual void ResetToCenter()
+		{
+
+		}
+
 		protected void DrawBackground(Rect rect)
 		{
 			Widgets.DrawBoxSolidWithOutline(rect, backgroundDopesheetColor, separatorColor);
@@ -275,17 +280,21 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		protected bool SelectionBox(Vector2 groupPos, Rect clickArea, out Rect dragRect)
+		protected bool SelectionBox(Vector2 groupPos, Rect visibleRect, Rect clickArea, out Rect dragRect)
 		{
 			dragRect = Rect.zero;
 			if (Input.GetMouseButtonDown(0) && Mouse.IsOver(clickArea))
 			{
-				selectionBoxPos = MouseUIPos(groupPos);
+				selectionBoxPos = MouseUIPos(groupPos - visibleRect.position);
 				draggingSelectionBox = true;
 			}
 			
 			if (draggingSelectionBox)
 			{
+				dragRect = DragRect(groupPos - visibleRect.position);
+				Widgets.DrawBoxSolidWithOutline(dragRect, selectBoxFillColor, selectBoxBorderColor);
+
+				Widgets.Label(dragRect, $"{selectionBoxPos} -> {dragRect}");
 				if (Input.GetMouseButton(0))
 				{
 					if (UnityGUIBugsFixer.MouseDrag(0))
@@ -302,12 +311,15 @@ namespace SmashTools.Animations
 					draggingSelectionBox = false;
 					return true;
 				}
-				Vector2 mousePos = MouseUIPos(groupPos);
-				Vector2 diff = new Vector2(mousePos.x, mousePos.y) - selectionBoxPos;
-				dragRect = new Rect(selectionBoxPos, diff);
-				Widgets.DrawBoxSolidWithOutline(dragRect, selectBoxFillColor, selectBoxBorderColor);
 			}
 			return false;
+		}
+
+		protected Rect DragRect(Vector2 groupPos)
+		{
+			Vector2 mousePos = MouseUIPos(groupPos);
+			Vector2 diff = new Vector2(mousePos.x, mousePos.y) - selectionBoxPos;
+			return new Rect(selectionBoxPos, diff);
 		}
 
 		protected static float DrawBlend(Rect rect, Color colorOne, Color colorTwo)
@@ -344,6 +356,28 @@ namespace SmashTools.Animations
 			//Must use GUI implementation and not Widgets, in order to disable scrollwheel handling
 			Widgets.mouseOverScrollViewStack.Pop();
 			GUI.EndScrollView(false);
+		}
+
+		protected Vector2 GetScrollPosNormalized(Rect outRect, Vector2 scrollPos, Rect viewRect)
+		{
+			float widthMax = viewRect.width - outRect.width + 16;
+			float heightMax = viewRect.height - outRect.height + 16;
+			return new Vector2(scrollPos.x / widthMax, scrollPos.y / heightMax);
+		}
+
+		protected void SetScrollPosNormalized(Rect outRect, ref Vector2 scrollPos, Rect viewRect, Vector2 normalizedScrollPos)
+		{
+			float widthMax = viewRect.width - outRect.width + 16;
+			float heightMax = viewRect.height - outRect.height + 16;
+			scrollPos = new Vector2(normalizedScrollPos.x * widthMax, normalizedScrollPos.y * heightMax);
+		}
+
+		protected Rect GetVisibleRect(Rect outRect, Vector2 scrollPos, Rect viewRect)
+		{
+			Vector2 scrollT = GetScrollPosNormalized(outRect, scrollPos, viewRect);
+			float visPosX = Mathf.Lerp(0, viewRect.width - outRect.width, scrollT.x);
+			float visPosY = Mathf.Lerp(0, viewRect.height - outRect.height, scrollT.y);
+			return new Rect(visPosX, visPosY, outRect.width, outRect.height);
 		}
 	}
 }
