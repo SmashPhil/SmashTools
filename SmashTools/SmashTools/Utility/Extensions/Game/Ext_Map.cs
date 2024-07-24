@@ -9,7 +9,6 @@ using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
 using HarmonyLib;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace SmashTools
 {
@@ -19,11 +18,45 @@ namespace SmashTools
 		private static readonly FieldInfo longEventTextField;
 		private static string previousEventText;
 
+		private static readonly HashSet<Type> areaTypes = new HashSet<Type>();
+
 		static Ext_Map()
 		{
 			currentEventField = AccessTools.Field(typeof(LongEventHandler), "currentEvent");
 			Type longQueuedEventType = AccessTools.TypeByName("Verse.LongEventHandler+QueuedLongEvent");
 			longEventTextField = AccessTools.Field(longQueuedEventType, "eventText");
+		}
+
+		public static void RegisterArea<T>() where T : Area
+		{
+			areaTypes.Add(typeof(T));
+		}
+
+		public static void TryAddAreas(this Map map)
+		{
+			if (map.areaManager == null)
+			{
+				Log.Error($"Trying to add registered area types before AreaManager has been initialized.");
+				return;
+			}
+
+			MethodInfo getAreaMethod = map.areaManager.GetType().GetMethod(nameof(map.areaManager.Get), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			if (getAreaMethod == null)
+			{
+				Log.Error($"Unable to register modded areas, could not locate getter method for AreaManager.");
+				return;
+			}
+			FieldInfo areaListField = map.areaManager.GetType().GetField("areas", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			List<Area> areas = (List<Area>)areaListField.GetValue(map.areaManager);
+			foreach (Type type in areaTypes)
+			{
+				Area area = (Area)getAreaMethod.MakeGenericMethod(type).Invoke(map.areaManager, null);
+				if (area == null) //Only add area if it hasn't been already, this is also done post-load
+				{
+					Area newArea = (Area)Activator.CreateInstance(type, new object[] { map.areaManager });
+					areas.Add(newArea);
+				}
+			}
 		}
 
 		public static void StashLongEventText()
