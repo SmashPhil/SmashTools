@@ -93,6 +93,19 @@ namespace SmashTools.Xml
 			}
 		}
 
+		public static void WriteObject<T>(string localName, T value)
+		{
+			try
+			{
+				writer.WriteElementString(localName, value.ToString());
+			}
+			catch (Exception ex)
+			{
+				Close();
+				throw ex;
+			}
+		}
+
 		public static void WriteElement(string localName, string value)
 		{
 			try

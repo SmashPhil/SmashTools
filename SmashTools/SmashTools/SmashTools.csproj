@@ -79,6 +79,7 @@
     <Compile Include="Animating\AnimationClip.cs" />
     <Compile Include="Animating\AnimationController.cs" />
     <Compile Include="Animating\AnimationCurve.cs" />
+    <Compile Include="Animating\AnimationLayer.cs" />
     <Compile Include="Animating\AnimationLoader.cs" />
     <Compile Include="Animating\AnimationProperty.cs" />
     <Compile Include="Animating\AnimationPropertyParent.cs" />
@@ -163,15 +164,15 @@
     <Compile Include="UI\Windows\AnimationEditor\AnimationClipEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationControllerEditor.cs" />
-    <Compile Include="UI\Windows\Dialog_AnimationEditor.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationEditor.cs" />
     <Compile Include="UI\Windows\Dialog_CameraView.cs" />
     <Compile Include="UI\Windows\Dialog_DedicatedThreadActivity.cs" />
-    <Compile Include="UI\Windows\Dialog_AnimationClipLister.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_FolderPicker.cs" />
     <Compile Include="UI\Windows\Dialog_Graph.cs" />
     <Compile Include="UI\Windows\Dialog_GraphEditor.cs" />
     <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />
-    <Compile Include="UI\Windows\Dialog_PropertySelect.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\Dialog_PropertySelect.cs" />
     <Compile Include="UI\Windows\Dialog_ToggleMenu.cs" />
     <Compile Include="UI\Windows\Dialog_RadioButtonMenu.cs" />
     <Compile Include="UI\Windows\EditWindow_TweakFields.cs" />

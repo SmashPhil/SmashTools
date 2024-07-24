@@ -68,7 +68,7 @@ namespace SmashTools.Animations
 
 		void IXmlExport.Export()
 		{
-			XmlExporter.WriteElement(nameof(frameCount), frameCount.ToString());
+			XmlExporter.WriteObject(nameof(frameCount), frameCount);
 			XmlExporter.WriteList(nameof(properties), properties);
 		}
 
