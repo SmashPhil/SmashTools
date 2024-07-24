@@ -30,15 +30,15 @@ namespace SmashTools.Animations
 		private const float SecondsPerFrame = 1 / 60f;
 		private const float DefaultAxisCount = 100;
 
-		private static readonly Texture2D skipToBeginningTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToBeginning");
-		private static readonly Texture2D skipToPreviousTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToPrevious");
-		private static readonly Texture2D skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
-		private static readonly Texture2D skipToEndTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToEnd");
+		private readonly Texture2D skipToBeginningTexture;
+		private readonly Texture2D skipToPreviousTexture;
+		private readonly Texture2D skipToNextTexture;
+		private readonly Texture2D skipToEndTexture;
 
-		private static readonly Texture2D animationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AnimationEvent");
-		private static readonly Texture2D keyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/KeyFrame");
-		private static readonly Texture2D addAnimationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AddEvent");
-		private static readonly Texture2D addKeyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/AddKeyFrame");
+		private readonly Texture2D animationEventTexture;
+		private readonly Texture2D keyFrameTexture;
+		private readonly Texture2D addAnimationEventTexture;
+		private readonly Texture2D addKeyFrameTexture;
 
 		private static readonly Color propertyExpandedNameColor = new ColorInt(123, 123, 123).ToColor;
 		private static readonly Color propertyLabelHighlightColor = new ColorInt(255, 255, 255, 10).ToColor;
@@ -97,6 +97,15 @@ namespace SmashTools.Animations
 
 		public AnimationClipEditor(Dialog_AnimationEditor parent) : base(parent)
 		{
+			skipToBeginningTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToBeginning");
+			skipToPreviousTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToPrevious");
+			skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
+			skipToEndTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToEnd");
+
+			animationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AnimationEvent");
+			keyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/KeyFrame");
+			addAnimationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AddEvent");
+			addKeyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/AddKeyFrame");
 		}
 
 		private bool UnsavedChanges { get; set; }
