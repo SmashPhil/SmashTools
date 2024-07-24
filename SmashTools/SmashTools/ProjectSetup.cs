@@ -48,7 +48,7 @@ namespace SmashTools
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
 
-			//Component Cache + DetachedMapComponent
+			//Map
 			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),
 				postfix: new HarmonyMethod(typeof(DetachedMapComponent),
 				nameof(DetachedMapComponent.InstantiateAllMapComponents)));
@@ -67,6 +67,9 @@ namespace SmashTools
 			Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
 				prefix: new HarmonyMethod(typeof(ComponentCache),
 				nameof(ComponentCache.ClearCache)));
+			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.FinalizeInit)),
+				postfix: new HarmonyMethod(typeof(ProjectSetup),
+				nameof(BackfillRegisteredAreas)));
 
 			//IThingHolderPawnOverlayer
 			Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
@@ -200,6 +203,11 @@ namespace SmashTools
 		{
 			ComponentCache.ClearCache();
 			ThreadManager.ReleaseAllActiveThreads();
+		}
+
+		private static void BackfillRegisteredAreas(Map __instance)
+		{
+			Ext_Map.TryAddAreas(__instance);
 		}
 	}
 }
