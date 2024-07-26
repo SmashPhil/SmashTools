@@ -30,6 +30,8 @@ namespace SmashTools.Animations
 		private const float SecondsPerFrame = 1 / 60f;
 		private const float DefaultAxisCount = 100;
 
+		private const float MaxExtraScrollDistance = 5000;
+
 		private static readonly Texture2D skipToBeginningTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToBeginning");
 		private static readonly Texture2D skipToPreviousTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToPrevious");
 		private static readonly Texture2D skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
@@ -40,32 +42,32 @@ namespace SmashTools.Animations
 		private static readonly Texture2D addAnimationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AddEvent");
 		private static readonly Texture2D addKeyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/AddKeyFrame");
 
-		private static readonly Color propertyExpandedNameColor = new ColorInt(123, 123, 123).ToColor;
-		private static readonly Color propertyLabelHighlightColor = new ColorInt(255, 255, 255, 10).ToColor;
-		private static readonly Color itemSelectedColor = new ColorInt(87, 133, 217).ToColor;
+		private readonly Color propertyExpandedNameColor = new ColorInt(123, 123, 123).ToColor;
+		private readonly Color propertyLabelHighlightColor = new ColorInt(255, 255, 255, 10).ToColor;
+		private readonly Color itemSelectedColor = new ColorInt(87, 133, 217).ToColor;
 
-		private static readonly Color animationEventBarColor = new ColorInt(49, 49, 49).ToColor;
-		private static readonly Color animationKeyFrameBarColor = new ColorInt(47, 47, 47).ToColor;
-		private static readonly Color animationKeyFrameBarFadeColor = new ColorInt(40, 40, 40).ToColor;
-		private static readonly Color curveTopColor = new Color(backgroundCurvesColor.r, backgroundCurvesColor.g, backgroundCurvesColor.b, curveTopFadeColor.a);
-		private static readonly Color curveTopFadeColor = new ColorInt(0, 0, 0, 25).ToColor;
+		private readonly Color animationEventBarColor = new ColorInt(49, 49, 49).ToColor;
+		private readonly Color animationKeyFrameBarColor = new ColorInt(47, 47, 47).ToColor;
+		private readonly Color animationKeyFrameBarFadeColor = new ColorInt(40, 40, 40).ToColor;
+		private readonly Color curveTopColor = new Color(40, 40, 40, 25);
+		private readonly Color curveTopFadeColor = new ColorInt(0, 0, 0, 25).ToColor;
 
-		private static readonly Color frameTimeBarColor = new ColorInt(40, 64, 75).ToColor;
-		private static readonly Color frameTimeBarColorDisabled = new ColorInt(10, 10, 10, 100).ToColor;
-		private static readonly Color frameTickColor = new ColorInt(140, 140, 140).ToColor;
-		private static readonly Color frameBarHighlightColor = new ColorInt(255, 255, 255, 5).ToColor;
-		private static readonly Color frameBarHighlightMinorColor = new ColorInt(255, 255, 255, 2).ToColor;
-		private static readonly Color frameBarHighlightOutlineColor = new ColorInt(68, 68, 68).ToColor;
-		private static readonly Color frameBarCurveColor = new ColorInt(73, 73, 73).ToColor;
-		private static readonly Color curveAxisColor = new ColorInt(93, 93, 93).ToColor;
+		private readonly Color frameTimeBarColor = new ColorInt(40, 64, 75).ToColor;
+		private readonly Color frameTimeBarColorDisabled = new ColorInt(10, 10, 10, 100).ToColor;
+		private readonly Color frameTickColor = new ColorInt(140, 140, 140).ToColor;
+		private readonly Color frameBarHighlightColor = new ColorInt(255, 255, 255, 5).ToColor;
+		private readonly Color frameBarHighlightMinorColor = new ColorInt(255, 255, 255, 2).ToColor;
+		private readonly Color frameBarHighlightOutlineColor = new ColorInt(68, 68, 68).ToColor;
+		private readonly Color frameBarCurveColor = new ColorInt(73, 73, 73).ToColor;
+		private readonly Color curveAxisColor = new ColorInt(93, 93, 93).ToColor;
 
-		private static readonly Color keyFrameColor = new ColorInt(153, 153, 153).ToColor;
-		private static readonly Color keyFrameTopColor = new ColorInt(108, 108, 108).ToColor;
-		private static readonly Color keyFrameHighlightColor = new ColorInt(200, 200, 200).ToColor;
+		private readonly Color keyFrameColor = new ColorInt(153, 153, 153).ToColor;
+		private readonly Color keyFrameTopColor = new ColorInt(108, 108, 108).ToColor;
+		private readonly Color keyFrameHighlightColor = new ColorInt(200, 200, 200).ToColor;
 
-		private static readonly Color frameLineMajorDopesheetColor = new ColorInt(75, 75, 75).ToColor;
-		private static readonly Color frameLineMinorDopesheetColor = new ColorInt(66, 66, 66).ToColor;
-		private static readonly Color frameLineCurvesColor = new ColorInt(51, 51, 51).ToColor;
+		private readonly Color frameLineMajorDopesheetColor = new ColorInt(75, 75, 75).ToColor;
+		private readonly Color frameLineMinorDopesheetColor = new ColorInt(66, 66, 66).ToColor;
+		private readonly Color frameLineCurvesColor = new ColorInt(51, 51, 51).ToColor;
 
 		private readonly Selector selector = new Selector();
 
@@ -88,6 +90,7 @@ namespace SmashTools.Animations
 		private float leftWindowSize = MinLeftWindowSize;
 
 		private Vector2 editorScrollPos;
+		private Vector2 extraScrollSize;
 		private float realTimeToTick;
 
 		private float curveTickCenter = 0;
@@ -190,6 +193,19 @@ namespace SmashTools.Animations
 					zoomY = Mathf.Clamp(value, 1, MaxFrameZoom);
 					RecalculateTickInterval();
 				}
+			}
+		}
+
+		public Vector2 ExtraScrollSize
+		{
+			get
+			{
+				return tab switch
+				{
+					EditTab.Dopesheet => new Vector2(extraScrollSize.x, 0),
+					EditTab.Curves => extraScrollSize,
+					_ => Vector2.zero,
+				};
 			}
 		}
 
@@ -680,7 +696,8 @@ namespace SmashTools.Animations
 				Rect editorRect = rect.AtZero();
 				Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
 				float viewWidth = Mathf.Clamp(EditorWidth, editorOutRect.width, EditorWidth);
-				Rect editorViewRect = new Rect(editorRect.x, editorRect.y, viewWidth, editorOutRect.height - 16);
+				Vector2 viewRectSize = new Vector2(viewWidth, editorOutRect.height - 16) + ExtraScrollSize;
+				Rect editorViewRect = new Rect(editorRect.position, viewRectSize);
 
 				ExtraPadding = 0;
 				if (EditorWidth < editorViewRect.width)
@@ -688,6 +705,13 @@ namespace SmashTools.Animations
 					ExtraPadding = editorViewRect.width - EditorWidth; //Pad all the way to the edge of the screen if necessary
 				}
 
+				if (dragging == DragItem.None)
+				{
+					//TODO - scrolling with scrollbar back to normal boundaries should auto-resize to minimum extra size
+					//TryResetExtraScrollSize(editorOutRect, editorScrollPos, editorViewRect, ref extraScrollSize);
+				}
+
+				Rect visibleRect = GetVisibleRect(editorOutRect, editorScrollPos, editorViewRect);
 				Widgets.BeginScrollView(editorOutRect, ref editorScrollPos, editorViewRect);
 				{
 					editorViewRect.height += 16; //Should still render editor background + frame ticks underneath scrollbar
@@ -696,11 +720,11 @@ namespace SmashTools.Animations
 
 					Rect frameBarRect = DrawFrameBar(editorViewRect);
 
-					Rect animationEventBarRect = new Rect(editorViewRect.x, frameBarRect.yMax, viewWidth, WidgetBarHeight);
+					Rect animationEventBarRect = new Rect(editorViewRect.x, frameBarRect.yMax, editorViewRect.width, WidgetBarHeight);
 					Widgets.DrawBoxSolid(animationEventBarRect, animationEventBarColor);
 
 					Rect blendRect = new Rect(editorViewRect.x, animationEventBarRect.yMax, editorViewRect.width, fadeHeight);
-
+					
 					switch (tab)
 					{
 						case EditTab.Dopesheet:
@@ -715,13 +739,16 @@ namespace SmashTools.Animations
 
 								DrawDopesheetFrameTicks(dopeSheetRect);
 
-								DrawKeyFrameMarkers(dopeSheetRect);
+								Rect dragRect = DragRect(rect.position - visibleRect.position, 
+									snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding);
+								DrawKeyFrameMarkers(dopeSheetRect, dragRect);
 
 								if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
 								{
-									SetDragPos();
+									SetDragPos(expandVertical: false);
 								}
-								if (SelectionBox(rect.position, Rect.zero, dopeSheetRect, out Rect dragRect))
+								if (dragging == DragItem.None && SelectionBox(rect.position, visibleRect, dopeSheetRect, out dragRect, 
+									snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding))
 								{
 
 								}
@@ -738,14 +765,15 @@ namespace SmashTools.Animations
 								Rect curveFrameBarRect = new Rect(editorOutRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
 								DrawAxis(curveFrameBarRect);
 
+								Rect dragRect = DragRect(rect.position - visibleRect.position);
 								Rect curvesRect = new Rect(frameBarRect.x, curveBackgroundRect.y, FrameBarWidth, curveBackgroundRect.height);
 								DrawCurves(curvesRect);
 
 								if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
 								{
-									SetDragPos(vertical: false);
+									SetDragPos();
 								}
-								if (SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out Rect dragRect))
+								if (dragging == DragItem.None && SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out dragRect))
 								{
 
 								}
@@ -757,6 +785,38 @@ namespace SmashTools.Animations
 					UIElements.DrawLineVertical(frameLinePos, frameBarRect.y, editorViewRect.height, Color.white);
 				}
 				EndScrollViewNoScrollbarControls();
+
+				void SetDragPos(bool expandHorizontal = true, bool expandVertical = true, bool horizontal = true, bool vertical = true)
+				{
+					Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+					Vector2 mouseDiff = dragPos - mousePos;
+					dragPos = mousePos;
+					Vector2 scrollT = GetScrollPosNormalized(editorOutRect, editorScrollPos, editorViewRect);
+					if (horizontal)
+					{
+						editorScrollPos.x += mouseDiff.x;
+
+						if (expandHorizontal)
+						{
+							if (Mathf.Approximately(scrollT.x, 1))
+							{
+								extraScrollSize.x += mouseDiff.x;
+							}
+						}
+					}
+					if (vertical)
+					{
+						editorScrollPos.y += -mouseDiff.y;
+
+						if (expandVertical && (Mathf.Approximately(scrollT.y, 0) || Mathf.Approximately(scrollT.y, 1)))
+						{
+							extraScrollSize.y += mouseDiff.y;
+						}
+					}
+
+					extraScrollSize.x = Mathf.Clamp(extraScrollSize.x, 0, MaxExtraScrollDistance);
+					extraScrollSize.y = Mathf.Clamp(extraScrollSize.y, 0, MaxExtraScrollDistance);
+				}
 			}
 			Widgets.EndGroup();
 
@@ -782,15 +842,6 @@ namespace SmashTools.Animations
 					ZoomCurve += value;
 					Event.current.Use();
 				}
-			}
-
-			void SetDragPos(bool horizontal = true, bool vertical = true)
-			{
-				Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
-				Vector2 mouseDiff = dragPos - mousePos;
-				dragPos = mousePos; 
-				if (horizontal) editorScrollPos.x += mouseDiff.x;
-				if (vertical) editorScrollPos.y += -mouseDiff.y;
 			}
 		}
 
@@ -989,7 +1040,7 @@ namespace SmashTools.Animations
 			Widgets.EndGroup();
 		}
 
-		private void DrawKeyFrameMarkers(Rect rect)
+		private void DrawKeyFrameMarkers(Rect rect, Rect dragRect)
 		{
 			if (animation != null && !animation.properties.NullOrEmpty())
 			{
@@ -1088,8 +1139,7 @@ namespace SmashTools.Animations
 				bool result = false;
 
 				GUI.color = selected ? itemSelectedColor : color;
-				float tickMarkPos = FrameBarPadding + frame * FrameTickMarkSpacing;
-				Rect keyFrameRect = new Rect(tickMarkPos - PropertyEntryHeight / 2 + 0.5f, y, PropertyEntryHeight, PropertyEntryHeight).ContractedBy(4);
+				Rect keyFrameRect = KeyFrameRect(y, frame);
 				clearSelect &= !Mouse.IsOver(keyFrameRect); //Only allow clear select if mouse is not over any key frame button
 				GUI.DrawTexture(keyFrameRect, keyFrameTexture);
 				if (Widgets.ButtonInvisible(keyFrameRect, doMouseoverSound: false))
@@ -1100,6 +1150,12 @@ namespace SmashTools.Animations
 
 				return result;
 			}
+		}
+
+		private Rect KeyFrameRect(float y, int frame)
+		{
+			float tickMarkPos = FrameBarPadding + frame * FrameTickMarkSpacing;
+			return new Rect(tickMarkPos - PropertyEntryHeight / 2 + 0.5f, y, PropertyEntryHeight, PropertyEntryHeight).ContractedBy(4);
 		}
 
 		private void DrawCurves(Rect rect)
@@ -1164,19 +1220,29 @@ namespace SmashTools.Animations
 				float height = CurveAxisSpacing * TickInterval;
 				float tick = 0;
 
-				for (float i = curveTickCenter - CurveAxisSpacing / 2; i <= curveTickCenter + CurveAxisSpacing / 2; i += CurveTickInterval)
+				Rect outRect = rect;
+				Rect viewRect = Rect.zero;
+				
+				Vector2 scrollT = GetScrollPosNormalized(outRect, editorScrollPos, viewRect);
+				Rect visibleRect = GetVisibleRect(outRect, editorScrollPos, viewRect);
+				Widgets.BeginScrollView(outRect, ref editorScrollPos, viewRect, showScrollbars: false);
 				{
-					float tickMarkPos = tick * CurveAxisSpacing;
+					//float middleValue = scrollT
+					for (float i = curveTickCenter - CurveAxisSpacing / 2; i <= curveTickCenter + CurveAxisSpacing / 2; i += CurveTickInterval)
+					{
+						float tickMarkPos = tick * CurveAxisSpacing;
 
-					UIElements.DrawLineHorizontal(rect.x, tickMarkPos, rect.width, frameBarCurveColor);
+						UIElements.DrawLineHorizontal(rect.x, tickMarkPos, rect.width, frameBarCurveColor);
 
-					GUI.color = curveAxisColor;
-					Rect labelRect = new Rect(rect.x, tickMarkPos - height, rect.width, height).ContractedBy(3); //Subtract height since y axis is top to bottom
-					Widgets.Label(labelRect, AxisStamp(i));
+						GUI.color = curveAxisColor;
+						Rect labelRect = new Rect(rect.x, tickMarkPos - height, rect.width, height).ContractedBy(3); //Subtract height since y axis is top to bottom
+						Widgets.Label(labelRect, AxisStamp(i));
 
-					tick += CurveTickInterval;
+						tick += CurveTickInterval;
+					}
 				}
-
+				EndScrollViewNoScrollbarControls();
+				
 				GUI.color = Color.white;
 				Text.Font = GameFont.Small;
 			}

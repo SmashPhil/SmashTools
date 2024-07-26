@@ -8,10 +8,12 @@ using UnityEngine;
 using Verse.Sound;
 using System.Runtime;
 using Verse.Noise;
+using HarmonyLib;
 
 namespace SmashTools.Animations
 {
-	public partial class Dialog_AnimationEditor : Window, IHighPriorityOnGUI
+	[StaticConstructorOnStartup]
+	public class Dialog_AnimationEditor : Window, IHighPriorityOnGUI
 	{
 		private List<TabRecord> tabs = new List<TabRecord>();
 		private DialogTab dialogTab = DialogTab.Controller;
@@ -23,6 +25,14 @@ namespace SmashTools.Animations
 
 		private AnimationControllerEditor controllerEditor;
 		private AnimationClipEditor clipEditor;
+
+		//IMGUI
+		public static readonly int s_SliderHash;
+
+		static Dialog_AnimationEditor()
+		{
+			s_SliderHash = (int)AccessTools.Field(typeof(GUI), nameof(s_SliderHash)).GetValue(null);
+		}
 
 		public Dialog_AnimationEditor(IAnimator animator)
 		{
@@ -72,7 +82,6 @@ namespace SmashTools.Animations
 			this.closeOnAccept = false;
 			this.closeOnClickedOutside = false;
 			this.closeOnCancel = false;
-			this.draggable = true;
 			this.absorbInputAroundWindow = false;
 			this.preventCameraMotion = true;
 			this.forcePause = true;

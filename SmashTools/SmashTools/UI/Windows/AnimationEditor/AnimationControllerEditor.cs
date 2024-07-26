@@ -31,15 +31,15 @@ namespace SmashTools.Animations
 
 		private const float ZoomRate = 0.03f;
 
-		private static readonly Color lineDarkColor = new ColorInt(25, 25, 25).ToColor;
-		private static readonly Color lineLightColor = new ColorInt(35, 35, 35).ToColor;
+		private readonly Color lineDarkColor = new ColorInt(25, 25, 25).ToColor;
+		private readonly Color lineLightColor = new ColorInt(35, 35, 35).ToColor;
 
-		private static readonly Color topBarFadeColor = new ColorInt(40, 40, 40).ToColor;
-		private static readonly Color entryStateColor = new ColorInt(20, 110, 50).ToColor;
-		private static readonly Color defaultStateColor = new ColorInt(185, 105, 25).ToColor;
-		private static readonly Color exitStateColor = new ColorInt(150, 25, 25).ToColor;
-		private static readonly Color anyStateColor = new ColorInt(90, 160, 140).ToColor;
-		private static readonly Color stateColor = new ColorInt(75, 75, 75).ToColor;
+		private readonly Color topBarFadeColor = new ColorInt(40, 40, 40).ToColor;
+		private readonly Color entryStateColor = new ColorInt(20, 110, 50).ToColor;
+		private readonly Color defaultStateColor = new ColorInt(185, 105, 25).ToColor;
+		private readonly Color exitStateColor = new ColorInt(150, 25, 25).ToColor;
+		private readonly Color anyStateColor = new ColorInt(90, 160, 140).ToColor;
+		private readonly Color stateColor = new ColorInt(75, 75, 75).ToColor;
 
 		private readonly Selector selector = new Selector();
 		private readonly Clipboard clipboard = new Clipboard();

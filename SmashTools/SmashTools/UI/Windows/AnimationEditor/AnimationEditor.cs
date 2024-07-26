@@ -19,16 +19,16 @@ namespace SmashTools.Animations
 		protected const int fadeLines = 10;
 		protected const float fadeHeight = fadeSize / fadeLines;
 
-		protected static readonly Color backgroundLightColor = new ColorInt(63, 63, 63).ToColor;
-		protected static readonly Color backgroundDopesheetColor = new ColorInt(56, 56, 56).ToColor;
-		protected static readonly Color backgroundCurvesColor = new ColorInt(40, 40, 40).ToColor;
-		protected static readonly Color separatorColor = new ColorInt(35, 35, 35).ToColor;
+		protected readonly Color backgroundLightColor = new ColorInt(63, 63, 63).ToColor;
+		protected readonly Color backgroundDopesheetColor = new ColorInt(56, 56, 56).ToColor;
+		protected readonly Color backgroundCurvesColor = new ColorInt(40, 40, 40).ToColor;
+		protected readonly Color separatorColor = new ColorInt(35, 35, 35).ToColor;
 
-		private static readonly Color buttonColor = new ColorInt(88, 88, 88).ToColor;
-		private static readonly Color buttonPressedColor = new ColorInt(70, 96, 124).ToColor;
+		private readonly Color buttonColor = new ColorInt(88, 88, 88).ToColor;
+		private readonly Color buttonPressedColor = new ColorInt(70, 96, 124).ToColor;
 
-		private static readonly Color selectBoxFillColor = new ColorInt(85, 145, 245, 15).ToColor;
-		private static readonly Color selectBoxBorderColor = new ColorInt(125, 175, 245, 75).ToColor;
+		private readonly Color selectBoxFillColor = new ColorInt(85, 145, 245, 15).ToColor;
+		private readonly Color selectBoxBorderColor = new ColorInt(125, 175, 245, 75).ToColor;
 
 		protected bool draggingSelectionBox = false;
 
@@ -217,7 +217,7 @@ namespace SmashTools.Animations
 
 			Rect resizeButtonRect = new Rect(rect.xMax - 24, rect.yMax - 24, 24, 24);
 			Vector2 mousePosition = Event.current.mousePosition;
-			if (Event.current.type == EventType.MouseDown && Mouse.IsOver(resizeButtonRect))
+			if (Input.GetMouseButtonDown(0) && Mouse.IsOver(resizeButtonRect))
 			{
 				resizing = true;
 				startingWidth = mousePosition.x;
@@ -227,7 +227,7 @@ namespace SmashTools.Animations
 				rect.width = startingWidth + (mousePosition.x - startingWidth);
 				rect.width = Mathf.Clamp(rect.width, minLeft, parent.windowRect.width - minRight);
 
-				if (Event.current.type == EventType.MouseUp)
+				if (!Input.GetMouseButton(0))
 				{
 					resizing = false;
 				}
@@ -280,21 +280,21 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		protected bool SelectionBox(Vector2 groupPos, Rect visibleRect, Rect clickArea, out Rect dragRect)
+		protected bool SelectionBox(Vector2 groupPos, Rect visibleRect, Rect clickArea, out Rect dragRect, 
+			float snapX = 0, float snapY = 0, float snapPaddingX = 0, float snapPaddingY = 0)
 		{
 			dragRect = Rect.zero;
 			if (Input.GetMouseButtonDown(0) && Mouse.IsOver(clickArea))
 			{
-				selectionBoxPos = MouseUIPos(groupPos - visibleRect.position);
 				draggingSelectionBox = true;
+				selectionBoxPos = MouseUIPos(groupPos - visibleRect.position);
 			}
 			
 			if (draggingSelectionBox)
 			{
-				dragRect = DragRect(groupPos - visibleRect.position);
+				dragRect = DragRect(groupPos - visibleRect.position, snapX: snapX, snapY: snapY, snapPaddingX: snapPaddingX, snapPaddingY: snapPaddingY);
 				Widgets.DrawBoxSolidWithOutline(dragRect, selectBoxFillColor, selectBoxBorderColor);
 
-				Widgets.Label(dragRect, $"{selectionBoxPos} -> {dragRect}");
 				if (Input.GetMouseButton(0))
 				{
 					if (UnityGUIBugsFixer.MouseDrag(0))
@@ -315,11 +315,30 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		protected Rect DragRect(Vector2 groupPos)
+		protected Rect DragRect(Vector2 groupPos, float snapX = 0, float snapY = 0, float snapPaddingX = 0, float snapPaddingY = 0)
 		{
 			Vector2 mousePos = MouseUIPos(groupPos);
-			Vector2 diff = new Vector2(mousePos.x, mousePos.y) - selectionBoxPos;
-			return new Rect(selectionBoxPos, diff);
+			if (snapX > 0)
+			{
+				mousePos.x = mousePos.x.RoundTo(snapX) + snapPaddingX;
+			}
+			if (snapY > 0)
+			{
+				mousePos.y = mousePos.y.RoundTo(snapY) + snapPaddingY;
+			}
+
+			Vector2 startPos = selectionBoxPos;
+			if (snapX > 0)
+			{
+				startPos.x = startPos.x.RoundTo(snapX) + snapPaddingX;
+			}
+			if (snapY > 0)
+			{
+				startPos.y = startPos.y.RoundTo(snapY) + snapPaddingY;
+			}
+
+			Vector2 diff = new Vector2(mousePos.x, mousePos.y) - startPos;
+			return new Rect(startPos, diff);
 		}
 
 		protected static float DrawBlend(Rect rect, Color colorOne, Color colorTwo)
@@ -360,9 +379,20 @@ namespace SmashTools.Animations
 
 		protected Vector2 GetScrollPosNormalized(Rect outRect, Vector2 scrollPos, Rect viewRect)
 		{
-			float widthMax = viewRect.width - outRect.width + 16;
-			float heightMax = viewRect.height - outRect.height + 16;
-			return new Vector2(scrollPos.x / widthMax, scrollPos.y / heightMax);
+			float widthMax = viewRect.width - outRect.width;
+			if (viewRect.height > outRect.height)
+			{
+				widthMax -= 16;
+			}
+			float heightMax = viewRect.height - outRect.height;
+			if (viewRect.width > outRect.width)
+			{
+				heightMax -= 16;
+			}
+
+			float xT = widthMax <= 0 ? 1 : scrollPos.x / widthMax;
+			float yT = heightMax <= 0 ? 1 : scrollPos.y / heightMax;
+			return new Vector2(xT, yT);
 		}
 
 		protected void SetScrollPosNormalized(Rect outRect, ref Vector2 scrollPos, Rect viewRect, Vector2 normalizedScrollPos)
@@ -370,6 +400,12 @@ namespace SmashTools.Animations
 			float widthMax = viewRect.width - outRect.width + 16;
 			float heightMax = viewRect.height - outRect.height + 16;
 			scrollPos = new Vector2(normalizedScrollPos.x * widthMax, normalizedScrollPos.y * heightMax);
+		}
+
+		protected void TryResetExtraScrollSize(Rect outRect, Vector2 scrollPos, Rect viewRect, ref Vector2 extraSize)
+		{
+			Vector2 scrollT = GetScrollPosNormalized(outRect, scrollPos, viewRect);
+			throw new NotImplementedException();
 		}
 
 		protected Rect GetVisibleRect(Rect outRect, Vector2 scrollPos, Rect viewRect)
