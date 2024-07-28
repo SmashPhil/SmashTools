@@ -22,6 +22,7 @@ namespace SmashTools.Animations
 		private const float PropertyBtnWidth = 180;
 
 		private const float FrameBarPadding = 40;
+		private const float FrameBarTickRenderingPadding = FrameBarPadding * 2 + 50;
 		private const float CollapseFrameDistance = 100;
 		private const float MaxFrameZoom = 1000;
 		private const float ZoomRate = 0.01f;
@@ -49,7 +50,7 @@ namespace SmashTools.Animations
 		private readonly Color animationEventBarColor = new ColorInt(49, 49, 49).ToColor;
 		private readonly Color animationKeyFrameBarColor = new ColorInt(47, 47, 47).ToColor;
 		private readonly Color animationKeyFrameBarFadeColor = new ColorInt(40, 40, 40).ToColor;
-		private readonly Color curveTopColor = new Color(40, 40, 40, 25);
+		private readonly Color curveTopColor = new ColorInt(40, 40, 40, 25).ToColor;
 		private readonly Color curveTopFadeColor = new ColorInt(0, 0, 0, 25).ToColor;
 
 		private readonly Color frameTimeBarColor = new ColorInt(40, 64, 75).ToColor;
@@ -89,13 +90,18 @@ namespace SmashTools.Animations
 
 		private float leftWindowSize = MinLeftWindowSize;
 
-		private Vector2 editorScrollPos;
-		private Vector2 extraScrollSize;
+		private Vector2 panelScrollPos;
+		private float extraPanelWidth;
+
+		private Vector2 frameScrollPos;
+		private float extraFrameHeight;
+
 		private float realTimeToTick;
 
 		private float curveTickCenter = 0;
 		private Vector2 dragPos;
 		private DragItem dragging = DragItem.None;
+
 		private EditTab tab = EditTab.Dopesheet;
 
 		public AnimationClipEditor(Dialog_AnimationEditor parent) : base(parent)
@@ -193,19 +199,6 @@ namespace SmashTools.Animations
 					zoomY = Mathf.Clamp(value, 1, MaxFrameZoom);
 					RecalculateTickInterval();
 				}
-			}
-		}
-
-		public Vector2 ExtraScrollSize
-		{
-			get
-			{
-				return tab switch
-				{
-					EditTab.Dopesheet => new Vector2(extraScrollSize.x, 0),
-					EditTab.Curves => extraScrollSize,
-					_ => Vector2.zero,
-				};
 			}
 		}
 
@@ -694,15 +687,11 @@ namespace SmashTools.Animations
 			Widgets.BeginGroup(rect);
 			{
 				Rect editorRect = rect.AtZero();
-				Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
-				float viewWidth = Mathf.Clamp(EditorWidth, editorOutRect.width, EditorWidth);
-				Vector2 viewRectSize = new Vector2(viewWidth, editorOutRect.height - 16) + ExtraScrollSize;
-				Rect editorViewRect = new Rect(editorRect.position, viewRectSize);
-
+				
 				ExtraPadding = 0;
-				if (EditorWidth < editorViewRect.width)
+				if (EditorWidth < editorRect.width)
 				{
-					ExtraPadding = editorViewRect.width - EditorWidth; //Pad all the way to the edge of the screen if necessary
+					ExtraPadding = editorRect.width - EditorWidth; //Pad all the way to the edge of the screen if necessary
 				}
 
 				if (dragging == DragItem.None)
@@ -710,112 +699,143 @@ namespace SmashTools.Animations
 					//TODO - scrolling with scrollbar back to normal boundaries should auto-resize to minimum extra size
 					//TryResetExtraScrollSize(editorOutRect, editorScrollPos, editorViewRect, ref extraScrollSize);
 				}
+				
+				FrameCountShown = Mathf.CeilToInt((FrameBarWidth + ExtraPadding + extraPanelWidth + FrameBarPadding) / FrameTickMarkSpacing);
 
-				Rect visibleRect = GetVisibleRect(editorOutRect, editorScrollPos, editorViewRect);
-				Widgets.BeginScrollView(editorOutRect, ref editorScrollPos, editorViewRect);
+				#region RightPanel
+				Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
+
+				float viewWidth = Mathf.Clamp(EditorWidth, editorRect.width, EditorWidth);
+				Vector2 viewRectSize = new Vector2(viewWidth + extraPanelWidth, editorOutRect.height - 16);
+				Rect editorViewRect = new Rect(editorOutRect.position, viewRectSize);
+
+				Rect visibleRect = GetVisibleRect(editorOutRect, panelScrollPos, editorViewRect);
+				Widgets.BeginScrollView(editorOutRect, ref panelScrollPos, editorViewRect);
+
+				//Should still render editor background + frame ticks underneath scrollbar
+				//if editorViewRect height is +16 when scrollview is started, it will pad enough to start scrolling
+				editorViewRect.height += 16;
+
+				Vector2 panelScrollT = GetScrollPosNormalized(editorOutRect, panelScrollPos, editorViewRect);
+
+				//Frame Bar
+				Rect frameBarRect = DrawFrameBar(visibleRect, editorViewRect, panelScrollT);
+				Rect animationEventBarRect = new Rect(editorViewRect.x, frameBarRect.yMax, editorViewRect.width, WidgetBarHeight);
+				Widgets.DrawBoxSolid(animationEventBarRect, animationEventBarColor);
+
+				#region EditorPanel
+				Rect frameOutRect = new Rect(editorViewRect.x, animationEventBarRect.yMax, editorViewRect.width, editorOutRect.height);
+				Rect frameViewRect = new Rect(frameOutRect.x, frameOutRect.y, editorViewRect.width, frameOutRect.height + extraFrameHeight);
+				Rect visibleFrameRect = GetVisibleRect(frameOutRect, frameScrollPos, frameViewRect);
+				Widgets.BeginScrollView(frameOutRect, ref frameScrollPos, frameViewRect, showScrollbars: true);
+
+				Rect blendRect = new Rect(editorViewRect.x, frameOutRect.y + visibleFrameRect.y, editorViewRect.width, fadeHeight);
+				switch (tab)
 				{
-					editorViewRect.height += 16; //Should still render editor background + frame ticks underneath scrollbar
+					case EditTab.Dopesheet:
+						{
+							float blendY = DrawBlend(blendRect, animationKeyFrameBarFadeColor, animationKeyFrameBarColor);
 
-					FrameCountShown = Mathf.CeilToInt((FrameBarWidth + ExtraPadding + FrameBarPadding) / FrameTickMarkSpacing);
+							Rect keyFrameTopBarRect = new Rect(frameViewRect.x, blendY, frameViewRect.width, KeyframeSize - fadeSize);
+							Widgets.DrawBoxSolid(keyFrameTopBarRect, animationKeyFrameBarColor);
 
-					Rect frameBarRect = DrawFrameBar(editorViewRect);
+							Rect dopeSheetRect = new Rect(frameViewRect.x, keyFrameTopBarRect.yMax, frameViewRect.width, frameViewRect.height - keyFrameTopBarRect.yMax);
+							DrawBackground(dopeSheetRect);
 
-					Rect animationEventBarRect = new Rect(editorViewRect.x, frameBarRect.yMax, editorViewRect.width, WidgetBarHeight);
-					Widgets.DrawBoxSolid(animationEventBarRect, animationEventBarColor);
+							DrawDopesheetFrameTicks(dopeSheetRect);
 
-					Rect blendRect = new Rect(editorViewRect.x, animationEventBarRect.yMax, editorViewRect.width, fadeHeight);
-					
-					switch (tab)
-					{
-						case EditTab.Dopesheet:
+							Rect dragRect = DragRect(rect.position - visibleRect.position,
+								snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding);
+							DrawKeyFrameMarkers(dopeSheetRect, dragRect);
+
+							if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
 							{
-								float blendY = DrawBlend(blendRect, animationKeyFrameBarFadeColor, animationKeyFrameBarColor);
-
-								Rect keyFrameTopBarRect = new Rect(editorViewRect.x, blendY, editorViewRect.width, KeyframeSize - fadeSize);
-								Widgets.DrawBoxSolid(keyFrameTopBarRect, animationKeyFrameBarColor);
-
-								Rect dopeSheetRect = new Rect(editorViewRect.x, keyFrameTopBarRect.yMax, editorViewRect.width, editorViewRect.height - keyFrameTopBarRect.yMax);
-								DrawBackground(dopeSheetRect);
-
-								DrawDopesheetFrameTicks(dopeSheetRect);
-
-								Rect dragRect = DragRect(rect.position - visibleRect.position, 
-									snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding);
-								DrawKeyFrameMarkers(dopeSheetRect, dragRect);
-
-								if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
-								{
-									SetDragPos(expandVertical: false);
-								}
-								if (dragging == DragItem.None && SelectionBox(rect.position, visibleRect, dopeSheetRect, out dragRect, 
-									snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding))
-								{
-
-								}
+								SetDragPos(expandVertical: false);
 							}
-							break;
-						case EditTab.Curves:
+							if (dragging == DragItem.None && SelectionBox(rect.position, visibleRect, dopeSheetRect, out dragRect,
+								snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding))
 							{
-								Rect curveBackgroundRect = new Rect(editorViewRect.x, animationEventBarRect.yMax, editorViewRect.width, editorViewRect.height - animationEventBarRect.height);
-								DrawBackgroundDark(curveBackgroundRect);
-								DrawCurvesFrameTicks(curveBackgroundRect);
 
-								DrawBlend(blendRect, curveTopFadeColor, curveTopColor);
-
-								Rect curveFrameBarRect = new Rect(editorOutRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
-								DrawAxis(curveFrameBarRect);
-
-								Rect dragRect = DragRect(rect.position - visibleRect.position);
-								Rect curvesRect = new Rect(frameBarRect.x, curveBackgroundRect.y, FrameBarWidth, curveBackgroundRect.height);
-								DrawCurves(curvesRect);
-
-								if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
-								{
-									SetDragPos();
-								}
-								if (dragging == DragItem.None && SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out dragRect))
-								{
-
-								}
 							}
-							break;
-					}
+						}
+						break;
+					case EditTab.Curves:
+						{
+							Rect curveBackgroundRect = new Rect(frameViewRect.x, animationEventBarRect.yMax, frameViewRect.width, frameViewRect.height - animationEventBarRect.height);
+							DrawBackgroundDark(curveBackgroundRect);
+							DrawCurvesFrameTicks(curveBackgroundRect);
 
-					float frameLinePos = frameBarRect.x + frame * FrameTickMarkSpacing;
-					UIElements.DrawLineVertical(frameLinePos, frameBarRect.y, editorViewRect.height, Color.white);
+							DrawBlend(blendRect, curveTopFadeColor, curveTopColor);
+
+							float yT = GetScrollPosNormalized(editorRect, frameScrollPos, frameViewRect).y;
+							Rect curveFrameBarRect = new Rect(editorOutRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
+							DrawAxis(curveFrameBarRect, yT, visibleRect);
+
+							Rect dragRect = DragRect(rect.position - visibleRect.position);
+							Rect curvesRect = new Rect(frameBarRect.x, curveBackgroundRect.y, FrameBarWidth, curveBackgroundRect.height);
+							DrawCurves(curvesRect);
+
+							if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
+							{
+								SetDragPos();
+							}
+							if (dragging == DragItem.None && SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out dragRect))
+							{
+
+							}
+						}
+						break;
 				}
 				EndScrollViewNoScrollbarControls();
+				#endregion EditorPanel
 
-				void SetDragPos(bool expandHorizontal = true, bool expandVertical = true, bool horizontal = true, bool vertical = true)
+				float frameLinePos = frameBarRect.x + frame * FrameTickMarkSpacing;
+				UIElements.DrawLineVertical(frameLinePos, frameBarRect.y, 2000, Color.white);
+
+				EndScrollViewNoScrollbarControls();
+				#endregion RightPanel
+
+				void SetDragPos(bool horizontal = true, bool vertical = true, bool expandHorizontal = true, bool expandVertical = true)
 				{
 					Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
 					Vector2 mouseDiff = dragPos - mousePos;
 					dragPos = mousePos;
-					Vector2 scrollT = GetScrollPosNormalized(editorOutRect, editorScrollPos, editorViewRect);
+					
 					if (horizontal)
 					{
-						editorScrollPos.x += mouseDiff.x;
+						float xT = GetScrollPosNormalized(editorOutRect, panelScrollPos, editorViewRect).x;
+
+						panelScrollPos.x += mouseDiff.x;
 
 						if (expandHorizontal)
 						{
-							if (Mathf.Approximately(scrollT.x, 1))
+							if (Mathf.Approximately(xT, 1))
 							{
-								extraScrollSize.x += mouseDiff.x;
+								extraPanelWidth += mouseDiff.x;
 							}
 						}
 					}
 					if (vertical)
 					{
-						editorScrollPos.y += -mouseDiff.y;
+						float yT = GetScrollPosNormalized(frameOutRect, frameScrollPos, frameViewRect).y;
 
-						if (expandVertical && (Mathf.Approximately(scrollT.y, 0) || Mathf.Approximately(scrollT.y, 1)))
+						if (expandVertical && Mathf.Approximately(yT, 0))
 						{
-							extraScrollSize.y += mouseDiff.y;
+							extraFrameHeight += mouseDiff.y;
+						}
+						else
+						{
+							frameScrollPos.y -= mouseDiff.y;
+
+							if (expandVertical && Mathf.Approximately(yT, 1))
+							{
+								extraFrameHeight -= mouseDiff.y;
+							}
 						}
 					}
 
-					extraScrollSize.x = Mathf.Clamp(extraScrollSize.x, 0, MaxExtraScrollDistance);
-					extraScrollSize.y = Mathf.Clamp(extraScrollSize.y, 0, MaxExtraScrollDistance);
+					extraPanelWidth = Mathf.Clamp(extraPanelWidth, 0, MaxExtraScrollDistance);
+					extraFrameHeight = Mathf.Clamp(extraFrameHeight, 0, MaxExtraScrollDistance);
 				}
 			}
 			Widgets.EndGroup();
@@ -845,48 +865,55 @@ namespace SmashTools.Animations
 			}
 		}
 
-		private Rect DrawFrameBar(Rect editorViewRect)
+		private Rect DrawFrameBar(Rect visibleRect, Rect viewRect, Vector2 scrollT)
 		{
 			//Left padding
-			Rect leftFrameBarPadding = new Rect(editorViewRect.x, editorViewRect.y, FrameBarPadding, WidgetBarHeight);
+			Rect leftFrameBarPadding = new Rect(viewRect.x, viewRect.y, FrameBarPadding, WidgetBarHeight);
 			Widgets.DrawBoxSolid(leftFrameBarPadding, frameTimeBarColor);
 			Widgets.DrawBoxSolid(leftFrameBarPadding, frameTimeBarColorDisabled);
 			UIElements.DrawLineVertical(leftFrameBarPadding.xMax - 1, leftFrameBarPadding.y, leftFrameBarPadding.height, frameTickColor);
 
-			float rightPaddingWidth = FrameBarPadding + ExtraPadding;
+			float rightPaddingWidth = FrameBarPadding + ExtraPadding + extraPanelWidth;
 
 			//FrameBar
-			Rect frameBarRect = new Rect(leftFrameBarPadding.xMax, editorViewRect.y, FrameBarWidth + rightPaddingWidth, WidgetBarHeight);
-			DoFrameSlider(frameBarRect);
+			Rect frameBarRect = new Rect(leftFrameBarPadding.xMax, viewRect.y, FrameBarWidth + rightPaddingWidth, WidgetBarHeight);
+			DoFrameSlider(visibleRect, frameBarRect, scrollT);
 
 			//Right padding
-			Rect rightFrameBarPadding = new Rect(FrameBarWidth + FrameBarPadding, editorViewRect.y, rightPaddingWidth, WidgetBarHeight);
+			Rect rightFrameBarPadding = new Rect(FrameBarWidth + FrameBarPadding, viewRect.y, rightPaddingWidth, WidgetBarHeight);
 			Widgets.DrawBoxSolid(rightFrameBarPadding, frameTimeBarColorDisabled);
 			UIElements.DrawLineVertical(rightFrameBarPadding.x, rightFrameBarPadding.y, rightFrameBarPadding.height, frameTickColor);
 
 			DoFrameSliderHandle(frameBarRect);
 
-			DoSeparatorHorizontal(editorViewRect.x, frameBarRect.yMax, editorViewRect.width);
+			DoSeparatorHorizontal(viewRect.x, frameBarRect.yMax, viewRect.width);
 			frameBarRect.yMax += 1;
 
 			return frameBarRect;
 		}
 
-		private void DoFrameSlider(Rect frameBarRect)
+		private void DoFrameSlider(Rect visibleRect, Rect viewRect, Vector2 scrollT)
 		{
-			Widgets.DrawBoxSolid(frameBarRect, frameTimeBarColor);
+			Widgets.DrawBoxSolid(viewRect, frameTimeBarColor);
 
-			Widgets.BeginGroup(frameBarRect);
+			Widgets.BeginGroup(viewRect);
 			{
 				Text.Anchor = TextAnchor.MiddleLeft;
 				Text.Font = GameFont.Tiny;
 				GUI.color = frameTickColor;
 
-				float height = frameBarRect.height * 0.65f;
-				float tickMarkPos;
-				for (int i = 0; i <= FrameCountShown; i += TickInterval)
+				float height = viewRect.height * 0.65f;
+
+				//How many ticks should be rendered in the visible rect
+				int ticksShown = Mathf.RoundToInt((visibleRect.width + FrameBarTickRenderingPadding) / FrameTickMarkSpacing);
+				float startTickUnbound = Mathf.Lerp(-1, FrameCountShown - ticksShown, scrollT.x);
+				int startTick = Mathf.RoundToInt(Mathf.Clamp(startTickUnbound, 0, FrameCountShown)).RoundTo(TickInterval);
+				//Max tick value to render, represents range from start to total w/ padding for backwards looping sub-ticks
+				int maxTicksShown = startTick + ticksShown + TickInterval;
+				
+				for (int i = startTick; i <= maxTicksShown; i += TickInterval)
 				{
-					tickMarkPos = i * FrameTickMarkSpacing;
+					float tickMarkPos = i * FrameTickMarkSpacing;
 
 					float tickHeight;
 					if (i % NextTickInterval() == 0)
@@ -902,9 +929,9 @@ namespace SmashTools.Animations
 						tickHeight = Mathf.Lerp(height / 2, height / 4, ZoomFrames % 1);
 					}
 
-					UIElements.DrawLineVertical(tickMarkPos, frameBarRect.yMax, -tickHeight, frameTickColor);
+					UIElements.DrawLineVertical(tickMarkPos, viewRect.yMax, -tickHeight, frameTickColor);
 
-					if (TickInterval > 1)
+					if (i > 0 && TickInterval > 1)
 					{
 						tickHeight = height / 4;
 
@@ -912,22 +939,26 @@ namespace SmashTools.Animations
 						int subTickCount = SubTickCount();
 						for (int n = 1; n <= subTickCount; n++)
 						{
-							subTickPos = tickMarkPos + ((float)n / (subTickCount + 1)) * TickInterval * FrameTickMarkSpacing;
-							UIElements.DrawLineVertical(subTickPos, frameBarRect.yMax, -tickHeight, frameTickColor);
+							subTickPos = tickMarkPos - ((float)n / (subTickCount + 1) * TickInterval * FrameTickMarkSpacing);
+							UIElements.DrawLineVertical(subTickPos, viewRect.yMax, -tickHeight, frameTickColor);
 						}
 					}
 
-					Rect labelRect = new Rect(tickMarkPos, frameBarRect.y, FrameTickMarkSpacing * TickInterval, frameBarRect.height).ContractedBy(3);
-					Widgets.Label(labelRect, TimeStamp(i));
+					if (i % TickInterval == 0)
+					{
+						Rect labelRect = new Rect(tickMarkPos, viewRect.y, FrameTickMarkSpacing * TickInterval, viewRect.height).ContractedBy(3);
+						Widgets.Label(labelRect, TimeStamp(i));
+					}
 				}
+				SmashLog.QuickMessage($"Start: {startTick} Shown: {ticksShown} Total: {maxTicksShown}");
 
 				GUI.color = Color.white;
 				Text.Font = GameFont.Small;
 			}
 			Widgets.EndGroup();
 
-			DoSeparatorVertical(frameBarRect.x, frameBarRect.y, frameBarRect.height);
-			DoSeparatorVertical(frameBarRect.xMax, frameBarRect.y, frameBarRect.height);
+			DoSeparatorVertical(viewRect.x, viewRect.y, viewRect.height);
+			DoSeparatorVertical(viewRect.xMax, viewRect.y, viewRect.height);
 		}
 
 		private void DoFrameSliderHandle(Rect rect)
@@ -1040,11 +1071,22 @@ namespace SmashTools.Animations
 			Widgets.EndGroup();
 		}
 
+		private void DrawAnimationEventMarkers(Rect rect, Rect dragRect)
+		{
+			if (animation != null && !animation.events.NullOrEmpty())
+			{
+				if (DeleteSelected && selector.AnyEventSelected)
+				{
+					animation.events.RemoveAll(animEvent => selector.IsSelected(animEvent));
+				}
+			}
+		}
+
 		private void DrawKeyFrameMarkers(Rect rect, Rect dragRect)
 		{
 			if (animation != null && !animation.properties.NullOrEmpty())
 			{
-				if ((Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Delete)) && selector.AnyKeyFramesSelected)
+				if (DeleteSelected && selector.AnyKeyFrameSelected)
 				{
 					foreach ((AnimationProperty property, int frame) in selector.selPropKeyFrames)
 					{
@@ -1165,7 +1207,7 @@ namespace SmashTools.Animations
 
 			if (animation != null && !animation.properties.NullOrEmpty())
 			{
-				if (!selector.AnyPropertiesSelected)
+				if (!selector.AnyPropertySelected)
 				{
 					foreach (AnimationPropertyParent propertyParent in animation.properties)
 					{
@@ -1206,47 +1248,42 @@ namespace SmashTools.Animations
 
 			void DrawProperty(AnimationProperty property)
 			{
-				Graph.DrawAnimationCurve(rect, property.curve, xRange, yRange);
+				//Graph.DrawAnimationCurve(rect, property.curve, xRange, yRange);
 			}
 		}
 
-		private void DrawAxis(Rect rect)
+		private void DrawAxis(Rect rect, float yT, Rect visibleRect)
 		{
 			Widgets.BeginGroup(rect);
 			{
 				Text.Anchor = TextAnchor.LowerRight;
 				Text.Font = GameFont.Tiny;
+				GUI.color = curveAxisColor;
 
-				float height = CurveAxisSpacing * TickInterval;
 				float tick = 0;
 
-				Rect outRect = rect;
-				Rect viewRect = Rect.zero;
-				
-				Vector2 scrollT = GetScrollPosNormalized(outRect, editorScrollPos, viewRect);
-				Rect visibleRect = GetVisibleRect(outRect, editorScrollPos, viewRect);
-				Widgets.BeginScrollView(outRect, ref editorScrollPos, viewRect, showScrollbars: false);
+				int tickMarks = Mathf.CeilToInt(visibleRect.height / (CurveAxisSpacing * TickInterval));
+				for (int i = 1; i < tickMarks; i++)
 				{
-					//float middleValue = scrollT
-					for (float i = curveTickCenter - CurveAxisSpacing / 2; i <= curveTickCenter + CurveAxisSpacing / 2; i += CurveTickInterval)
-					{
-						float tickMarkPos = tick * CurveAxisSpacing;
-
-						UIElements.DrawLineHorizontal(rect.x, tickMarkPos, rect.width, frameBarCurveColor);
-
-						GUI.color = curveAxisColor;
-						Rect labelRect = new Rect(rect.x, tickMarkPos - height, rect.width, height).ContractedBy(3); //Subtract height since y axis is top to bottom
-						Widgets.Label(labelRect, AxisStamp(i));
-
-						tick += CurveTickInterval;
-					}
+					DrawAxisTick(0, tick);
+					tick += CurveTickInterval;
 				}
-				EndScrollViewNoScrollbarControls();
-				
+
 				GUI.color = Color.white;
 				Text.Font = GameFont.Small;
 			}
 			Widgets.EndGroup();
+
+			void DrawAxisTick(float value, float tick)
+			{
+				float height = CurveAxisSpacing * TickInterval;
+
+				float tickMarkPos = tick * CurveAxisSpacing;
+				UIElements.DrawLineHorizontal(rect.x, tickMarkPos, rect.width, frameBarCurveColor);
+				
+				Rect labelUpRect = new Rect(rect.x, tickMarkPos - height, rect.width, height).ContractedBy(3);
+				Widgets.Label(labelUpRect, AxisStamp(value));
+			}
 		}
 
 		private bool DragWindow(Rect rect, DragItem dragItem, int button = 0)
@@ -1364,10 +1401,13 @@ namespace SmashTools.Animations
 
 			public HashSet<AnimationPropertyParent> selectedParents = new HashSet<AnimationPropertyParent>();
 			public HashSet<AnimationProperty> selectedProperties = new HashSet<AnimationProperty>();
+			public HashSet<AnimationEvent> selectedEvents = new HashSet<AnimationEvent>();
 
-			public bool AnyPropertiesSelected => selectedParents.Count > 0 || selectedProperties.Count > 0;
+			public bool AnyPropertySelected => selectedParents.Count > 0 || selectedProperties.Count > 0;
 
-			public bool AnyKeyFramesSelected => selPropKeyFrames.Count > 0;
+			public bool AnyKeyFrameSelected => selPropKeyFrames.Count > 0;
+
+			public bool AnyEventSelected => selectedEvents.Count > 0;
 
 			public bool IsSelected(int frame)
 			{
@@ -1422,6 +1462,15 @@ namespace SmashTools.Animations
 					return false;
 				}
 				return selectedProperties.Contains(property);
+			}
+
+			public bool IsSelected(AnimationEvent animationEvent)
+			{
+				if (animationEvent == null)
+				{
+					return false;
+				}
+				return selectedEvents.Contains(animationEvent);
 			}
 
 			public void SelectAll(AnimationClip clip, int frame)
@@ -1492,6 +1541,15 @@ namespace SmashTools.Animations
 				selectedProperties.Add(property);
 			}
 
+			public void Select(AnimationEvent animationEvent, bool clear = true)
+			{
+				if (clear)
+				{
+					ClearSelectedEvents();
+				}
+				selectedEvents.Add(animationEvent);
+			}
+
 			public void ClearSelectedKeyFrames()
 			{
 				selPropKeyFrames.Clear();
@@ -1501,6 +1559,11 @@ namespace SmashTools.Animations
 			{
 				selectedParents.Clear();
 				selectedProperties.Clear();
+			}
+
+			public void ClearSelectedEvents()
+			{
+				selectedEvents.Clear();
 			}
 		}
 	}

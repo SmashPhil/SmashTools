@@ -114,6 +114,17 @@ namespace SmashTools
 		{
 			return method.Invoke(obj, args);
 		}
+
+		public override string ToString()
+		{
+			string typeName = GenTypes.GetTypeNameWithoutIgnoredNamespaces(method.DeclaringType);
+			string readout = $"{typeName}.{method.Name}";
+			if (!args.NullOrEmpty())
+			{
+				readout += $"({string.Join(",", args)})";
+			}
+			return readout;
+		}
 	}
 
 	public class ResolvedMethod<T> : ResolvedMethod
