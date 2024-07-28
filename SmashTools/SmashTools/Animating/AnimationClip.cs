@@ -16,6 +16,7 @@ namespace SmashTools.Animations
 		public int frameCount = DefaultFrameCount;
 
 		public List<AnimationPropertyParent> properties = new List<AnimationPropertyParent>();
+		public List<AnimationEvent> events = new List<AnimationEvent>();
 
 		public string FilePath { get; set; }
 
@@ -70,6 +71,7 @@ namespace SmashTools.Animations
 		{
 			XmlExporter.WriteObject(nameof(frameCount), frameCount);
 			XmlExporter.WriteList(nameof(properties), properties);
+			XmlExporter.WriteList(nameof(events), events);
 		}
 
 		public static implicit operator bool(AnimationClip clip)

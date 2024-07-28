@@ -12,7 +12,7 @@ namespace SmashTools.Animations
 {
 	public abstract class AnimationEditor
 	{
-		protected Dialog_AnimationEditor parent;
+		protected readonly Dialog_AnimationEditor parent;
 
 		//Blend
 		protected const float fadeSize = 10;
@@ -45,6 +45,8 @@ namespace SmashTools.Animations
 		{
 			this.parent = parent;
 		}
+
+		public bool DeleteSelected => Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Delete);
 
 		public abstract void Draw(Rect rect);
 
