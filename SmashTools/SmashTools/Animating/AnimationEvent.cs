@@ -8,10 +8,17 @@ using UnityEngine;
 
 namespace SmashTools.Animations
 {
-	public class AnimationEvent : IXmlExport
+	public class AnimationEvent : IXmlExport, IComparable<AnimationEvent>
 	{
 		public int frame;
 		public ResolvedMethod method;
+
+		int IComparable<AnimationEvent>.CompareTo(AnimationEvent other)
+		{
+			if (frame < other.frame) return -1;
+			if (frame > other.frame) return 1;
+			return 0;
+		}
 
 		void IXmlExport.Export()
 		{

@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml;
 using Verse;
 using UnityEngine;
+using System.Xml.Linq;
 
 namespace SmashTools.Xml
 {
@@ -97,7 +98,15 @@ namespace SmashTools.Xml
 		{
 			try
 			{
-				writer.WriteElementString(localName, value.ToString());
+				if (value == null)
+				{
+					OpenNode(localName, ("IsNull", "TRUE"));
+					CloseNode();
+				}
+				else
+				{
+					writer.WriteElementString(localName, value.ToString());
+				}
 			}
 			catch (Exception ex)
 			{

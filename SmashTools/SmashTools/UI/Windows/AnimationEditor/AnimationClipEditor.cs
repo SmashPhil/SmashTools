@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using Verse;
+using Verse.Noise;
 using Verse.Sound;
+using static SmashTools.ConditionalPatch;
 
 namespace SmashTools.Animations
 {
@@ -314,8 +316,20 @@ namespace SmashTools.Animations
 		{
 			DrawBackground(rect);
 
-			bool previewInGame = previewWindow.IsOpen;
+			if (parent.animator == null)
+			{
+				DisableGUI(hardDisable: true);
+			}
 
+
+			#region TimelineButtons
+
+			if (animation == null)
+			{
+				DisableGUI();
+			}
+
+			bool previewInGame = previewWindow.IsOpen;
 			string previewLabel = "ST_PreviewAnimation".Translate();
 			float width = Text.CalcSize(previewLabel).x;
 			Rect toggleRect = new Rect(rect.x, rect.y, width + 20, WidgetBarHeight);
@@ -338,10 +352,6 @@ namespace SmashTools.Animations
 
 			DoSeparatorVertical(rect.xMax, rect.y, rect.height);
 
-			if (parent.animator == null)
-			{
-				GUI.enabled = false;
-			}
 			Rect buttonRect = new Rect(toggleRect.xMax, rect.y, WidgetBarHeight, WidgetBarHeight);
 			if (AnimationButton(buttonRect, skipToBeginningTexture, "ST_SkipFrameBeginningTooltip".Translate()))
 			{
@@ -381,13 +391,47 @@ namespace SmashTools.Animations
 			}
 			DoSeparatorVertical(buttonRect.x, buttonRect.y, buttonRect.height);
 			DoSeparatorVertical(buttonRect.xMax, buttonRect.y, buttonRect.height);
-
+			
 			Rect frameNumberRect = new Rect(rect.xMax - FrameInputWidth, rect.y, FrameInputWidth, buttonRect.height).ContractedBy(2);
 			string nullBuffer = null;
 			Widgets.TextFieldNumeric(frameNumberRect, ref frame, ref nullBuffer);
 			CheckTextFieldControlFocus(frameNumberRect);
 
-			Rect animClipDropdownRect = new Rect(rect.x, buttonRect.yMax, 200, buttonRect.height);
+			#endregion TimelineButtons
+
+
+			#region ClipControls
+
+			Rect animButtonRect = new Rect(rect.xMax - buttonRect.height, buttonRect.yMax, buttonRect.height, buttonRect.height);
+			if (AnimationButton(animButtonRect, addAnimationEventTexture, "ST_AddAnimationEvent".Translate()))
+			{
+				AnimationEvent newEvent = new AnimationEvent();
+				newEvent.frame = frame;
+				animation.events.Add(newEvent);
+				animation.ValidateEventOrder();
+				ChangeMade();
+			}
+			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
+			animButtonRect.x -= 1;
+
+			animButtonRect.x -= animButtonRect.height;
+
+			if (AnimationButton(animButtonRect, addKeyFrameTexture, "ST_AddKeyFrame".Translate()))
+			{
+				foreach (AnimationPropertyParent propertyParent in animation.properties)
+				{
+					AddKeyFramesForParent(propertyParent);
+				}
+				animation.RecacheFrameCount();
+				ChangeMade();
+			}
+
+			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
+			animButtonRect.x -= 1;
+
+			EnableGUI(); //Enable so animation clip can be selected
+
+			Rect animClipDropdownRect = new Rect(rect.x, animButtonRect.y, 200, buttonRect.height);
 			Rect animClipSelectRect = new Rect(parent.windowRect.x + parent.EditorMargin + animClipDropdownRect.x, 
 				parent.windowRect.y + parent.EditorMargin + animClipDropdownRect.yMax, animClipDropdownRect.width, 500);
 			string animLabel = animation?.FileName ?? "[No Clip]";
@@ -398,217 +442,29 @@ namespace SmashTools.Animations
 			}
 			DoSeparatorVertical(animClipDropdownRect.xMax, animClipDropdownRect.y, animClipDropdownRect.height);
 
-			Rect animButtonRect = new Rect(rect.xMax - buttonRect.height, animClipDropdownRect.y, buttonRect.height, buttonRect.height);
-			if (AnimationButton(animButtonRect, addAnimationEventTexture, "ST_AddAnimationEvent".Translate()))
-			{
-				ChangeMade();
-			}
-			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
-			animButtonRect.x -= 1;
-
-			animButtonRect.x -= animButtonRect.height;
-
-			var enabled = GUI.enabled;
-			if (enabled && (animation == null || animation.properties.NullOrEmpty() || IsPlaying))
-			{
-				GUI.enabled = false;
-			}
-			if (AnimationButton(animButtonRect, addKeyFrameTexture, "ST_AddKeyFrame".Translate()))
-			{
-				foreach (AnimationPropertyParent propertyParent in animation.properties)
-				{
-					AddKeyFramesForParent(propertyParent);
-				}
-				animation.RecacheFrameCount();
-				ChangeMade();
-			}
-			GUI.enabled = enabled;
-			DoSeparatorVertical(animButtonRect.x, animButtonRect.y, animButtonRect.height);
-			animButtonRect.x -= 1;
-
 			DoSeparatorHorizontal(animClipDropdownRect.x, animClipDropdownRect.yMax, rect.width);
 
-			//Add KeyframeSize to keep keyframe bars aligned with their properties
-			Rect rowRect = new Rect(rect.x + 4, animClipDropdownRect.yMax + KeyframeSize, rect.width - 10, PropertyEntryHeight);
-			Rect fullPropertyRect = rowRect;
-			if (animation != null && !animation.properties.NullOrEmpty())
-			{
-				float collapseBtnSize = rowRect.height;
-				float propertyBtnSize = rowRect.height;
-				float expandedIndent = collapseBtnSize;
+			#endregion ClipControls
 
-				bool lightBg = false;
-				foreach (AnimationPropertyParent propertyParent in animation.properties)
-				{
-					if (selector.IsSelected(propertyParent))
-					{
-						Widgets.DrawBoxSolid(rowRect, itemSelectedColor);
-					}
-					else if (lightBg)
-					{
-						Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
-					}
-
-					Rect selectParentRect = new Rect(rowRect.x + collapseBtnSize, rowRect.y, rowRect.width - PropertyEntryHeight * 3 - propertyBtnSize * 2 - collapseBtnSize, PropertyEntryHeight);
-					if (Widgets.ButtonInvisible(selectParentRect, doMouseoverSound: false))
-					{
-						selector.Select(propertyParent, clear: !Input.GetKey(KeyCode.LeftControl));
-					}
-
-					Rect collapseBtnRect = new Rect(rowRect.x, rowRect.y, collapseBtnSize, collapseBtnSize).ContractedBy(3);
-					bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
-					if (!propertyParent.Children.NullOrEmpty() && Widgets.ButtonImage(collapseBtnRect, expanded ? TexButton.Collapse : TexButton.Reveal, keyFrameColor, keyFrameHighlightColor))
-					{
-						expanded = !expanded; //modify local variable so expanded state can be used for drawing inner properties
-						propertyExpanded[propertyParent] = expanded;
-
-						if (expanded)
-						{
-							SoundDefOf.TabOpen.PlayOneShotOnCamera();
-						}
-						else
-						{
-							SoundDefOf.TabClose.PlayOneShotOnCamera();
-						}
-					}
-					else if (propertyParent.Single != null)
-					{
-						float inputBoxWidth = PropertyEntryHeight * 3;
-						Rect inputRect = new Rect(rowRect.xMax - collapseBtnSize - inputBoxWidth, rowRect.y, inputBoxWidth, rowRect.height);
-						KeyFrameInput(inputRect, propertyParent.Single);
-					}
-
-					Rect propertyPropertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
-					if (Widgets.ButtonImage(propertyPropertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
-					{
-						List<FloatMenuOption> options = new List<FloatMenuOption>();
-						var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
-						{
-							propertiesToRemove.Add(propertyParent);
-							ChangeMade();
-						});
-						options.Add(removePropsOption);
-
-						var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
-						{
-							AddKeyFramesForParent(propertyParent);
-							ChangeMade();
-						});
-						addKeyOption.Disabled = propertyParent.AllKeyFramesAt(frame);
-						options.Add(addKeyOption);
-
-						var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
-						{
-							RemoveKeyFramesForParent(propertyParent);
-							ChangeMade();
-						});
-						removeKeyOption.Disabled = !propertyParent.AnyKeyFrameAt(frame);
-						options.Add(removeKeyOption);
-
-						Find.WindowStack.Add(new FloatMenu(options));
-					}
-
-					Rect propertyParentRect = new Rect(collapseBtnRect.xMax, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
-					if (Mouse.IsOver(propertyParentRect))
-					{
-						Widgets.DrawBoxSolid(propertyParentRect, propertyLabelHighlightColor);
-					}
-					Widgets.Label(propertyParentRect, $"{propertyParent.Type.Name} : {propertyParent.Name}");
-
-					if (expanded)
-					{
-						foreach (AnimationProperty property in propertyParent.Children)
-						{
-							lightBg = !lightBg;
-							rowRect.y += rowRect.height;
-							fullPropertyRect.height += rowRect.height;
-
-							if (selector.IsSelected(property))
-							{
-								Widgets.DrawBoxSolid(rowRect, itemSelectedColor);
-							}
-							else if (lightBg)
-							{
-								Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
-							}
-
-							Rect selectPropertyRect = new Rect(rowRect.x + collapseBtnSize, rowRect.y, rowRect.width - PropertyEntryHeight * 3 - propertyBtnSize * 2 - collapseBtnSize, PropertyEntryHeight);
-							if (Widgets.ButtonInvisible(selectPropertyRect, doMouseoverSound: false))
-							{
-								selector.Select(property, clear: !Input.GetKey(KeyCode.LeftControl));
-							}
-
-							Rect propertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
-							if (Widgets.ButtonImage(propertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
-							{
-								List<FloatMenuOption> options = new List<FloatMenuOption>();
-								var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
-								{
-									propertiesToRemove.Add(propertyParent);
-									ChangeMade();
-								});
-								options.Add(removePropsOption);
-
-								var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
-								{
-									property.curve.Add(frame, 0);
-									ChangeMade();
-								});
-								addKeyOption.Disabled = property.curve.KeyFrameAt(frame);
-								options.Add(addKeyOption);
-
-								var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
-								{
-									property.curve.Remove(frame);
-									ChangeMade();
-								});
-								removeKeyOption.Disabled = !property.curve.KeyFrameAt(frame);
-								options.Add(removeKeyOption);
-
-								Find.WindowStack.Add(new FloatMenu(options));
-							}
-
-							float inputBoxWidth = PropertyEntryHeight * 3;
-							Rect inputRect = new Rect(rowRect.xMax - collapseBtnSize - inputBoxWidth, rowRect.y, inputBoxWidth, rowRect.height);
-							KeyFrameInput(inputRect, property);
-
-							GUI.color = propertyExpandedNameColor;
-							Rect propertyRect = new Rect(propertyParentRect.x + expandedIndent, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
-							if (Mouse.IsOver(propertyRect))
-							{
-								Widgets.DrawBoxSolid(propertyRect, propertyLabelHighlightColor);
-							}
-							Widgets.Label(propertyRect, $"{propertyParent.Name}.{property.Name}");
-							GUI.color = Color.white;
-						}
-					}
-					lightBg = !lightBg;
-					rowRect.y += rowRect.height;
-					fullPropertyRect.height += rowRect.height;
-				}
-				rowRect.y += PropertyEntryHeight / 2; //Extra padding for add property btn
-			}
-
-			if (!Mouse.IsOver(fullPropertyRect) && Input.GetMouseButton(0))
-			{
-				selector.ClearSelectedProperties();
-			}
+			float propertyYMax = DrawPropertyEntries(rect, animClipDropdownRect.yMax);
 
 			RemoveFlaggedProperties();
 
-			enabled = GUI.enabled;
+			if (animation != null)
+			{
+				Rect propertyButtonRect = new Rect(rect.xMax / 2 - PropertyBtnWidth / 2, propertyYMax, PropertyBtnWidth, WidgetBarHeight);
+				if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()))
+				{
+					Vector2 propertyDropdownPosition = new Vector2(parent.windowRect.x + parent.EditorMargin + propertyButtonRect.xMax + 2,
+						parent.windowRect.y + parent.EditorMargin + propertyButtonRect.y + 1);
+					Find.WindowStack.Add(new Dialog_PropertySelect(parent.animator, animation, propertyDropdownPosition, propertyAdded: InjectKeyFramesNewProperty));
+				}
+			}
+			
 			if (animation == null)
 			{
-				GUI.enabled = false;
+				DisableGUI();
 			}
-			Rect propertyButtonRect = new Rect(rect.xMax / 2 - PropertyBtnWidth / 2, rowRect.yMax, PropertyBtnWidth, WidgetBarHeight);
-			if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()))
-			{
-				Vector2 propertyDropdownPosition = new Vector2(parent.windowRect.x + parent.EditorMargin + propertyButtonRect.xMax + 2, 
-					parent.windowRect.y + parent.EditorMargin + propertyButtonRect.y + 1);
-				Find.WindowStack.Add(new Dialog_PropertySelect(parent.animator, animation, propertyDropdownPosition, propertyAdded: InjectKeyFramesNewProperty));
-			}
-			GUI.enabled = enabled;
 
 			Rect tabRect = new Rect(rect.xMax - TabWidth - 24, rect.yMax - WidgetBarHeight, TabWidth, WidgetBarHeight);
 			DoSeparatorHorizontal(tabRect.xMax, tabRect.y, 24);
@@ -623,7 +479,7 @@ namespace SmashTools.Animations
 			}
 			DoSeparatorHorizontal(rect.x, tabRect.y, rect.x + tabRect.x);
 
-			GUI.enabled = true;
+			EnableGUI(hardEnable: true);
 
 			DoResizerButton(rect, ref leftWindowSize, MinLeftWindowSize, MinRightWindowSize);
 
@@ -636,6 +492,180 @@ namespace SmashTools.Animations
 					_ => throw new NotImplementedException(),
 				};
 			}
+		}
+
+		private float DrawPropertyEntries(Rect rect, float y)
+		{
+			//Add KeyframeSize to keep keyframe bars aligned with their properties
+			Rect rowRect = new Rect(rect.x + 4, y + KeyframeSize, rect.width - 10, PropertyEntryHeight);
+			Rect fullPropertyRect = rowRect;
+
+			if (animation == null || animation.properties.NullOrEmpty())
+			{
+				return rowRect.yMax;
+			}
+
+			float collapseBtnSize = rowRect.height;
+			float propertyBtnSize = rowRect.height;
+			float expandedIndent = collapseBtnSize;
+
+			bool lightBg = false;
+			foreach (AnimationPropertyParent propertyParent in animation.properties)
+			{
+				if (selector.IsSelected(propertyParent))
+				{
+					Widgets.DrawBoxSolid(rowRect, itemSelectedColor);
+				}
+				else if (lightBg)
+				{
+					Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
+				}
+
+				Rect selectParentRect = new Rect(rowRect.x + collapseBtnSize, rowRect.y, rowRect.width - PropertyEntryHeight * 3 - propertyBtnSize * 2 - collapseBtnSize, PropertyEntryHeight);
+				if (Widgets.ButtonInvisible(selectParentRect, doMouseoverSound: false))
+				{
+					selector.Select(propertyParent, clear: !Input.GetKey(KeyCode.LeftControl));
+				}
+
+				Rect collapseBtnRect = new Rect(rowRect.x, rowRect.y, collapseBtnSize, collapseBtnSize).ContractedBy(3);
+				bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
+				if (!propertyParent.Children.NullOrEmpty() && Widgets.ButtonImage(collapseBtnRect, expanded ? TexButton.Collapse : TexButton.Reveal, keyFrameColor, keyFrameHighlightColor))
+				{
+					expanded = !expanded; //modify local variable so expanded state can be used for drawing inner properties
+					propertyExpanded[propertyParent] = expanded;
+
+					if (expanded)
+					{
+						SoundDefOf.TabOpen.PlayOneShotOnCamera();
+					}
+					else
+					{
+						SoundDefOf.TabClose.PlayOneShotOnCamera();
+					}
+				}
+				else if (propertyParent.Single != null)
+				{
+					float inputBoxWidth = PropertyEntryHeight * 3;
+					Rect inputRect = new Rect(rowRect.xMax - collapseBtnSize - inputBoxWidth, rowRect.y, inputBoxWidth, rowRect.height);
+					KeyFrameInput(inputRect, propertyParent.Single);
+				}
+
+				Rect propertyPropertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
+				if (Widgets.ButtonImage(propertyPropertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
+				{
+					List<FloatMenuOption> options = new List<FloatMenuOption>();
+					var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
+					{
+						propertiesToRemove.Add(propertyParent);
+						ChangeMade();
+					});
+					options.Add(removePropsOption);
+
+					var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
+					{
+						AddKeyFramesForParent(propertyParent);
+						ChangeMade();
+					});
+					addKeyOption.Disabled = propertyParent.AllKeyFramesAt(frame);
+					options.Add(addKeyOption);
+
+					var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
+					{
+						RemoveKeyFramesForParent(propertyParent);
+						ChangeMade();
+					});
+					removeKeyOption.Disabled = !propertyParent.AnyKeyFrameAt(frame);
+					options.Add(removeKeyOption);
+
+					Find.WindowStack.Add(new FloatMenu(options));
+				}
+
+				Rect propertyParentRect = new Rect(collapseBtnRect.xMax, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
+				if (Mouse.IsOver(propertyParentRect))
+				{
+					Widgets.DrawBoxSolid(propertyParentRect, propertyLabelHighlightColor);
+				}
+				Widgets.Label(propertyParentRect, $"{propertyParent.Type.Name} : {propertyParent.Name}");
+
+				if (expanded)
+				{
+					foreach (AnimationProperty property in propertyParent.Children)
+					{
+						lightBg = !lightBg;
+						rowRect.y += rowRect.height;
+						fullPropertyRect.height += rowRect.height;
+
+						if (selector.IsSelected(property))
+						{
+							Widgets.DrawBoxSolid(rowRect, itemSelectedColor);
+						}
+						else if (lightBg)
+						{
+							Widgets.DrawBoxSolid(rowRect, backgroundLightColor);
+						}
+
+						Rect selectPropertyRect = new Rect(rowRect.x + collapseBtnSize, rowRect.y, rowRect.width - PropertyEntryHeight * 3 - propertyBtnSize * 2 - collapseBtnSize, PropertyEntryHeight);
+						if (Widgets.ButtonInvisible(selectPropertyRect, doMouseoverSound: false))
+						{
+							selector.Select(property, clear: !Input.GetKey(KeyCode.LeftControl));
+						}
+
+						Rect propertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
+						if (Widgets.ButtonImage(propertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
+						{
+							List<FloatMenuOption> options = new List<FloatMenuOption>();
+							var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
+							{
+								propertiesToRemove.Add(propertyParent);
+								ChangeMade();
+							});
+							options.Add(removePropsOption);
+
+							var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
+							{
+								property.curve.Add(frame, 0);
+								ChangeMade();
+							});
+							addKeyOption.Disabled = property.curve.KeyFrameAt(frame);
+							options.Add(addKeyOption);
+
+							var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
+							{
+								property.curve.Remove(frame);
+								ChangeMade();
+							});
+							removeKeyOption.Disabled = !property.curve.KeyFrameAt(frame);
+							options.Add(removeKeyOption);
+
+							Find.WindowStack.Add(new FloatMenu(options));
+						}
+
+						float inputBoxWidth = PropertyEntryHeight * 3;
+						Rect inputRect = new Rect(rowRect.xMax - collapseBtnSize - inputBoxWidth, rowRect.y, inputBoxWidth, rowRect.height);
+						KeyFrameInput(inputRect, property);
+
+						GUI.color = propertyExpandedNameColor;
+						Rect propertyRect = new Rect(propertyParentRect.x + expandedIndent, rowRect.y, rowRect.width - collapseBtnSize - propertyBtnSize, rowRect.height);
+						if (Mouse.IsOver(propertyRect))
+						{
+							Widgets.DrawBoxSolid(propertyRect, propertyLabelHighlightColor);
+						}
+						Widgets.Label(propertyRect, $"{propertyParent.Name}.{property.Name}");
+						GUI.color = Color.white;
+					}
+				}
+				lightBg = !lightBg;
+				rowRect.y += rowRect.height;
+				fullPropertyRect.height += rowRect.height;
+			}
+			rowRect.y += PropertyEntryHeight / 2; //Extra padding for add property btn
+
+			if (!Mouse.IsOver(fullPropertyRect) && Input.GetMouseButton(0))
+			{
+				selector.ClearSelectedProperties();
+			}
+
+			return rowRect.yMax;
 		}
 
 		private void KeyFrameInput(Rect inputRect, AnimationProperty property)
@@ -684,163 +714,179 @@ namespace SmashTools.Animations
 
 		private void DrawAnimatorSectionRight(Rect rect)
 		{
-			Widgets.BeginGroup(rect);
+			if (parent.animator == null)
 			{
-				Rect editorRect = rect.AtZero();
-				
-				ExtraPadding = 0;
-				if (EditorWidth < editorRect.width)
-				{
-					ExtraPadding = editorRect.width - EditorWidth; //Pad all the way to the edge of the screen if necessary
-				}
+				DisableGUI(hardDisable: true);
+			}
 
-				if (dragging == DragItem.None)
-				{
-					//TODO - scrolling with scrollbar back to normal boundaries should auto-resize to minimum extra size
-					//TryResetExtraScrollSize(editorOutRect, editorScrollPos, editorViewRect, ref extraScrollSize);
-				}
-				
-				FrameCountShown = Mathf.CeilToInt((FrameBarWidth + ExtraPadding + extraPanelWidth + FrameBarPadding) / FrameTickMarkSpacing);
+			Widgets.BeginGroup(rect);
 
-				#region RightPanel
-				Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
+			Rect editorRect = rect.AtZero();
 
-				float viewWidth = Mathf.Clamp(EditorWidth, editorRect.width, EditorWidth);
-				Vector2 viewRectSize = new Vector2(viewWidth + extraPanelWidth, editorOutRect.height - 16);
-				Rect editorViewRect = new Rect(editorOutRect.position, viewRectSize);
+			ExtraPadding = 0;
+			if (EditorWidth < editorRect.width)
+			{
+				ExtraPadding = editorRect.width - EditorWidth; //Pad all the way to the edge of the screen if necessary
+			}
 
-				Rect visibleRect = GetVisibleRect(editorOutRect, panelScrollPos, editorViewRect);
-				Widgets.BeginScrollView(editorOutRect, ref panelScrollPos, editorViewRect);
+			if (dragging == DragItem.None)
+			{
+				//TODO - scrolling with scrollbar back to normal boundaries should auto-resize to minimum extra size
+				//TryResetExtraScrollSize(editorOutRect, editorScrollPos, editorViewRect, ref extraScrollSize);
+			}
 
-				//Should still render editor background + frame ticks underneath scrollbar
-				//if editorViewRect height is +16 when scrollview is started, it will pad enough to start scrolling
-				editorViewRect.height += 16;
+			FrameCountShown = Mathf.CeilToInt((FrameBarWidth + ExtraPadding + extraPanelWidth + FrameBarPadding) / FrameTickMarkSpacing);
 
-				Vector2 panelScrollT = GetScrollPosNormalized(editorOutRect, panelScrollPos, editorViewRect);
+			#region RightPanel
 
-				//Frame Bar
-				Rect frameBarRect = DrawFrameBar(visibleRect, editorViewRect, panelScrollT);
-				Rect animationEventBarRect = new Rect(editorViewRect.x, frameBarRect.yMax, editorViewRect.width, WidgetBarHeight);
-				Widgets.DrawBoxSolid(animationEventBarRect, animationEventBarColor);
+			if (animation == null)
+			{
+				DisableGUI();
+			}
 
-				#region EditorPanel
-				Rect frameOutRect = new Rect(editorViewRect.x, animationEventBarRect.yMax, editorViewRect.width, editorOutRect.height);
-				Rect frameViewRect = new Rect(frameOutRect.x, frameOutRect.y, editorViewRect.width, frameOutRect.height + extraFrameHeight);
-				Rect visibleFrameRect = GetVisibleRect(frameOutRect, frameScrollPos, frameViewRect);
-				Widgets.BeginScrollView(frameOutRect, ref frameScrollPos, frameViewRect, showScrollbars: true);
+			Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
 
-				Rect blendRect = new Rect(editorViewRect.x, frameOutRect.y + visibleFrameRect.y, editorViewRect.width, fadeHeight);
-				switch (tab)
-				{
-					case EditTab.Dopesheet:
+			float viewWidth = Mathf.Clamp(EditorWidth, editorRect.width, EditorWidth);
+			Vector2 viewRectSize = new Vector2(viewWidth + extraPanelWidth, editorOutRect.height - 16);
+			Rect editorViewRect = new Rect(editorOutRect.position, viewRectSize);
+
+			Rect visibleRect = GetVisibleRect(editorOutRect, panelScrollPos, editorViewRect);
+			Widgets.BeginScrollView(editorOutRect, ref panelScrollPos, editorViewRect, showScrollbars: GUI.enabled);
+
+			//Should still render editor background + frame ticks underneath scrollbar
+			//if editorViewRect height is +16 when scrollview is started, it will pad enough to start scrolling
+			editorViewRect.height += 16;
+
+			Vector2 panelScrollT = GetScrollPosNormalized(editorOutRect, panelScrollPos, editorViewRect);
+
+			//Frame Bar
+			Rect frameBarRect = DrawFrameBar(visibleRect, editorViewRect, panelScrollT);
+			Rect animationEventBarRect = new Rect(editorViewRect.x, frameBarRect.yMax, editorViewRect.width, WidgetBarHeight);
+			DrawAnimationEventMarkers(animationEventBarRect);
+
+			#region EditorPanel
+			Rect frameOutRect = new Rect(editorViewRect.x, animationEventBarRect.yMax, editorViewRect.width, editorOutRect.height);
+			Rect frameViewRect = new Rect(frameOutRect.x, frameOutRect.y, editorViewRect.width, frameOutRect.height + extraFrameHeight);
+			Rect visibleFrameRect = GetVisibleRect(frameOutRect, frameScrollPos, frameViewRect);
+			Widgets.BeginScrollView(frameOutRect, ref frameScrollPos, frameViewRect, showScrollbars: GUI.enabled);
+
+			Rect blendRect = new Rect(editorViewRect.x, frameOutRect.y + visibleFrameRect.y, editorViewRect.width, fadeHeight);
+			switch (tab)
+			{
+				case EditTab.Dopesheet:
+					{
+						float blendY = DrawBlend(blendRect, animationKeyFrameBarFadeColor, animationKeyFrameBarColor);
+
+						Rect keyFrameTopBarRect = new Rect(frameViewRect.x, blendY, frameViewRect.width, KeyframeSize - fadeSize);
+						Widgets.DrawBoxSolid(keyFrameTopBarRect, animationKeyFrameBarColor);
+
+						Rect dopeSheetRect = new Rect(frameViewRect.x, keyFrameTopBarRect.yMax, frameViewRect.width, frameViewRect.height - keyFrameTopBarRect.yMax);
+						DrawBackground(dopeSheetRect);
+
+						DrawDopesheetFrameTicks(dopeSheetRect);
+
+						Rect dragRect = DragRect(rect.position - visibleRect.position,
+							snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding);
+
+						DrawKeyFrameMarkers(dopeSheetRect, out bool keyFrameSelected);
+
+						if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
 						{
-							float blendY = DrawBlend(blendRect, animationKeyFrameBarFadeColor, animationKeyFrameBarColor);
-
-							Rect keyFrameTopBarRect = new Rect(frameViewRect.x, blendY, frameViewRect.width, KeyframeSize - fadeSize);
-							Widgets.DrawBoxSolid(keyFrameTopBarRect, animationKeyFrameBarColor);
-
-							Rect dopeSheetRect = new Rect(frameViewRect.x, keyFrameTopBarRect.yMax, frameViewRect.width, frameViewRect.height - keyFrameTopBarRect.yMax);
-							DrawBackground(dopeSheetRect);
-
-							DrawDopesheetFrameTicks(dopeSheetRect);
-
-							Rect dragRect = DragRect(rect.position - visibleRect.position,
-								snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding);
-							DrawKeyFrameMarkers(dopeSheetRect, dragRect);
-
-							if (DragWindow(dopeSheetRect, DragItem.KeyFrameWindow, button: 2))
-							{
-								SetDragPos(expandVertical: false);
-							}
-							if (dragging == DragItem.None && SelectionBox(rect.position, visibleRect, dopeSheetRect, out dragRect,
-								snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding))
-							{
-
-							}
+							SetDragPos(expandVertical: false);
 						}
-						break;
-					case EditTab.Curves:
+						if (dragging == DragItem.None && !keyFrameSelected &&
+							SelectionBox(rect.position, visibleRect, dopeSheetRect, out dragRect, 
+							snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding))
 						{
-							Rect curveBackgroundRect = new Rect(frameViewRect.x, animationEventBarRect.yMax, frameViewRect.width, frameViewRect.height - animationEventBarRect.height);
-							DrawBackgroundDark(curveBackgroundRect);
-							DrawCurvesFrameTicks(curveBackgroundRect);
 
-							DrawBlend(blendRect, curveTopFadeColor, curveTopColor);
-
-							float yT = GetScrollPosNormalized(editorRect, frameScrollPos, frameViewRect).y;
-							Rect curveFrameBarRect = new Rect(editorOutRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
-							DrawAxis(curveFrameBarRect, yT, visibleRect);
-
-							Rect dragRect = DragRect(rect.position - visibleRect.position);
-							Rect curvesRect = new Rect(frameBarRect.x, curveBackgroundRect.y, FrameBarWidth, curveBackgroundRect.height);
-							DrawCurves(curvesRect);
-
-							if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
-							{
-								SetDragPos();
-							}
-							if (dragging == DragItem.None && SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out dragRect))
-							{
-
-							}
 						}
-						break;
-				}
-				EndScrollViewNoScrollbarControls();
-				#endregion EditorPanel
+					}
+					break;
+				case EditTab.Curves:
+					{
+						Rect curveBackgroundRect = new Rect(frameViewRect.x, animationEventBarRect.yMax, frameViewRect.width, frameViewRect.height - animationEventBarRect.height);
+						DrawBackgroundDark(curveBackgroundRect);
+						DrawCurvesFrameTicks(curveBackgroundRect);
 
+						DrawBlend(blendRect, curveTopFadeColor, curveTopColor);
+
+						float yT = GetScrollPosNormalized(editorRect, frameScrollPos, frameViewRect).y;
+						Rect curveFrameBarRect = new Rect(editorOutRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
+						DrawAxis(curveFrameBarRect, yT, visibleRect);
+
+						Rect dragRect = DragRect(rect.position - visibleRect.position);
+						Rect curvesRect = new Rect(frameBarRect.x, curveBackgroundRect.y, FrameBarWidth, curveBackgroundRect.height);
+						DrawCurves(curvesRect);
+
+						if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
+						{
+							SetDragPos();
+						}
+						if (dragging == DragItem.None && SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out dragRect))
+						{
+
+						}
+					}
+					break;
+			}
+			EndScrollViewNoScrollbarControls();
+			#endregion EditorPanel
+
+			if (GUI.enabled)
+			{
 				float frameLinePos = frameBarRect.x + frame * FrameTickMarkSpacing;
 				UIElements.DrawLineVertical(frameLinePos, frameBarRect.y, 2000, Color.white);
-
-				EndScrollViewNoScrollbarControls();
-				#endregion RightPanel
-
-				void SetDragPos(bool horizontal = true, bool vertical = true, bool expandHorizontal = true, bool expandVertical = true)
-				{
-					Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
-					Vector2 mouseDiff = dragPos - mousePos;
-					dragPos = mousePos;
-					
-					if (horizontal)
-					{
-						float xT = GetScrollPosNormalized(editorOutRect, panelScrollPos, editorViewRect).x;
-
-						panelScrollPos.x += mouseDiff.x;
-
-						if (expandHorizontal)
-						{
-							if (Mathf.Approximately(xT, 1))
-							{
-								extraPanelWidth += mouseDiff.x;
-							}
-						}
-					}
-					if (vertical)
-					{
-						float yT = GetScrollPosNormalized(frameOutRect, frameScrollPos, frameViewRect).y;
-
-						if (expandVertical && Mathf.Approximately(yT, 0))
-						{
-							extraFrameHeight += mouseDiff.y;
-						}
-						else
-						{
-							frameScrollPos.y -= mouseDiff.y;
-
-							if (expandVertical && Mathf.Approximately(yT, 1))
-							{
-								extraFrameHeight -= mouseDiff.y;
-							}
-						}
-					}
-
-					extraPanelWidth = Mathf.Clamp(extraPanelWidth, 0, MaxExtraScrollDistance);
-					extraFrameHeight = Mathf.Clamp(extraFrameHeight, 0, MaxExtraScrollDistance);
-				}
 			}
+
+			EndScrollViewNoScrollbarControls();
+			#endregion RightPanel
+
+			void SetDragPos(bool horizontal = true, bool vertical = true, bool expandHorizontal = true, bool expandVertical = true)
+			{
+				Vector2 mousePos = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+				Vector2 mouseDiff = dragPos - mousePos;
+				dragPos = mousePos;
+
+				if (horizontal)
+				{
+					float xT = GetScrollPosNormalized(editorOutRect, panelScrollPos, editorViewRect).x;
+
+					panelScrollPos.x += mouseDiff.x;
+
+					if (expandHorizontal)
+					{
+						if (Mathf.Approximately(xT, 1))
+						{
+							extraPanelWidth += mouseDiff.x;
+						}
+					}
+				}
+				if (vertical)
+				{
+					float yT = GetScrollPosNormalized(frameOutRect, frameScrollPos, frameViewRect).y;
+
+					if (expandVertical && Mathf.Approximately(yT, 0))
+					{
+						extraFrameHeight += mouseDiff.y;
+					}
+					else
+					{
+						frameScrollPos.y -= mouseDiff.y;
+
+						if (expandVertical && Mathf.Approximately(yT, 1))
+						{
+							extraFrameHeight -= mouseDiff.y;
+						}
+					}
+				}
+
+				extraPanelWidth = Mathf.Clamp(extraPanelWidth, 0, MaxExtraScrollDistance);
+				extraFrameHeight = Mathf.Clamp(extraFrameHeight, 0, MaxExtraScrollDistance);
+			}
+
 			Widgets.EndGroup();
 
-			if (Mouse.IsOver(rect) && Event.current.type == EventType.ScrollWheel)
+			if (GUI.enabled && Mouse.IsOver(rect) && Event.current.type == EventType.ScrollWheel)
 			{
 				float value = Event.current.delta.y * ZoomRate;
 
@@ -863,14 +909,24 @@ namespace SmashTools.Animations
 					Event.current.Use();
 				}
 			}
+
+			EnableGUI(hardEnable: true);
 		}
 
 		private Rect DrawFrameBar(Rect visibleRect, Rect viewRect, Vector2 scrollT)
 		{
+			Color frameBarColor = frameTimeBarColor;
+			Color frameBarPaddingColor = frameTimeBarColorDisabled;
+			if (!GUI.enabled)
+			{
+				frameBarColor = backgroundDopesheetColor;
+				frameBarPaddingColor = backgroundDopesheetColor;
+			}
+
 			//Left padding
 			Rect leftFrameBarPadding = new Rect(viewRect.x, viewRect.y, FrameBarPadding, WidgetBarHeight);
-			Widgets.DrawBoxSolid(leftFrameBarPadding, frameTimeBarColor);
-			Widgets.DrawBoxSolid(leftFrameBarPadding, frameTimeBarColorDisabled);
+			Widgets.DrawBoxSolid(leftFrameBarPadding, frameBarColor);
+			Widgets.DrawBoxSolid(leftFrameBarPadding, frameBarPaddingColor);
 			UIElements.DrawLineVertical(leftFrameBarPadding.xMax - 1, leftFrameBarPadding.y, leftFrameBarPadding.height, frameTickColor);
 
 			float rightPaddingWidth = FrameBarPadding + ExtraPadding + extraPanelWidth;
@@ -897,64 +953,64 @@ namespace SmashTools.Animations
 			Widgets.DrawBoxSolid(viewRect, frameTimeBarColor);
 
 			Widgets.BeginGroup(viewRect);
+
+			Text.Anchor = TextAnchor.MiddleLeft;
+			Text.Font = GameFont.Tiny;
+			var color = GUI.color;
+			GUI.color = frameTickColor;
+
+			float height = viewRect.height * 0.65f;
+
+			//How many ticks should be rendered in the visible rect
+			int ticksShown = Mathf.RoundToInt((visibleRect.width + FrameBarTickRenderingPadding) / FrameTickMarkSpacing);
+			float startTickUnbound = Mathf.Lerp(-1, FrameCountShown - ticksShown, scrollT.x);
+			int startTick = Mathf.RoundToInt(Mathf.Clamp(startTickUnbound, 0, FrameCountShown)).RoundTo(TickInterval);
+			//Max tick value to render, represents range from start to total w/ padding for backwards looping sub-ticks
+			int maxTicksShown = startTick + ticksShown + TickInterval;
+
+			for (int i = startTick; i <= maxTicksShown; i += TickInterval)
 			{
-				Text.Anchor = TextAnchor.MiddleLeft;
-				Text.Font = GameFont.Tiny;
-				GUI.color = frameTickColor;
+				float tickMarkPos = i * FrameTickMarkSpacing;
 
-				float height = viewRect.height * 0.65f;
-
-				//How many ticks should be rendered in the visible rect
-				int ticksShown = Mathf.RoundToInt((visibleRect.width + FrameBarTickRenderingPadding) / FrameTickMarkSpacing);
-				float startTickUnbound = Mathf.Lerp(-1, FrameCountShown - ticksShown, scrollT.x);
-				int startTick = Mathf.RoundToInt(Mathf.Clamp(startTickUnbound, 0, FrameCountShown)).RoundTo(TickInterval);
-				//Max tick value to render, represents range from start to total w/ padding for backwards looping sub-ticks
-				int maxTicksShown = startTick + ticksShown + TickInterval;
-				
-				for (int i = startTick; i <= maxTicksShown; i += TickInterval)
+				float tickHeight;
+				if (i % NextTickInterval() == 0)
 				{
-					float tickMarkPos = i * FrameTickMarkSpacing;
+					tickHeight = height;
+				}
+				else if (i % TickInterval == 0)
+				{
+					tickHeight = Mathf.Lerp(height, height / 2, ZoomFrames % 1);
+				}
+				else
+				{
+					tickHeight = Mathf.Lerp(height / 2, height / 4, ZoomFrames % 1);
+				}
 
-					float tickHeight;
-					if (i % NextTickInterval() == 0)
-					{
-						tickHeight = height;
-					}
-					else if (i % TickInterval == 0)
-					{
-						tickHeight = Mathf.Lerp(height, height / 2, ZoomFrames % 1);
-					}
-					else
-					{
-						tickHeight = Mathf.Lerp(height / 2, height / 4, ZoomFrames % 1);
-					}
+				UIElements.DrawLineVertical(tickMarkPos, viewRect.yMax, -tickHeight, frameTickColor);
 
-					UIElements.DrawLineVertical(tickMarkPos, viewRect.yMax, -tickHeight, frameTickColor);
+				if (i > 0 && TickInterval > 1)
+				{
+					tickHeight = height / 4;
 
-					if (i > 0 && TickInterval > 1)
+					float subTickPos;
+					int subTickCount = SubTickCount();
+					for (int n = 1; n <= subTickCount; n++)
 					{
-						tickHeight = height / 4;
-
-						float subTickPos;
-						int subTickCount = SubTickCount();
-						for (int n = 1; n <= subTickCount; n++)
-						{
-							subTickPos = tickMarkPos - ((float)n / (subTickCount + 1) * TickInterval * FrameTickMarkSpacing);
-							UIElements.DrawLineVertical(subTickPos, viewRect.yMax, -tickHeight, frameTickColor);
-						}
-					}
-
-					if (i % TickInterval == 0)
-					{
-						Rect labelRect = new Rect(tickMarkPos, viewRect.y, FrameTickMarkSpacing * TickInterval, viewRect.height).ContractedBy(3);
-						Widgets.Label(labelRect, TimeStamp(i));
+						subTickPos = tickMarkPos - ((float)n / (subTickCount + 1) * TickInterval * FrameTickMarkSpacing);
+						UIElements.DrawLineVertical(subTickPos, viewRect.yMax, -tickHeight, frameTickColor);
 					}
 				}
-				SmashLog.QuickMessage($"Start: {startTick} Shown: {ticksShown} Total: {maxTicksShown}");
 
-				GUI.color = Color.white;
-				Text.Font = GameFont.Small;
+				if (i % TickInterval == 0)
+				{
+					Rect labelRect = new Rect(tickMarkPos, viewRect.y, FrameTickMarkSpacing * TickInterval, viewRect.height).ContractedBy(3);
+					Widgets.Label(labelRect, TimeStamp(i));
+				}
 			}
+
+			GUI.color = color;
+			Text.Font = GameFont.Small;
+
 			Widgets.EndGroup();
 
 			DoSeparatorVertical(viewRect.x, viewRect.y, viewRect.height);
@@ -971,6 +1027,11 @@ namespace SmashTools.Animations
 
 		private void DrawDopesheetFrameTicks(Rect rect)
 		{
+			if (!GUI.enabled)
+			{
+				return;
+			}
+
 			Widgets.BeginGroup(rect);
 			{
 				GUI.color = frameLineMajorDopesheetColor;
@@ -1055,6 +1116,10 @@ namespace SmashTools.Animations
 
 		private void DrawCurvesFrameTicks(Rect rect)
 		{
+			if (!GUI.enabled)
+			{
+				return;
+			}
 			Widgets.BeginGroup(rect);
 			{
 				GUI.color = frameLineMajorDopesheetColor;
@@ -1071,122 +1136,153 @@ namespace SmashTools.Animations
 			Widgets.EndGroup();
 		}
 
-		private void DrawAnimationEventMarkers(Rect rect, Rect dragRect)
+		private void DrawAnimationEventMarkers(Rect rect)
 		{
-			if (animation != null && !animation.events.NullOrEmpty())
+			Widgets.DrawBoxSolid(rect, animationEventBarColor);
+
+			if (!GUI.enabled)
 			{
-				if (DeleteSelected && selector.AnyEventSelected)
+				return;
+			}
+
+			if (DeleteSelected && selector.AnyEventSelected)
+			{
+				animation.events.RemoveAll(animEvent => selector.IsSelected(animEvent));
+				animation.ValidateEventOrder();
+				selector.ClearSelectedEvents();
+			}
+
+			bool clickedOutside = Input.GetMouseButtonDown(0);
+
+			foreach (AnimationEvent animationEvent in animation.events)
+			{
+				GUI.color = selector.IsSelected(animationEvent) ? itemSelectedColor : Color.white;
+				Rect eventRect = DopesheetIconRect(rect.y, animationEvent.frame).ContractedBy(5, 3);
+				eventRect.y -= 3;
+
+				GUI.DrawTexture(eventRect, animationEventTexture);
+				if (Input.GetMouseButtonDown(0) && Mouse.IsOver(eventRect))
 				{
-					animation.events.RemoveAll(animEvent => selector.IsSelected(animEvent));
+					clickedOutside = false;
+					selector.Select(animationEvent, clear: SingleSelect);
 				}
+				GUI.color = Color.white;
+			}
+			if (clickedOutside)
+			{
+				selector.ClearSelectedEvents();
 			}
 		}
 
-		private void DrawKeyFrameMarkers(Rect rect, Rect dragRect)
+		private void DrawKeyFrameMarkers(Rect rect, out bool keyFrameSelected)
 		{
-			if (animation != null && !animation.properties.NullOrEmpty())
+			keyFrameSelected = false;
+
+			if (!GUI.enabled)
 			{
-				if (DeleteSelected && selector.AnyKeyFrameSelected)
+				return;
+			}
+
+			if (DeleteSelected && selector.AnyKeyFrameSelected)
+			{
+				foreach ((AnimationProperty property, int frame) in selector.selPropKeyFrames)
 				{
-					foreach ((AnimationProperty property, int frame) in selector.selPropKeyFrames)
-					{
-						property.curve.Remove(frame);
-					}
+					property.curve.Remove(frame);
 				}
+			}
 
-				bool clearSelect = Input.GetMouseButtonUp(0) && !Input.GetKeyUp(KeyCode.LeftControl);
-				framesToDraw.Clear();
-				Rect rowRect = new Rect(rect.x, rect.y, rect.width, PropertyEntryHeight);
-				float parentIconY = rowRect.y - KeyframeSize; //Next bar up
-				foreach (AnimationPropertyParent propertyParent in animation.properties)
+			bool clickedOutside = Input.GetMouseButtonDown(0);
+
+			framesToDraw.Clear();
+			Rect rowRect = new Rect(rect.x, rect.y, rect.width, PropertyEntryHeight);
+			float parentIconY = rowRect.y - KeyframeSize; //Next bar up
+			foreach (AnimationPropertyParent propertyParent in animation.properties)
+			{
+				float propertyIconY = rowRect.y;
+
+				parentFramesToDraw.Clear();
+				Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightColor, frameBarHighlightOutlineColor);
+				if (propertyParent.Single?.curve != null && !propertyParent.Single.curve.points.NullOrEmpty())
 				{
-					float propertyIconY = rowRect.y;
-
-					parentFramesToDraw.Clear();
-					Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightColor, frameBarHighlightOutlineColor);
-					if (propertyParent.Single?.curve != null && !propertyParent.Single.curve.points.NullOrEmpty())
+					foreach (AnimationCurve.KeyFrame keyFrame in propertyParent.Single.curve.points)
 					{
-						foreach (AnimationCurve.KeyFrame keyFrame in propertyParent.Single.curve.points)
+						framesToDraw.Add(keyFrame.frame);
+						if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(propertyParent.Single, keyFrame.frame)))
 						{
-							framesToDraw.Add(keyFrame.frame);
-							if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(propertyParent.Single, keyFrame.frame), ref clearSelect))
-							{
-								selector.SelectFrame(propertyParent, keyFrame.frame);
-							}
+							selector.SelectFrame(propertyParent, keyFrame.frame);
 						}
 					}
-					else if (!propertyParent.Children.NullOrEmpty())
-					{
-						Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(2), frameBarHighlightColor, frameBarHighlightOutlineColor);
+				}
+				else if (!propertyParent.Children.NullOrEmpty())
+				{
+					Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(2), frameBarHighlightColor, frameBarHighlightOutlineColor);
 
-						bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
-						foreach (AnimationProperty property in propertyParent.Children)
+					bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
+					foreach (AnimationProperty property in propertyParent.Children)
+					{
+						if (expanded)
 						{
+							rowRect.y += rowRect.height;
+							Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightMinorColor, frameBarHighlightOutlineColor);
+						}
+
+						foreach (AnimationCurve.KeyFrame keyFrame in property.curve.points)
+						{
+							framesToDraw.Add(keyFrame.frame);
+							parentFramesToDraw.Add(keyFrame.frame);
 							if (expanded)
 							{
-								rowRect.y += rowRect.height;
-								Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightMinorColor, frameBarHighlightOutlineColor);
-							}
-
-							foreach (AnimationCurve.KeyFrame keyFrame in property.curve.points)
-							{
-								framesToDraw.Add(keyFrame.frame);
-								parentFramesToDraw.Add(keyFrame.frame);
-								if (expanded)
+								if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(property, keyFrame.frame)))
 								{
-									if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(property, keyFrame.frame), ref clearSelect))
-									{
-										clearSelect = false;
-										selector.SelectFrame(property, keyFrame.frame);
-									}
+									keyFrameSelected = true;
+									selector.SelectFrame(property, keyFrame.frame);
 								}
 							}
 						}
 					}
-
-					if (parentFramesToDraw.Count > 0)
-					{
-						foreach (int frame in parentFramesToDraw)
-						{
-							if (KeyFrameButton(propertyIconY, frame, keyFrameColor, selector.IsSelected(propertyParent, frame), ref clearSelect))
-							{
-								clearSelect = false;
-								selector.SelectFrame(propertyParent, frame);
-							}
-						}
-					}
-
-					rowRect.y += rowRect.height;
 				}
-				if (framesToDraw.Count > 0)
+
+				foreach (int frame in parentFramesToDraw)
 				{
-					foreach (int frame in framesToDraw)
+					if (KeyFrameButton(propertyIconY, frame, keyFrameColor, selector.IsSelected(propertyParent, frame)))
 					{
-						if (KeyFrameButton(parentIconY, frame, keyFrameTopColor, selector.IsSelected(frame), ref clearSelect))
-						{
-							clearSelect = false;
-							selector.SelectAll(animation, frame);
-						}
+						keyFrameSelected = true;
+						selector.SelectFrame(propertyParent, frame);
 					}
 				}
 
-				if (clearSelect)
+				rowRect.y += rowRect.height;
+			}
+
+			foreach (int frame in framesToDraw)
+			{
+				if (KeyFrameButton(parentIconY, frame, keyFrameTopColor, selector.IsSelected(frame)))
 				{
-					selector.ClearSelectedKeyFrames();
+					keyFrameSelected = true;
+					selector.SelectAll(animation, frame);
 				}
 			}
 
-			bool KeyFrameButton(float y, int frame, Color color, bool selected, ref bool clearSelect)
+			if (clickedOutside)
+			{
+				selector.ClearSelectedKeyFrames();
+			}
+
+			bool KeyFrameButton(float y, int frame, Color color, bool selected)
 			{
 				bool result = false;
 
 				GUI.color = selected ? itemSelectedColor : color;
-				Rect keyFrameRect = KeyFrameRect(y, frame);
-				clearSelect &= !Mouse.IsOver(keyFrameRect); //Only allow clear select if mouse is not over any key frame button
+				Rect keyFrameRect = DopesheetIconRect(y, frame).ContractedBy(4);
 				GUI.DrawTexture(keyFrameRect, keyFrameTexture);
-				if (Widgets.ButtonInvisible(keyFrameRect, doMouseoverSound: false))
+				if (Input.GetMouseButtonDown(0) && Mouse.IsOver(keyFrameRect))
 				{
 					result = true;
+					clickedOutside = false;
+					if (SingleSelect)
+					{
+						selector.ClearSelectedKeyFrames();
+					}
 				}
 				GUI.color = Color.white;
 
@@ -1194,36 +1290,38 @@ namespace SmashTools.Animations
 			}
 		}
 
-		private Rect KeyFrameRect(float y, int frame)
+		private Rect DopesheetIconRect(float y, int frame)
 		{
 			float tickMarkPos = FrameBarPadding + frame * FrameTickMarkSpacing;
-			return new Rect(tickMarkPos - PropertyEntryHeight / 2 + 0.5f, y, PropertyEntryHeight, PropertyEntryHeight).ContractedBy(4);
+			return new Rect(tickMarkPos - PropertyEntryHeight / 2 + 0.5f, y, PropertyEntryHeight, PropertyEntryHeight);
 		}
 
 		private void DrawCurves(Rect rect)
 		{
+			if (!GUI.enabled)
+			{
+				return;
+			}
+
 			FloatRange xRange = new FloatRange(0, 60);
 			FloatRange yRange = new FloatRange(-1, 1);
 
-			if (animation != null && !animation.properties.NullOrEmpty())
+			if (!selector.AnyPropertySelected)
 			{
-				if (!selector.AnyPropertySelected)
+				foreach (AnimationPropertyParent propertyParent in animation.properties)
 				{
-					foreach (AnimationPropertyParent propertyParent in animation.properties)
-					{
-						DrawPropertyParent(propertyParent);
-					}
+					DrawPropertyParent(propertyParent);
 				}
-				else
+			}
+			else
+			{
+				foreach (AnimationPropertyParent propertyParent in selector.selectedParents)
 				{
-					foreach (AnimationPropertyParent propertyParent in selector.selectedParents)
-					{
-						DrawPropertyParent(propertyParent);
-					}
-					foreach (AnimationProperty property in selector.selectedProperties)
-					{
-						DrawProperty(property);
-					}
+					DrawPropertyParent(propertyParent);
+				}
+				foreach (AnimationProperty property in selector.selectedProperties)
+				{
+					DrawProperty(property);
 				}
 			}
 
@@ -1254,6 +1352,11 @@ namespace SmashTools.Animations
 
 		private void DrawAxis(Rect rect, float yT, Rect visibleRect)
 		{
+			if (!GUI.enabled)
+			{
+				return;
+			}
+
 			Widgets.BeginGroup(rect);
 			{
 				Text.Anchor = TextAnchor.LowerRight;
