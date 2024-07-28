@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 using Verse;
 
 namespace SmashTools.Animations
@@ -56,19 +57,26 @@ namespace SmashTools.Animations
 					frameCount = max;
 				}
 			}
+		}
 
-			int MaxFrame(AnimationProperty property)
+		private static int MaxFrame(AnimationProperty property)
+		{
+			if (property.curve.PointsCount > 0)
 			{
-				if (property.curve.PointsCount > 0)
-				{
-					return property.curve.points.Max(keyFrame => keyFrame.frame);
-				}
-				return -1;
+				return property.curve.points.Max(keyFrame => keyFrame.frame);
 			}
+			return -1;
+		}
+
+		internal void ValidateEventOrder()
+		{
+			events.Sort();
 		}
 
 		void IXmlExport.Export()
 		{
+			ValidateEventOrder();
+
 			XmlExporter.WriteObject(nameof(frameCount), frameCount);
 			XmlExporter.WriteList(nameof(properties), properties);
 			XmlExporter.WriteList(nameof(events), events);

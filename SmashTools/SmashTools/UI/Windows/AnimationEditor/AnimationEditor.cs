@@ -19,6 +19,8 @@ namespace SmashTools.Animations
 		protected const int fadeLines = 10;
 		protected const float fadeHeight = fadeSize / fadeLines;
 
+		protected readonly Color DisabledColor = new Color32(155, 155, 155, 255);
+
 		protected readonly Color backgroundLightColor = new ColorInt(63, 63, 63).ToColor;
 		protected readonly Color backgroundDopesheetColor = new ColorInt(56, 56, 56).ToColor;
 		protected readonly Color backgroundCurvesColor = new ColorInt(40, 40, 40).ToColor;
@@ -31,6 +33,7 @@ namespace SmashTools.Animations
 		private readonly Color selectBoxBorderColor = new ColorInt(125, 175, 245, 75).ToColor;
 
 		protected bool draggingSelectionBox = false;
+		private bool hardDisabled = false;
 
 		/* ----- Left Panel Resizing ----- */
 		private bool resizing = false;
@@ -47,6 +50,8 @@ namespace SmashTools.Animations
 		}
 
 		public bool DeleteSelected => Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Delete);
+
+		public bool SingleSelect => Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.LeftShift);
 
 		public abstract void Draw(Rect rect);
 
@@ -95,12 +100,35 @@ namespace SmashTools.Animations
 			UIElements.DrawLineVertical(x, y, height, separatorColor);
 		}
 
+		protected void EnableGUI(bool hardEnable = false)
+		{
+			if (hardDisabled && !hardEnable)
+			{
+				return;
+			}
+			GUI.enabled = true;
+			GUI.color = Color.white;
+		}
+
+		protected void DisableGUI(bool hardDisable = false)
+		{
+			GUI.enabled = false;
+			GUI.color = DisabledColor;
+			hardDisabled = hardDisable;
+		}
+
 		protected bool AnimationButton(Rect rect, Texture2D texture, string tooltip)
 		{
-			GUI.color = Mouse.IsOver(rect) ? GenUI.MouseoverColor : Color.white;
+			var color = GUI.color;
+			if (GUI.enabled && Mouse.IsOver(rect))
+			{
+				GUI.color = GenUI.MouseoverColor;
+			}
+
 			Rect imageRect = rect.ContractedBy(3);
 			GUI.DrawTexture(imageRect, texture);
-			GUI.color = Color.white;
+
+			GUI.color = color;
 
 			if (!tooltip.NullOrEmpty())
 			{
@@ -126,7 +154,8 @@ namespace SmashTools.Animations
 			DoSeparatorVertical(rect.x, rect.y, rect.height);
 			DoSeparatorVertical(rect.xMax, rect.y, rect.height);
 
-			if (Mouse.IsOver(rect))
+			var color = GUI.color;
+			if (GUI.enabled && Mouse.IsOver(rect))
 			{
 				GUI.color = new Color(0.75f, 0.75f, 0.75f);
 			}
@@ -144,7 +173,7 @@ namespace SmashTools.Animations
 				pressed = true;
 				SoundDefOf.Click.PlayOneShotOnCamera();
 			}
-			GUI.color = Color.white;
+			GUI.color = color;
 			Text.Anchor = anchor;
 			return pressed;
 		}
@@ -157,23 +186,24 @@ namespace SmashTools.Animations
 			var font = Text.Font;
 			Text.Font = GameFont.Small;
 
-			Color color = buttonColor;
-			if (Mouse.IsOver(rect))
+			var color = GUI.color;
+			Color buttonColor = this.buttonColor;
+			if (GUI.enabled && Mouse.IsOver(rect))
 			{
 				GUI.color = new Color(0.75f, 0.75f, 0.75f);
 				if (Input.GetMouseButton(0))
 				{
-					color = buttonPressedColor;
+					buttonColor = buttonPressedColor;
 				}
 			}
-			Widgets.DrawBoxSolidWithOutline(rect, color, separatorColor);
+			Widgets.DrawBoxSolidWithOutline(rect, buttonColor, separatorColor);
 			Widgets.Label(rect, label);
 			if (Widgets.ButtonInvisible(rect))
 			{
 				pressed = true;
 				SoundDefOf.Click.PlayOneShotOnCamera();
 			}
-			GUI.color = Color.white;
+			GUI.color = color;
 			Text.Anchor = anchor;
 			Text.Font = font;
 			return pressed;
@@ -185,7 +215,8 @@ namespace SmashTools.Animations
 			var anchor = Text.Anchor;
 			Text.Anchor = TextAnchor.MiddleCenter;
 
-			if (Mouse.IsOver(rect))
+			var color = GUI.color;
+			if (GUI.enabled && Mouse.IsOver(rect))
 			{
 				GUI.color = new Color(0.75f, 0.75f, 0.75f);
 			}
@@ -208,7 +239,7 @@ namespace SmashTools.Animations
 				pressed = true;
 				SoundDefOf.Click.PlayOneShotOnCamera();
 			}
-			GUI.color = Color.white;
+			GUI.color = color;
 			Text.Anchor = anchor;
 			return pressed;
 		}
@@ -254,6 +285,10 @@ namespace SmashTools.Animations
 
 		protected bool DragWindow(Rect rect, ref Vector2 dragPos, Action dragAction, Func<bool> isDragging, Action dragStopped, int button = 0)
 		{
+			if (!GUI.enabled)
+			{
+				return false;
+			}
 			if (Input.GetMouseButtonDown(button) && Mouse.IsOver(rect))
 			{
 				dragAction();
