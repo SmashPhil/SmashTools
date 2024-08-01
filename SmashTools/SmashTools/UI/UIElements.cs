@@ -5,6 +5,7 @@ using HarmonyLib;
 using Verse;
 using Verse.Sound;
 using RimWorld;
+using Verse.Steam;
 
 namespace SmashTools
 {
@@ -721,6 +722,31 @@ namespace SmashTools
 			bool result = Widgets.ButtonImage(rect, TexButton.Info, GUI.color, true);
 			UIHighlighter.HighlightOpportunity(rect, "InfoCard");
 			return result;
+		}
+
+		public static void BeginScrollView(Rect outRect, ref Vector2 scrollPosition, Rect viewRect, bool showHorizontalScrollbar = true, bool showVerticalScrollbar = true)
+		{
+			if (Widgets.mouseOverScrollViewStack.Count > 0)
+			{
+				Widgets.mouseOverScrollViewStack.Push(Widgets.mouseOverScrollViewStack.Peek() && outRect.Contains(Event.current.mousePosition));
+			}
+			else
+			{
+				Widgets.mouseOverScrollViewStack.Push(outRect.Contains(Event.current.mousePosition));
+			}
+			SteamDeck.HandleTouchScreenScrollViewScroll(outRect, ref scrollPosition);
+			GUIStyle horizontalStyle = showHorizontalScrollbar ? GUI.skin.horizontalScrollbar : GUIStyle.none;
+			GUIStyle verticalStyle = showVerticalScrollbar ? GUI.skin.verticalScrollbar : GUIStyle.none;
+
+			scrollPosition = GUI.BeginScrollView(outRect, scrollPosition, viewRect, horizontalStyle, verticalStyle);
+
+			UnityGUIBugsFixer.Notify_BeginScrollView();
+		}
+
+		public static void EndScrollView(bool handleScrollWheel = true)
+		{
+			Widgets.mouseOverScrollViewStack.Pop();
+			GUI.EndScrollView(handleScrollWheel);
 		}
 	}
 }

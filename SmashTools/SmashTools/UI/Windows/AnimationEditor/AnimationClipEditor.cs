@@ -2,11 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
 using UnityEngine;
 using Verse;
 using Verse.Noise;
 using Verse.Sound;
-using static SmashTools.ConditionalPatch;
+using KeyFrame = SmashTools.Animations.AnimationCurve.KeyFrame;
 
 namespace SmashTools.Animations
 {
@@ -15,6 +18,7 @@ namespace SmashTools.Animations
 	{
 		private const float MinLeftWindowSize = 300;
 		private const float MinRightWindowSize = 250;
+		public const float DropdownWidth = 300;
 
 		private const float WidgetBarHeight = 24;
 		private const float KeyframeSize = 20;
@@ -22,6 +26,7 @@ namespace SmashTools.Animations
 		private const float TabWidth = 110;
 		private const float PropertyEntryHeight = 24;
 		private const float PropertyBtnWidth = 180;
+		private const float ParamCheckboxSize = 20;
 
 		private const float FrameBarPadding = 40;
 		private const float FrameBarTickRenderingPadding = FrameBarPadding * 2 + 50;
@@ -34,7 +39,7 @@ namespace SmashTools.Animations
 		private const float DefaultAxisCount = 100;
 
 		private const float MaxExtraScrollDistance = 5000;
-
+		
 		private static readonly Texture2D skipToBeginningTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToBeginning");
 		private static readonly Texture2D skipToPreviousTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToPrevious");
 		private static readonly Texture2D skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
@@ -86,7 +91,8 @@ namespace SmashTools.Animations
 		private bool isPlaying;
 		private int tickInterval = 1;
 		private float curveTickInterval = 0.5f;
-		private Dictionary<AnimationPropertyParent, bool> propertyExpanded = new Dictionary<AnimationPropertyParent, bool>();
+		private readonly Dictionary<AnimationPropertyParent, bool> propertyExpanded = new Dictionary<AnimationPropertyParent, bool>();
+		private readonly Dictionary<ParameterInfo, string> inputBuffers = new Dictionary<ParameterInfo, string>();
 
 		private Dialog_CameraView previewWindow;
 
@@ -111,6 +117,8 @@ namespace SmashTools.Animations
 		}
 
 		private bool UnsavedChanges { get; set; }
+
+		private bool MouseOverSelectableArea { get; set; }
 
 		private float ExtraPadding { get; set; }
 
@@ -363,7 +371,7 @@ namespace SmashTools.Animations
 			buttonRect.x += buttonRect.width;
 			if (AnimationButton(buttonRect, skipToPreviousTexture, "ST_SkipFramePreviousTooltip".Translate()))
 			{
-				//TODO
+				SkipKeyFrame(-1);
 			}
 			DoSeparatorVertical(buttonRect.x, buttonRect.y, buttonRect.height);
 			buttonRect.x += 1;
@@ -379,7 +387,7 @@ namespace SmashTools.Animations
 			buttonRect.x += buttonRect.width;
 			if (AnimationButton(buttonRect, skipToNextTexture, "ST_SkipFrameNextTooltip".Translate()))
 			{
-				//TODO
+				SkipKeyFrame(1);
 			}
 			DoSeparatorVertical(buttonRect.x, buttonRect.y, buttonRect.height);
 			buttonRect.x += 1;
@@ -433,7 +441,7 @@ namespace SmashTools.Animations
 
 			Rect animClipDropdownRect = new Rect(rect.x, animButtonRect.y, 200, buttonRect.height);
 			Rect animClipSelectRect = new Rect(parent.windowRect.x + parent.EditorMargin + animClipDropdownRect.x, 
-				parent.windowRect.y + parent.EditorMargin + animClipDropdownRect.yMax, animClipDropdownRect.width, 500);
+				parent.windowRect.y + parent.EditorMargin + animClipDropdownRect.yMax, DropdownWidth, 500);
 			string animLabel = animation?.FileName ?? "[No Clip]";
 			string animPath = animation?.FilePath ?? string.Empty;
 			if (Dropdown(animClipDropdownRect, animLabel, animPath))
@@ -446,21 +454,17 @@ namespace SmashTools.Animations
 
 			#endregion ClipControls
 
-			float propertyYMax = DrawPropertyEntries(rect, animClipDropdownRect.yMax);
-
-			RemoveFlaggedProperties();
-
-			if (animation != null)
+			Rect leftPanelRect = new Rect(rect.x, animClipDropdownRect.yMax, rect.width, rect.height - animClipDropdownRect.yMax);
+			if (selector.AnyEventSelected)
 			{
-				Rect propertyButtonRect = new Rect(rect.xMax / 2 - PropertyBtnWidth / 2, propertyYMax, PropertyBtnWidth, WidgetBarHeight);
-				if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()))
-				{
-					Vector2 propertyDropdownPosition = new Vector2(parent.windowRect.x + parent.EditorMargin + propertyButtonRect.xMax + 2,
-						parent.windowRect.y + parent.EditorMargin + propertyButtonRect.y + 1);
-					Find.WindowStack.Add(new Dialog_PropertySelect(parent.animator, animation, propertyDropdownPosition, propertyAdded: InjectKeyFramesNewProperty));
-				}
+
+				DrawAnimationEventFields(leftPanelRect);
 			}
-			
+			else
+			{
+				DrawPropertyEntries(leftPanelRect);
+			}
+
 			if (animation == null)
 			{
 				DisableGUI();
@@ -494,15 +498,195 @@ namespace SmashTools.Animations
 			}
 		}
 
-		private float DrawPropertyEntries(Rect rect, float y)
+		private void SkipKeyFrame(int offset)
+		{
+			if (animation == null)
+			{
+				return;
+			}
+			if (offset == 0)
+			{
+				return;
+			}
+
+			int closestKeyFrame = -1;
+			float minDiff = float.MaxValue;
+			foreach (AnimationPropertyParent propertyParent in animation.properties)
+			{
+				foreach (AnimationProperty property in propertyParent)
+				{
+					foreach (KeyFrame keyFrame in property.curve.points)
+					{
+						if (offset > 0 && keyFrame.frame <= frame) //Skip Forward & not at current frame
+						{
+							continue;
+						}
+						if (offset < 0 && keyFrame.frame >= frame) //Skip Backward & not at current frame
+						{
+							continue;
+						}
+
+						float diff = Mathf.Abs(keyFrame.frame - frame + offset);
+						if (diff < minDiff)
+						{
+							closestKeyFrame = keyFrame.frame;
+							minDiff = diff;
+						}
+					}
+				}
+			}
+			if (closestKeyFrame >= 0)
+			{
+				frame = closestKeyFrame;
+			}
+		}
+
+		private void DrawAnimationEventFields(Rect rect)
+		{
+			Rect rowRect = new Rect(rect.x + 5, rect.y + 5, rect.width - 10, PropertyEntryHeight);
+
+			AnimationEvent animationEvent = selector.selectedEvents.FirstOrDefault();
+			if (animationEvent == null)
+			{
+				return;
+			}
+
+			string label;
+			string tooltip = string.Empty;
+			if (animationEvent.method?.method == null)
+			{
+				label = $"[{"No Function Selected".Translate()}]";
+			}
+			else
+			{
+				label = Dialog_MethodSelector.MethodName(animationEvent.method.method);
+				tooltip = Dialog_MethodSelector.FullMethodSignature(animationEvent.method.method);
+			}
+			Rect methodDropdownRect = new Rect(rowRect.x, rowRect.y, rowRect.width, Mathf.Max(rowRect.height, Text.CalcHeight(label, rowRect.width)));
+			if (Dropdown(methodDropdownRect, label, tooltip))
+			{
+				Rect methodSelectRect = new Rect(parent.windowRect.x + parent.EditorMargin + rowRect.x,
+					parent.windowRect.y + parent.EditorMargin + rowRect.yMax, DropdownWidth, 500);
+				Find.WindowStack.Add(new Dialog_MethodSelector(parent.animator, methodSelectRect, animationEvent, onMethodPicked: AddMethodToEvent));
+			}
+			rowRect.y = methodDropdownRect.yMax;
+			if (animationEvent.method?.method != null)
+			{
+				ParameterInfo[] parameters = animationEvent.method.method.GetParameters();
+				animationEvent.method.args ??= new object[parameters.Length];
+				for (int i = 0; i < parameters.Length; i++)
+				{
+					ParameterInfo parameter = parameters[i];
+					bool injectedArg = animationEvent.method.InjectedCount > i;
+
+					object value = null;
+					if (!animationEvent.method.args.OutOfBounds(i))
+					{
+						value = animationEvent.method.args[i];
+					}
+					Text.Anchor = TextAnchor.MiddleLeft;
+
+					rowRect.SplitVertically(rect.width * 0.3f, out Rect labelRect, out Rect inputRect);
+					inputRect.xMin += rect.width * 0.2f;
+					Widgets.Label(labelRect, parameter.Name);
+
+					if (injectedArg)
+					{
+						Text.Anchor = TextAnchor.MiddleRight;
+						Widgets.Label(inputRect, "ST_Injected".Translate());
+					}
+					else
+					{
+						ParameterInput(inputRect, animationEvent, parameter, ref value);
+						animationEvent.method.args[i] = value;
+					}
+
+					Text.Anchor = TextAnchor.MiddleLeft;
+
+					rowRect.y += PropertyEntryHeight + 5;
+				}
+			}
+		}
+
+		private void ParameterInput(Rect rect, AnimationEvent animationEvent, ParameterInfo parameter, ref object value)
+		{
+			//Checkbox
+			if (parameter.ParameterType == typeof(bool))
+			{
+				Rect checkboxRect = new Rect(rect.xMax - rect.height, rect.y, rect.height, rect.height).ContractedBy((24 - ParamCheckboxSize) / 2);
+				bool checkOn = value == null ? false : (bool)value; //Might be boxed to null for initial value if arg defaults weren't set
+				Widgets.Checkbox(checkboxRect.position, ref checkOn, size: ParamCheckboxSize);
+				value = checkOn;
+				return;
+			}
+
+			//Input field for types parseable as single-line strings
+			if (ParseHelper.HandlesType(parameter.ParameterType))
+			{
+				if (!inputBuffers.ContainsKey(parameter))
+				{
+					inputBuffers[parameter] = null;
+				}
+				string buffer = inputBuffers[parameter];
+				InputBox(rect, parameter.ParameterType, ref value, ref buffer);
+				inputBuffers[parameter] = buffer;
+				return;
+			}
+
+			//DefNames
+			if (parameter.ParameterType.IsSubclassOf(typeof(Def)))
+			{
+				Text.Anchor = TextAnchor.MiddleCenter;
+				Def selectedDef = value as Def;
+				string name = selectedDef?.defName ?? "NULL";
+				if (Dropdown(rect, name, string.Empty))
+				{
+					Rect defDropdownRect = new Rect(parent.windowRect.x + parent.EditorMargin + rect.x,
+							parent.windowRect.y + parent.EditorMargin + rect.yMax, DropdownWidth, 500);
+					Find.WindowStack.Add(new Dialog_DefDropdown(defDropdownRect, parameter.ParameterType,
+						(Def def) => SetDefParameter(animationEvent, parameter, def),
+						(Def def) => selectedDef == def));
+				}
+				return;
+			}
+
+			//All other types are unsupported, they must be serializable as strings
+			//or ResolvedMethod will be unable to parse them as arguments
+			Text.Anchor = TextAnchor.MiddleCenter;
+			Widgets.Label(rect, "ST_UnsupportedType".Translate());
+		}
+
+		private void SetDefParameter(AnimationEvent animationEvent, ParameterInfo settingParameter, Def def)
+		{
+			ParameterInfo[] parameters = animationEvent.method.method.GetParameters();
+			for (int i = 0; i < parameters.Length; i++)
+			{
+				ParameterInfo parameter = parameters[i];
+				if (parameter == settingParameter)
+				{
+					animationEvent.method.args[i] = def;
+				}
+			}
+		}
+
+		private void AddMethodToEvent(MethodInfo method)
+		{
+			AnimationEvent animationEvent = selector.selectedEvents.FirstOrDefault();
+			if (animationEvent != null)
+			{
+				animationEvent.method = new ResolvedMethod(method);
+			}
+		}
+
+		private void DrawPropertyEntries(Rect rect)
 		{
 			//Add KeyframeSize to keep keyframe bars aligned with their properties
-			Rect rowRect = new Rect(rect.x + 4, y + KeyframeSize, rect.width - 10, PropertyEntryHeight);
+			Rect rowRect = new Rect(rect.x + 5, rect.y + KeyframeSize, rect.width - 10, PropertyEntryHeight);
 			Rect fullPropertyRect = rowRect;
 
-			if (animation == null || animation.properties.NullOrEmpty())
+			if (animation == null)
 			{
-				return rowRect.yMax;
+				return;
 			}
 
 			float collapseBtnSize = rowRect.height;
@@ -623,7 +807,8 @@ namespace SmashTools.Animations
 
 							var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
 							{
-								property.curve.Add(frame, 0);
+								float curValue = property.curve[frame];
+								property.curve.Add(frame, curValue);
 								ChangeMade();
 							});
 							addKeyOption.Disabled = property.curve.KeyFrameAt(frame);
@@ -665,7 +850,15 @@ namespace SmashTools.Animations
 				selector.ClearSelectedProperties();
 			}
 
-			return rowRect.yMax;
+			RemoveFlaggedProperties();
+
+			Rect propertyButtonRect = new Rect(rect.xMax / 2 - PropertyBtnWidth / 2, rowRect.yMax, PropertyBtnWidth, WidgetBarHeight);
+			if (ButtonText(propertyButtonRect, "ST_AddProperty".Translate()))
+			{
+				Vector2 propertyDropdownPosition = new Vector2(parent.windowRect.x + parent.EditorMargin + propertyButtonRect.xMax + 2,
+					parent.windowRect.y + parent.EditorMargin + propertyButtonRect.y + 1);
+				Find.WindowStack.Add(new Dialog_PropertySelect(parent.animator, animation, propertyDropdownPosition, propertyAdded: InjectKeyFramesNewProperty));
+			}
 		}
 
 		private void KeyFrameInput(Rect inputRect, AnimationProperty property)
@@ -746,12 +939,16 @@ namespace SmashTools.Animations
 
 			Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
 
+			//Area where clicking will select / unselect objects in the animator
+			Rect selectableRect = new Rect(editorOutRect.x, editorRect.y + WidgetBarHeight, editorOutRect.width, editorOutRect.height - WidgetBarHeight - 16);
+			MouseOverSelectableArea = Mouse.IsOver(selectableRect);
+
 			float viewWidth = Mathf.Clamp(EditorWidth, editorRect.width, EditorWidth);
 			Vector2 viewRectSize = new Vector2(viewWidth + extraPanelWidth, editorOutRect.height - 16);
 			Rect editorViewRect = new Rect(editorOutRect.position, viewRectSize);
 
 			Rect visibleRect = GetVisibleRect(editorOutRect, panelScrollPos, editorViewRect);
-			Widgets.BeginScrollView(editorOutRect, ref panelScrollPos, editorViewRect, showScrollbars: GUI.enabled);
+			UIElements.BeginScrollView(editorOutRect, ref panelScrollPos, editorViewRect, showHorizontalScrollbar: GUI.enabled, showVerticalScrollbar: false);
 
 			//Should still render editor background + frame ticks underneath scrollbar
 			//if editorViewRect height is +16 when scrollview is started, it will pad enough to start scrolling
@@ -765,12 +962,19 @@ namespace SmashTools.Animations
 			DrawAnimationEventMarkers(animationEventBarRect);
 
 			#region EditorPanel
-			Rect frameOutRect = new Rect(editorViewRect.x, animationEventBarRect.yMax, editorViewRect.width, editorOutRect.height);
-			Rect frameViewRect = new Rect(frameOutRect.x, frameOutRect.y, editorViewRect.width, frameOutRect.height + extraFrameHeight);
+			Rect frameOutRect = new Rect(editorOutRect.x, animationEventBarRect.yMax, editorViewRect.width, editorOutRect.height);
+			Rect frameViewRect = new Rect(frameOutRect.x, frameOutRect.y, frameOutRect.width, frameOutRect.height + extraFrameHeight);
 			Rect visibleFrameRect = GetVisibleRect(frameOutRect, frameScrollPos, frameViewRect);
-			Widgets.BeginScrollView(frameOutRect, ref frameScrollPos, frameViewRect, showScrollbars: GUI.enabled);
 
-			Rect blendRect = new Rect(editorViewRect.x, frameOutRect.y + visibleFrameRect.y, editorViewRect.width, fadeHeight);
+			Rect scrollbarRect = new Rect(visibleRect.xMax + GUI.skin.horizontalScrollbar.margin.left,
+				frameOutRect.y, GUI.skin.verticalScrollbar.fixedWidth, frameViewRect.height);
+			float size = Mathf.Min(visibleRect.height, frameViewRect.height);
+			frameScrollPos.y = GUI.VerticalScrollbar(scrollbarRect, frameScrollPos.y, size, 0f, frameViewRect.height, GUI.skin.verticalScrollbar);
+			UIElements.BeginScrollView(frameOutRect, ref frameScrollPos, frameViewRect, showHorizontalScrollbar: false, showVerticalScrollbar: false);
+			
+			frameViewRect.width += 16;
+
+			Rect blendRect = new Rect(editorViewRect.x, animationEventBarRect.yMax + visibleFrameRect.y, editorViewRect.width, fadeHeight);
 			switch (tab)
 			{
 				case EditTab.Dopesheet:
@@ -818,6 +1022,8 @@ namespace SmashTools.Animations
 						Rect curvesRect = new Rect(frameBarRect.x, curveBackgroundRect.y, FrameBarWidth, curveBackgroundRect.height);
 						DrawCurves(curvesRect);
 
+						Widgets.DrawBoxSolidWithOutline(visibleFrameRect, new Color(0.75f, 0.15f, 0.5f, 0.15f), Color.white);
+
 						if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
 						{
 							SetDragPos();
@@ -829,7 +1035,7 @@ namespace SmashTools.Animations
 					}
 					break;
 			}
-			EndScrollViewNoScrollbarControls();
+			UIElements.EndScrollView(false);
 			#endregion EditorPanel
 
 			if (GUI.enabled)
@@ -838,7 +1044,7 @@ namespace SmashTools.Animations
 				UIElements.DrawLineVertical(frameLinePos, frameBarRect.y, 2000, Color.white);
 			}
 
-			EndScrollViewNoScrollbarControls();
+			UIElements.EndScrollView(false);
 			#endregion RightPanel
 
 			void SetDragPos(bool horizontal = true, bool vertical = true, bool expandHorizontal = true, bool expandVertical = true)
@@ -885,6 +1091,9 @@ namespace SmashTools.Animations
 			}
 
 			Widgets.EndGroup();
+
+			frameScrollPos.x = panelScrollPos.x;
+			panelScrollPos.y = frameScrollPos.y;
 
 			if (GUI.enabled && Mouse.IsOver(rect) && Event.current.type == EventType.ScrollWheel)
 			{
@@ -1165,10 +1374,11 @@ namespace SmashTools.Animations
 				{
 					clickedOutside = false;
 					selector.Select(animationEvent, clear: SingleSelect);
+					inputBuffers.Clear();
 				}
 				GUI.color = Color.white;
 			}
-			if (clickedOutside)
+			if (clickedOutside && MouseOverSelectableArea)
 			{
 				selector.ClearSelectedEvents();
 			}
@@ -1263,7 +1473,7 @@ namespace SmashTools.Animations
 				}
 			}
 
-			if (clickedOutside)
+			if (clickedOutside && MouseOverSelectableArea)
 			{
 				selector.ClearSelectedKeyFrames();
 			}
@@ -1433,16 +1643,10 @@ namespace SmashTools.Animations
 
 		private void AddKeyFramesForParent(AnimationPropertyParent propertyParent)
 		{
-			if (propertyParent.Single != null)
+			foreach (AnimationProperty property in propertyParent)
 			{
-				propertyParent.Single.curve.Add(frame, 0);
-			}
-			else if (!propertyParent.Children.NullOrEmpty())
-			{
-				foreach (AnimationProperty property in propertyParent.Children)
-				{
-					property.curve.Add(frame, 0);
-				}
+				float curValue = property.curve[frame];
+				property.curve.Add(frame, curValue);
 			}
 			ChangeMade();
 		}
@@ -1578,6 +1782,7 @@ namespace SmashTools.Animations
 
 			public void SelectAll(AnimationClip clip, int frame)
 			{
+				ClearSelectedEvents();
 				if (!Input.GetKey(KeyCode.LeftControl))
 				{
 					ClearSelectedKeyFrames();
@@ -1590,6 +1795,7 @@ namespace SmashTools.Animations
 
 			public void SelectFrame(AnimationPropertyParent propertyParent, int frame, bool clear = true)
 			{
+				ClearSelectedEvents();
 				if (clear && !Input.GetKey(KeyCode.LeftControl))
 				{
 					ClearSelectedKeyFrames();
@@ -1610,6 +1816,7 @@ namespace SmashTools.Animations
 
 			public void SelectFrame(AnimationProperty property, int frame, bool clear = true, bool sort = true)
 			{
+				ClearSelectedEvents();
 				if (clear && !Input.GetKey(KeyCode.LeftControl))
 				{
 					ClearSelectedKeyFrames();
@@ -1628,6 +1835,7 @@ namespace SmashTools.Animations
 
 			public void Select(AnimationPropertyParent propertyParent, bool clear = true)
 			{
+				ClearSelectedEvents();
 				if (clear)
 				{
 					ClearSelectedProperties();
@@ -1637,6 +1845,7 @@ namespace SmashTools.Animations
 
 			public void Select(AnimationProperty property, bool clear = true)
 			{
+				ClearSelectedEvents();
 				if (clear)
 				{
 					ClearSelectedProperties();
@@ -1646,6 +1855,8 @@ namespace SmashTools.Animations
 
 			public void Select(AnimationEvent animationEvent, bool clear = true)
 			{
+				ClearSelectedKeyFrames();
+				ClearSelectedProperties();
 				if (clear)
 				{
 					ClearSelectedEvents();

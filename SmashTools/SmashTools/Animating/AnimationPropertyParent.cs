@@ -1,5 +1,6 @@
 ﻿using SmashTools.Xml;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,7 +10,7 @@ using Verse;
 
 namespace SmashTools.Animations
 {
-	public class AnimationPropertyParent : IXmlExport
+	public class AnimationPropertyParent : IXmlExport, IEnumerable<AnimationProperty>
 	{
 		private string name;
 		private Type type;
@@ -36,6 +37,8 @@ namespace SmashTools.Animations
 		public List<AnimationProperty> Children => children;
 
 		public bool IsValid => Single != null || !Children.NullOrEmpty();
+
+		public AnimationProperty Current => throw new NotImplementedException();
 
 		public bool AllKeyFramesAt(int frame)
 		{
@@ -89,6 +92,26 @@ namespace SmashTools.Animations
 			{
 				XmlExporter.WriteList(nameof(children), children);
 			}
+		}
+
+		public IEnumerator<AnimationProperty> GetEnumerator()
+		{
+			if (Single != null)
+			{
+				yield return single;
+			}
+			else if (!Children.NullOrEmpty())
+			{
+				foreach (AnimationProperty animationProperty in Children)
+				{
+					yield return animationProperty;
+				}
+			}
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 	}
 }

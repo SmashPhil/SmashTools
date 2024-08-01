@@ -91,6 +91,7 @@
     <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
     <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
     <Compile Include="Animating\Obsolete\AnimatorObject.cs" />
+    <Compile Include="Attributes\AnimationEventAttribute.cs" />
     <Compile Include="Attributes\AnimationPropertyAttribute.cs" />
     <Compile Include="Attributes\GraphEditableAttribute.cs" />
     <Compile Include="Attributes\HeaderTitleAttribute.cs" />
@@ -166,9 +167,12 @@
     <Compile Include="UI\Windows\AnimationEditor\AnimationEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationControllerEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationEditor.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\Dialog_DefDropdown.cs" />
+    <Compile Include="UI\Windows\AnimationEditor\Dialog_MethodSelector.cs" />
     <Compile Include="UI\Windows\Dialog_CameraView.cs" />
     <Compile Include="UI\Windows\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
+    <Compile Include="UI\Windows\Dialog_ItemDropdown.cs" />
     <Compile Include="UI\Windows\Dialog_FolderPicker.cs" />
     <Compile Include="UI\Windows\Dialog_Graph.cs" />
     <Compile Include="UI\Windows\Dialog_GraphEditor.cs" />

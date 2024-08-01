@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using HarmonyLib;
+using System;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Xml;
 using Verse;
-using RimWorld;
-using HarmonyLib;
-using SmashTools.Xml;
+
 
 namespace SmashTools
 {
@@ -17,25 +16,71 @@ namespace SmashTools
 		public MethodInfo method;
 		public object[] args;
 
-		private int count = -1;
+		private int runtimeArgs = -1;
 
-		public int InjectedCount
+		public ResolvedMethod()
+		{
+		}
+
+		public ResolvedMethod(MethodInfo method)
+		{
+			this.method = method;
+			RecacheRuntimeArgCount();
+			RecacheInjectedCount();
+			LoadDefaultArgs();
+		}
+
+		public int InjectedCount { get; private set; }
+
+		public int RuntimeArguments
 		{
 			get
 			{
-				if (count < 0)
+				if (runtimeArgs < 0)
 				{
-					Type type = GetType();
-					if (!type.IsGenericType)
-					{
-						count = 0;
-					}
-					else
-					{
-						count = type.GetGenericArguments().Length;
-					}
+					RecacheRuntimeArgCount();
 				}
-				return count;
+				return runtimeArgs;
+			}
+		}
+
+		private void RecacheRuntimeArgCount()
+		{
+			Type type = GetType();
+			if (!type.IsGenericType)
+			{
+				runtimeArgs = 0;
+			}
+			else
+			{
+				runtimeArgs = type.GetGenericArguments().Length;
+			}
+		}
+
+		private void RecacheInjectedCount()
+		{
+			InjectedCount = 0;
+			ParameterInfo[] parameters = method.GetParameters();
+			for (int i = RuntimeArguments; i < parameters.Length; i++)
+			{
+				ParameterInfo parameter = parameters[i];
+
+				//Arguments with prefix are injected arguments
+				if (!parameter.Name.StartsWith("__"))
+				{
+					return; //Injected args must immediately follow any runtime arguments
+				}
+				InjectedCount++;
+			}
+		}
+
+		private void LoadDefaultArgs()
+		{
+			ParameterInfo[] parameters = method.GetParameters();
+			args = new object[parameters.Length];
+			for (int i = RuntimeArguments + InjectedCount; i < parameters.Length; i++)
+			{
+				args[i] = parameters[i].ParameterType.GetDefaultValue();
 			}
 		}
 
@@ -63,9 +108,10 @@ namespace SmashTools
 				string argString = methodInfoBody.LastOrDefault().Replace(")", "");
 				string[] argStrings = argString.Split(',');
 				object[] resolvedArgs = new object[argStrings.Length];
-				Type[] argTypes = method.GetParameters().Select(p => p.ParameterType).ToArray();
+				ParameterInfo[] parameters = method.GetParameters();
+				//Type[] argTypes = .Select(p => p.ParameterType).ToArray();
 
-				if (argStrings.Length > argTypes.Length)
+				if (argStrings.Length > parameters.Length)
 				{
 					Log.Error($"Number of parameters is less than number of args passed in. Xml={entry}");
 					return;
@@ -77,30 +123,34 @@ namespace SmashTools
 					exactParameters = bool.Parse(unsafeAttribute.Value.ToLowerInvariant());
 				}
 
-				if (exactParameters && (argStrings.Length + InjectedCount) != argTypes.Length)
+				RecacheRuntimeArgCount();
+				RecacheInjectedCount();
+
+				if (exactParameters && (argStrings.Length + RuntimeArguments) != parameters.Length)
 				{
 					Log.Error($"Number of parameters doesn't match number of args passed in. Xml={entry}");
 				}
-				
-				args = new object[argTypes.Length];
-				for (int i = InjectedCount; i < argTypes.Length; i++)
+
+				LoadDefaultArgs();
+				for (int i = RuntimeArguments + InjectedCount; i < parameters.Length; i++)
 				{
-					int argIndex = i - InjectedCount;
+					int argIndex = i - RuntimeArguments;
+					ParameterInfo parameter = parameters[0];
+
 					if (argStrings.OutOfBounds(argIndex))
 					{
 						args[i] = Type.Missing; //Handles optional parameters
+						continue;
+					}
+
+					string text = argStrings[argIndex];
+					if (text.ToUpperInvariant() == "NULL" && (parameters[i].ParameterType.IsClass || Nullable.GetUnderlyingType(parameters[i].ParameterType) != null))
+					{
+						args[i] = null;
 					}
 					else
 					{
-						string text = argStrings[argIndex];
-						if (text.ToUpperInvariant() == "NULL" && (argTypes[i].IsClass || Nullable.GetUnderlyingType(argTypes[i]) != null))
-						{
-							args[i] = null;
-						}
-						else
-						{
-							args[i] = XmlParseHelper.WrapStringAndParse(argTypes[i], text, true);
-						}
+						args[i] = ParseArgument(parameters[i].ParameterType, text);
 					}
 				}
 			}
@@ -110,32 +160,85 @@ namespace SmashTools
 			}
 		}
 
-		public virtual object Invoke(object obj)
+		private static object ParseArgument(Type type, string entry)
 		{
+			Type valueType = Nullable.GetUnderlyingType(type);
+			if (valueType != null)
+			{
+				if (entry.NullOrEmpty())
+				{
+					return null;
+				}
+				return ParseHelper.FromString(entry, type);
+			}
+
+			if (ParseHelper.HandlesType(type))
+			{
+				return ParseHelper.FromString(entry, type);
+			}
+			
+			if (type.IsSubclassOf(typeof(Def)))
+			{
+				return GenDefDatabase.GetDef(type, entry);
+			}
+			Log.ErrorOnce($"Unhandled type {type.Name} in ResolvedMethod arguments.", type.GetHashCode());
+			return type.GetDefaultValue();
+		}
+
+		public virtual object Invoke(object obj, params object[] injectedArgs)
+		{
+			InjectArguments(injectedArgs);
 			return method.Invoke(obj, args);
 		}
 
 		public override string ToString()
 		{
-			string typeName = GenTypes.GetTypeNameWithoutIgnoredNamespaces(method.DeclaringType);
-			string readout = $"{typeName}.{method.Name}";
+			if (method == null)
+			{
+				return null;
+			}
+			string type = GenTypes.GetTypeNameWithoutIgnoredNamespaces(method.DeclaringType);
+			string readout = $"{type}.{method.Name}";
 			if (!args.NullOrEmpty())
 			{
-				readout += $"({string.Join(",", args)})";
+				readout += $"({string.Join(",", args.Select(obj => obj?.ToString() ?? "NULL"))})";
 			}
 			return readout;
+		}
+
+		public string ToStringSignature()
+		{
+			string readout = method.Name;
+			if (!args.NullOrEmpty())
+			{
+				readout += $"( {string.Join(", ", args.Select(obj => obj.GetType()))} )";
+			}
+			return readout;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected void InjectArguments(object[] injectedArgs)
+		{
+			if (InjectedCount > 0 && !injectedArgs.NullOrEmpty())
+			{
+				for (int i = RuntimeArguments; i < injectedArgs.Length; i++)
+				{
+					args[i] = injectedArgs[i];
+				}
+			}
 		}
 	}
 
 	public class ResolvedMethod<T> : ResolvedMethod
 	{
-		public override object Invoke(object obj)
+		public override object Invoke(object obj, params object[] injectedArgs)
 		{
 			throw new MethodAccessException("ResolvedMethod subtypes should never call the base Invoke method.");
 		}
 
-		public object Invoke(object obj, T param)
+		public object Invoke(object obj, T param, params object[] injectedArgs)
 		{
+			InjectArguments(injectedArgs);
 			args[0] = param;
 			return method.Invoke(obj, args);
 		}

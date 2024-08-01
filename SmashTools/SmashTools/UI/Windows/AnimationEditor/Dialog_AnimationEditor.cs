@@ -38,6 +38,7 @@ namespace SmashTools.Animations
 		{
 			SetWindowProperties();
 			InitializeTabs();
+			Dialog_MethodSelector.InitStaticEventMethods();
 
 			this.animator = animator;
 			controllerEditor = new AnimationControllerEditor(this);
