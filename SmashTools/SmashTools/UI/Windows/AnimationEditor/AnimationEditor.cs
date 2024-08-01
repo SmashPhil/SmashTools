@@ -6,7 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
+using Verse.Noise;
 using Verse.Sound;
+using static HarmonyLib.Code;
 
 namespace SmashTools.Animations
 {
@@ -214,7 +216,7 @@ namespace SmashTools.Animations
 			bool pressed = false;
 			var anchor = Text.Anchor;
 			Text.Anchor = TextAnchor.MiddleCenter;
-
+			var font = Text.Font;
 			var color = GUI.color;
 			if (GUI.enabled && Mouse.IsOver(rect))
 			{
@@ -222,7 +224,12 @@ namespace SmashTools.Animations
 			}
 			float dropdownSize = rect.height;
 			rect.SplitVertically(rect.width - dropdownSize, out Rect labelRect, out Rect dropdownRect);
-			Widgets.Label(labelRect, label);
+			Text.Font = GameFont.Small;
+			if (Text.CalcSize(label).x > labelRect.width)
+			{
+				Text.Font--;
+			}
+			Widgets.Label(labelRect, label.Truncate(labelRect.width));
 
 			GUIState.Push();
 			{
@@ -241,6 +248,7 @@ namespace SmashTools.Animations
 			}
 			GUI.color = color;
 			Text.Anchor = anchor;
+			Text.Font = font;
 			return pressed;
 		}
 
@@ -352,6 +360,37 @@ namespace SmashTools.Animations
 			return false;
 		}
 
+		protected void InputBox(Rect rect, Type type, ref object value, ref string buffer)
+		{
+			if (buffer == null)
+			{
+				buffer = value?.ToString() ?? type.GetDefaultValue().ToString();
+			}
+			string text = "InputBox" + rect.y.ToString("F0") + rect.x.ToString("F0");
+			GUI.SetNextControlName(text);
+			string inputText = Widgets.TextField(rect, buffer);
+			if (GUI.GetNameOfFocusedControl() != text)
+			{
+				ResolveParseNow(type, buffer, ref value, ref buffer);
+				return;
+			}
+			if (inputText != buffer)
+			{
+				buffer = inputText;
+				ResolveParseNow(type, inputText, ref value, ref buffer);
+			}
+		}
+
+		private static void ResolveParseNow(Type type, string edited, ref object value, ref string buffer)
+		{
+			if (!ParseHelper.CanParse(type, edited))
+			{
+				buffer = null;
+				return;
+			}
+			value = ParseHelper.FromString(edited, type);
+		}
+
 		protected Rect DragRect(Vector2 groupPos, float snapX = 0, float snapY = 0, float snapPaddingX = 0, float snapPaddingY = 0)
 		{
 			Vector2 mousePos = MouseUIPos(groupPos);
@@ -405,13 +444,6 @@ namespace SmashTools.Animations
 			Vector2 mousePos = new Vector2(UI.MousePositionOnUIInverted.x, UI.MousePositionOnUIInverted.y);
 			Vector2 marginSize = new Vector2(parent.EditorMargin, parent.EditorMargin);
 			return mousePos - parent.windowRect.position - groupPos - marginSize;
-		}
-
-		protected void EndScrollViewNoScrollbarControls()
-		{
-			//Must use GUI implementation and not Widgets, in order to disable scrollwheel handling
-			Widgets.mouseOverScrollViewStack.Pop();
-			GUI.EndScrollView(false);
 		}
 
 		protected Vector2 GetScrollPosNormalized(Rect outRect, Vector2 scrollPos, Rect viewRect)

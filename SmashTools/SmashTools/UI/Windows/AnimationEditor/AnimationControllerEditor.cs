@@ -152,7 +152,7 @@ namespace SmashTools.Animations
 				}
 
 				Rect visibleRect = GetVisibleRect(editorRect, scrollPos, viewRect);
-				Widgets.BeginScrollView(editorRect, ref scrollPos, viewRect, showScrollbars: false);
+				UIElements.BeginScrollView(editorRect, ref scrollPos, viewRect, showHorizontalScrollbar: false, showVerticalScrollbar: false);
 				{
 					DrawBackgroundDark(viewRect);
 
@@ -188,7 +188,7 @@ namespace SmashTools.Animations
 
 					}
 				}
-				EndScrollViewNoScrollbarControls();
+				UIElements.EndScrollView(false);
 			}
 			Widgets.EndGroup();
 
