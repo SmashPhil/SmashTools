@@ -38,16 +38,11 @@ namespace SmashTools
 				postfix: new HarmonyMethod(typeof(XmlParseHelper),
 				nameof(XmlParseHelper.ReadCustomAttributes)));
 
-			//Game Init
-			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.FinalizeInit)),
-				postfix: new HarmonyMethod(typeof(StaticConstructorOnGameInitAttribute),
-				nameof(StaticConstructorOnGameInitAttribute.RunGameInitStaticConstructors)));
-
 			//Logging
 			Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
 				transpiler: new HarmonyMethod(typeof(SmashLog),
 				nameof(SmashLog.RemoveRichTextTranspiler)));
-
+			
 			//Map
 			Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),
 				postfix: new HarmonyMethod(typeof(DetachedMapComponent),
@@ -80,9 +75,10 @@ namespace SmashTools
 				nameof(PawnOverlayRenderer.LayingFacing)));
 
 			//Unit Tests
-			//Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
-			//	postfix: new HarmonyMethod(typeof(UnitTesting),
-			//	nameof(UnitTesting.DrawDebugWindowButton)));
+#if DEBUG
+			Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
+				postfix: new HarmonyMethod(typeof(ProjectSetup),
+				nameof(DrawDebugWindowButton)));
 			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.StartedNewGame)),
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecuteNewGameTesting)));
@@ -93,13 +89,16 @@ namespace SmashTools
 				postfix: new HarmonyMethod(typeof(UnitTesting),
 				nameof(UnitTesting.ExecuteOnStartupTesting)));
 
-			//Input handling
+			//Input handling (DEBUG)
 			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI)),
 				prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
 				nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
 			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI)),
 				prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
 				nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
+#endif
+
+			//Input handling
 			Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.Add)),
 				postfix: new HarmonyMethod(typeof(HighPriorityInputs),
 				nameof(HighPriorityInputs.WindowAddedToStack)));
@@ -114,17 +113,13 @@ namespace SmashTools
 			Harmony.Patch(original: AccessTools.Method(typeof(MainTabWindow_Inspect), nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),
 				prefix: new HarmonyMethod(typeof(ProjectSetup),
 				nameof(InspectablePaneButtons)));
-			Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.Notify_ClickedInsideWindow)),
-				prefix: new HarmonyMethod(typeof(ProjectSetup),
-				nameof(HandleSingleWindowDialogs)));
 
 			//Debugging
-			if (Prefs.DevMode)
-			{
-				Harmony.Patch(original: AccessTools.Method(typeof(UIRoot), nameof(UIRoot.UIRootOnGUI)),
-					postfix: new HarmonyMethod(typeof(ProjectSetup),
-					nameof(ValidateGUIState)));
-			}
+#if DEBUG
+			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot), nameof(UIRoot.UIRootOnGUI)),
+				postfix: new HarmonyMethod(typeof(ProjectSetup),
+				nameof(ValidateGUIState)));
+#endif
 
 			//Mod Init
 			StaticConstructorOnModInit();
@@ -160,6 +155,19 @@ namespace SmashTools
 			}
 		}
 
+		private static void DrawDebugWindowButton(WidgetRow ___widgetRow, ref float ___widgetRowFinalX)
+		{
+			if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu, "Open Unit Testing menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
+			{
+				UnitTesting.OpenMenu();
+			}
+			if (___widgetRow.ButtonIcon(TexButton.OpenStatsReport, "Open Profiler.\n\n View profiler entries from ProfilerWatch."))
+			{
+				Find.WindowStack.Add(new Dialog_Profiler());
+			}
+			___widgetRowFinalX = ___widgetRow.FinalX;
+		}
+
 		private static bool InspectablePaneButtons(Rect rect, ref float lineEndWidth)
 		{
 			if (Find.Selector.SingleSelectedThing is IInspectable inspectable)
@@ -173,20 +181,6 @@ namespace SmashTools
 				return false;
 			}
 			return true;
-		}
-
-		private static void HandleSingleWindowDialogs(Window window, WindowStack __instance)
-		{
-			if (Event.current.type == EventType.MouseDown)
-			{
-				if (window is null || !(window is SingleWindow) && (__instance.GetWindowAt(UI.GUIToScreenPoint(Event.current.mousePosition)) != SingleWindow.CurrentlyOpenedWindow))
-				{
-					if (SingleWindow.CurrentlyOpenedWindow != null && SingleWindow.CurrentlyOpenedWindow.closeOnAnyClickOutside)
-					{
-						Find.WindowStack.TryRemove(SingleWindow.CurrentlyOpenedWindow);
-					}
-				}
-			}
 		}
 
 		private static void ValidateGUIState()

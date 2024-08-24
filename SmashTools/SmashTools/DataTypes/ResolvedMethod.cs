@@ -216,7 +216,6 @@ namespace SmashTools
 			return readout;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		protected void InjectArguments(object[] injectedArgs)
 		{
 			if (InjectedCount > 0 && !injectedArgs.NullOrEmpty())

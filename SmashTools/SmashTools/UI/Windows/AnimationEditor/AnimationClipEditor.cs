@@ -713,9 +713,8 @@ namespace SmashTools.Animations
 
 				Rect collapseBtnRect = new Rect(rowRect.x, rowRect.y, collapseBtnSize, collapseBtnSize).ContractedBy(3);
 				bool expanded = propertyExpanded.TryGetValue(propertyParent, false);
-				if (!propertyParent.Children.NullOrEmpty() && Widgets.ButtonImage(collapseBtnRect, expanded ? TexButton.Collapse : TexButton.Reveal, keyFrameColor, keyFrameHighlightColor))
+				if (!propertyParent.Children.NullOrEmpty() && UIElements.CollapseButton(collapseBtnRect, ref expanded, keyFrameColor, keyFrameHighlightColor))
 				{
-					expanded = !expanded; //modify local variable so expanded state can be used for drawing inner properties
 					propertyExpanded[propertyParent] = expanded;
 
 					if (expanded)

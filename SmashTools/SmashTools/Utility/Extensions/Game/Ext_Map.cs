@@ -130,7 +130,6 @@ namespace SmashTools
 			map.debugDrawer.FlashLine(from, to, duration: duration, color: color);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static IEnumerator DrawLineRoutine(Vector3 from, Vector3 to, Map map, SimpleColor color = SimpleColor.White, int duration = 50)
 		{
 			float elapsed = 0;

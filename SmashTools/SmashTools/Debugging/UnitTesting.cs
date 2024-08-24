@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Verse;
@@ -14,10 +15,12 @@ namespace SmashTools
 		internal static List<Toggle> unitTestRadioButtons = new List<Toggle>();
 
 		internal static bool NoUnitTest { get; private set; }
+
 		internal static bool Enabled { get; private set; }
 
 		static UnitTesting()
 		{
+#if DEBUG
 			Enabled = false;
 			try
 			{
@@ -39,8 +42,10 @@ namespace SmashTools
 			}
 			Enabled = true;
 			PostLoadSetup();
+#endif
 		}
 
+		[Conditional("DEBUG")]
 		public static void OpenMenu()
 		{
 			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Unit Testing", unitTestRadioButtons, postClose: SmashMod.Serialize));
@@ -117,14 +122,6 @@ namespace SmashTools
 			unitTestRadioButtons = unitTestRadioButtons.OrderBy(toggle => toggle.DisplayName).ToList();
 		}
 
-		public static void DrawDebugWindowButton(WidgetRow ___widgetRow)
-		{
-			if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu, "Open Unit Testing menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
-			{
-				OpenMenu();
-			}
-		}
-
 		private static void PostLoadSetup()
 		{
 			if (!SmashSettings.unitTest.NullOrEmpty() && unitTests.TryGetValue(SmashSettings.unitTest, out UnitTestAction unitTest))
@@ -133,19 +130,19 @@ namespace SmashTools
 			}
 		}
 
-		public static void ExecutePostLoadTesting()
+		internal static void ExecutePostLoadTesting()
 		{
 			ExecuteTesting(GameState.LoadedSave);
 			ExecuteTesting(GameState.Playing);
 		}
 
-		public static void ExecuteNewGameTesting()
+		internal static void ExecuteNewGameTesting()
 		{
 			ExecuteTesting(GameState.NewGame);
 			ExecuteTesting(GameState.Playing);
 		}
 
-		public static void ExecuteOnStartupTesting()
+		internal static void ExecuteOnStartupTesting()
 		{
 			ExecuteTesting(GameState.OnStartup);
 		}

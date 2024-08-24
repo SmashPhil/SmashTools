@@ -116,11 +116,9 @@ namespace SmashTools.Animations
 					bool expanded = expandedContainers[i];
 					rowRect.SplitVertically(EntryHeight, out Rect checkboxRect, out Rect fileLabelRect);
 
-					if (Widgets.ButtonImage(checkboxRect.ContractedBy(2), expanded ? TexButton.Collapse : TexButton.Reveal))
+					if (UIElements.CollapseButton(checkboxRect.ContractedBy(2), ref expanded))
 					{
-						expanded = !expanded;
 						expandedContainers[i] = expanded;
-
 						SoundDefOf.Click.PlayOneShotOnCamera(null);
 					}
 

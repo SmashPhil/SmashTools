@@ -13,19 +13,16 @@ namespace SmashTools
 	/// <typeparam name="T"></typeparam>
 	public class ConcurrentSet<T> : ConcurrentDictionary<T, byte>
 	{
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public bool Add(T item)
 		{
 			return TryAdd(item, 0);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public bool Remove(T item)
 		{
 			return TryRemove(item, out _);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public bool Contains(T item)
 		{
 			return ContainsKey(item);

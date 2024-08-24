@@ -81,13 +81,11 @@ namespace SmashTools
 			return value ? 1 : -1;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool IsOdd(this int value)
 		{
 			return value % 2 != 0;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool IsEven(this int value)
 		{
 			return value % 2 == 0;
@@ -149,9 +147,8 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Round to nearest n digits
+		/// Round to nearest n digits. <paramref name="roundTo"/> is representative of the decimal place. Eg. 0.01 for 2 decimal places
 		/// </summary>
-		/// <remarks><paramref name="roundTo"/> is representative of the decimal place. Eg. 0.01 for 2 decimal places</remarks>
 		/// <param name="num"></param>
 		/// <param name="roundTo"></param>
 		public static float RoundTo(this float num, float roundTo)
@@ -169,7 +166,6 @@ namespace SmashTools
 			return Mathf.RoundToInt(num / roundTo) * roundTo;
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int PowTwo(int exp)
 		{
 			return 1 << exp;

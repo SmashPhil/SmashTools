@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Verse;
 
 namespace SmashTools
 {
+	[Obsolete]
 	public abstract class SingleWindow : Window
 	{
 		public static SingleWindow CurrentlyOpenedWindow { get; set; }

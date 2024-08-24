@@ -17,13 +17,11 @@ namespace SmashTools
 		/// <param name="val"></param>
 		/// <param name="min"></param>
 		/// <param name="max"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static float Clamp(this float val, float min, float max)
 		{
 			return Mathf.Clamp(val, min, max);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Clamp(this int val, int min, int max)
 		{
 			return Mathf.Clamp(val, min, max);

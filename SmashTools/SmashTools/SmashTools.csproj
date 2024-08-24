@@ -19,7 +19,7 @@
     <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\..\..\SteamLibrary\steamapps\common\RimWorld\Mods\Vehicles\1.5\Assemblies\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>CS0649</NoWarn>
@@ -98,13 +98,17 @@
     <Compile Include="Attributes\HeaderTitleAttribute.cs" />
     <Compile Include="Attributes\LoadedEarlyAttribute.cs" />
     <Compile Include="Attributes\MustImplementAttribute.cs" />
+    <Compile Include="Attributes\NoProfilingAttribute.cs" />
     <Compile Include="Attributes\NumericBoxValuesAttribute.cs" />
+    <Compile Include="Attributes\ProfileAttribute.cs" />
     <Compile Include="Attributes\SliderValuesAttribute.cs" />
     <Compile Include="Attributes\StaticConstructorOnGameInitAttribute.cs" />
     <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
     <Compile Include="Attributes\TweakFieldAttribute.cs" />
     <Compile Include="Attributes\UnitTestAttribute.cs" />
+    <Compile Include="Collections\CircularArray.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
+    <Compile Include="Collections\DropOutStack.cs" />
     <Compile Include="Collections\SimpleDictionary.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
@@ -140,6 +144,7 @@
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Interfaces\ITweakFields.cs" />
     <Compile Include="Interfaces\IXmlExport.cs" />
+    <Compile Include="Logging\Debug.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\Harmony\Compatibility_RimHUD.cs" />
@@ -171,7 +176,7 @@
     <Compile Include="UI\Windows\AnimationEditor\Dialog_DefDropdown.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_MethodSelector.cs" />
     <Compile Include="UI\Windows\Dialog_CameraView.cs" />
-    <Compile Include="UI\Windows\Dialog_DedicatedThreadActivity.cs" />
+    <Compile Include="UI\Windows\Performance\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_ItemDropdown.cs" />
     <Compile Include="UI\Windows\Dialog_FolderPicker.cs" />
@@ -183,9 +188,11 @@
     <Compile Include="UI\Windows\Dialog_RadioButtonMenu.cs" />
     <Compile Include="UI\Windows\EditWindow_TweakFields.cs" />
     <Compile Include="UI\Windows\MovingWindow.cs" />
+    <Compile Include="UI\Windows\Performance\Dialog_Profiler.cs" />
     <Compile Include="UI\Windows\SingleWindow.cs" />
     <Compile Include="Animating\Obsolete\AnimationTargetHandler.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Concurrency.cs" />
+    <Compile Include="Utility\Extensions\Collections\Ext_LinkedList.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Queue.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Comp.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_Animation.cs" />

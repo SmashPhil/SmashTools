@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using UnityEngine;
 using HarmonyLib;
 using Verse;
+using System.Diagnostics;
 
 namespace SmashTools
 {
