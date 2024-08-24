@@ -40,6 +40,11 @@ namespace SmashTools
 			}
 		}
 
+		public void OnDestroy()
+		{
+			Log.Message("DESTROYED!");
+		}
+
 		public static void QueueInvoke(Action action)
 		{
 			Instance.enumerators.Enqueue(new Enumerator(action));
@@ -143,8 +148,9 @@ namespace SmashTools
 		internal static CoroutineManager InjectToScene()
 		{
 			GameObject gameObject = new GameObject("CoroutineManager");
-			CoroutineManager coroutineManager = gameObject.AddComponent<CoroutineManager>();
-			return coroutineManager;
+			CoroutineManager manager = gameObject.AddComponent<CoroutineManager>();
+			DontDestroyOnLoad(gameObject);
+			return manager;
 		}
 
 		private class Enumerator

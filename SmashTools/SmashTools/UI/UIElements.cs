@@ -103,6 +103,27 @@ namespace SmashTools
 			return clicked;
 		}
 
+		public static bool CollapseButton(Rect rect, ref bool expanded, bool doMouseoverSound = true, string tooltip = null)
+		{
+			return CollapseButton(rect, ref expanded, Color.white, doMouseoverSound: doMouseoverSound, tooltip: tooltip);
+		}
+
+		public static bool CollapseButton(Rect rect, ref bool expanded, Color baseColor, bool doMouseoverSound = true, string tooltip = null)
+		{
+			return CollapseButton(rect, ref expanded, baseColor, GenUI.MouseoverColor, doMouseoverSound: doMouseoverSound, tooltip: tooltip);
+		}
+
+		public static bool CollapseButton(Rect rect, ref bool expanded, Color baseColor, Color mouseoverColor, bool doMouseoverSound = true, string tooltip = null)
+		{
+			bool result = Widgets.ButtonImage(rect, expanded ? TexButton.Collapse : TexButton.Reveal, 
+				baseColor: baseColor, mouseoverColor: mouseoverColor, doMouseoverSound: doMouseoverSound, tooltip: tooltip);
+			if (result)
+			{
+				expanded = !expanded;
+			}
+			return result;
+		}
+
 		public static bool ReverseRadioButton(Rect rect, string label, bool enabled)
 		{
 			bool flag;

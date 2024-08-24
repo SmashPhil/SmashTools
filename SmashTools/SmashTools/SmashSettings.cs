@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using Verse;
+using SmashTools.Performance;
 
 namespace SmashTools
 {
@@ -11,6 +12,7 @@ namespace SmashTools
 		public static string unitTest;
 		public static QuickStartOption quickStartOption = QuickStartOption.None;
 		public static string quickStartFile;
+		public static HashSet<string> profileAssemblies = new HashSet<string>();
 
 		public static string FullPath => Path.Combine(GenFilePaths.ConfigFolderPath, "SmashTools.xml");
 
@@ -20,6 +22,7 @@ namespace SmashTools
 			Scribe_Values.Look(ref quickStartOption, nameof(quickStartOption), QuickStartOption.None);
 			Scribe_Values.Look(ref quickStartFile, nameof(quickStartFile));
 			Scribe_Values.Look(ref unitTest, nameof(unitTest));
+			Scribe_Collections.Look(ref profileAssemblies, nameof(profileAssemblies));
 #endif
 		}
 	}

@@ -6,6 +6,7 @@ using Verse;
 namespace SmashTools
 {
 	[AttributeUsage(AttributeTargets.Class)]
+	[Obsolete("Do not use.", true)]
 	public class StaticConstructorOnGameInitAttribute : Attribute
 	{
 		public static void RunGameInitStaticConstructors()

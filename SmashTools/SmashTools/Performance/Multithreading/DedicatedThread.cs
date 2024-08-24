@@ -13,17 +13,20 @@ namespace SmashTools.Performance
 		public readonly Thread thread;
 		public readonly int id;
 		public readonly ThreadType type;
+		public UpdateLoop update;
 
 		private readonly ConcurrentQueue<AsyncAction> queue;
 
 		private bool shouldExit;
 		private bool inLongOperation;
 
+		public delegate void UpdateLoop();
+
 		public DedicatedThread(int id, ThreadType type)
 		{
 			this.id = id;
 			this.type = type;
-
+			
 			queue = new ConcurrentQueue<AsyncAction>();
 			thread = new Thread(Execute)
 			{
@@ -74,7 +77,12 @@ namespace SmashTools.Performance
 					}
 					asyncAction.ReturnToPool();
 				}
-				while (queue.Count == 0) Thread.Sleep(15);
+				//Prioritize running queue over update loop
+				while (queue.Count == 0)
+				{
+					update?.Invoke();
+					Thread.Sleep(10);
+				}
 			}
 		}
 
