@@ -23,7 +23,7 @@ namespace SmashTools.Performance
 	/// Better implementation of <see cref="DeepProfiler"/> with exclusion from release builds and proper UI panel.
 	/// </summary>
 	/// <remarks>Results are joined and averaged across threads, the only separator is depth within a profile block.</remarks>
-#if DEBUG && !LAZY_PROFILING
+#if DEBUG
 	[StaticConstructorOnStartup]
 #endif
 	[NoProfiling]
@@ -54,6 +54,7 @@ namespace SmashTools.Performance
 #if DEBUG
 			harmony = new Harmony("SmashTools.ProfilerWatch");
 #endif
+			//ProfilerLogger.Link();
 			FlagModsForProfiling();
 			ClearCache();
 #if DEBUG && !LAZY_PROFILING
