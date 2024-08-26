@@ -157,6 +157,7 @@
     <Compile Include="Performance\Multithreading\AsyncPool.cs" />
     <Compile Include="Performance\Asynchronous\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
+    <Compile Include="Performance\Profiling\ProfilerLogger.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
     <Compile Include="Performance\Multithreading\TaskManager.cs" />
     <Compile Include="Performance\Multithreading\ThreadManager.cs" />
