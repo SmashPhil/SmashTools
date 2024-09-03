@@ -115,10 +115,6 @@ namespace SmashTools
 		/// <param name="index"></param>
 		public static bool OutOfBounds<T>(this IList<T> list, int index)
 		{
-			if (list.NullOrEmpty())
-			{
-				return true;
-			}
 			return index < 0 || index >= list.Count;
 		}
 	}

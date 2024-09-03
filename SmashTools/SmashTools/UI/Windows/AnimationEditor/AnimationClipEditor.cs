@@ -10,10 +10,11 @@ using Verse;
 using Verse.Noise;
 using Verse.Sound;
 using KeyFrame = SmashTools.Animations.AnimationCurve.KeyFrame;
+using Debug = SmashTools.Debug;
+using HarmonyLib;
 
 namespace SmashTools.Animations
 {
-	[StaticConstructorOnStartup]
 	public class AnimationClipEditor : AnimationEditor
 	{
 		private const float MinLeftWindowSize = 300;
@@ -34,21 +35,25 @@ namespace SmashTools.Animations
 		private const float MaxFrameZoom = 1000;
 		private const float ZoomRate = 0.01f;
 
+		private const int InitialTickInterval = 1;
+		private const float InitialCurveTickInterval = 0.1f;
+		private const float MaxCurveSpacing = CollapseFrameDistance / InitialCurveTickInterval / 2.5f;
+
 		private const int DefaultFrameCount = 60;
 		private const float SecondsPerFrame = 1 / 60f;
 		private const float DefaultAxisCount = 100;
 
 		private const float MaxExtraScrollDistance = 5000;
 		
-		private static readonly Texture2D skipToBeginningTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToBeginning");
-		private static readonly Texture2D skipToPreviousTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToPrevious");
-		private static readonly Texture2D skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
-		private static readonly Texture2D skipToEndTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToEnd");
+		private readonly Texture2D skipToBeginningTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToBeginning");
+		private readonly Texture2D skipToPreviousTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoReturnToPrevious");
+		private readonly Texture2D skipToNextTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToNext");
+		private readonly Texture2D skipToEndTexture = ContentFinder<Texture2D>.Get("SmashTools/VideoSkipToEnd");
 
-		private static readonly Texture2D animationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AnimationEvent");
-		private static readonly Texture2D keyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/KeyFrame");
-		private static readonly Texture2D addAnimationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AddEvent");
-		private static readonly Texture2D addKeyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/AddKeyFrame");
+		private readonly Texture2D animationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AnimationEvent");
+		private readonly Texture2D keyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/KeyFrame");
+		private readonly Texture2D addAnimationEventTexture = ContentFinder<Texture2D>.Get("SmashTools/AddEvent");
+		private readonly Texture2D addKeyFrameTexture = ContentFinder<Texture2D>.Get("SmashTools/AddKeyFrame");
 
 		private readonly Color propertyExpandedNameColor = new ColorInt(123, 123, 123).ToColor;
 		private readonly Color propertyLabelHighlightColor = new ColorInt(255, 255, 255, 10).ToColor;
@@ -89,8 +94,9 @@ namespace SmashTools.Animations
 
 		private int frame = 0;
 		private bool isPlaying;
-		private int tickInterval = 1;
-		private float curveTickInterval = 0.5f;
+		private int tickInterval = InitialTickInterval;
+		private float curveTickInterval = InitialCurveTickInterval;
+
 		private readonly Dictionary<AnimationPropertyParent, bool> propertyExpanded = new Dictionary<AnimationPropertyParent, bool>();
 		private readonly Dictionary<ParameterInfo, string> inputBuffers = new Dictionary<ParameterInfo, string>();
 
@@ -106,8 +112,8 @@ namespace SmashTools.Animations
 
 		private float realTimeToTick;
 
-		private float curveTickCenter = 0;
 		private Vector2 dragPos;
+		private (AnimationProperty property, int index) draggingKeyFrame;
 		private DragItem dragging = DragItem.None;
 
 		private EditTab tab = EditTab.Dopesheet;
@@ -143,20 +149,20 @@ namespace SmashTools.Animations
 			get
 			{
 				float spacing = CollapseFrameDistance / Mathf.Lerp(TickInterval / 2f, TickInterval, ZoomFrames % 1f);
-				if (TickInterval == 1)
+				if (TickInterval == InitialTickInterval)
 				{
 					spacing /= 2.5f; //Return to being factor of 2, with max frame distance of 250 at 1 tick interval
 				}
 				return spacing;
 			}
 		}
-
+		
 		private float CurveAxisSpacing
 		{
 			get
 			{
 				float spacing = CollapseFrameDistance / Mathf.Lerp(CurveTickInterval / 2f, CurveTickInterval, ZoomCurve % 1f);
-				if (CurveTickInterval == 1)
+				if (CurveTickInterval == InitialCurveTickInterval)
 				{
 					spacing /= 2.5f; //Return to being factor of 2, with max frame distance of 250 at 1 tick interval
 				}
@@ -168,6 +174,7 @@ namespace SmashTools.Animations
 		{
 			get
 			{
+				Debug.Assert(tickInterval > 0);
 				return tickInterval;
 			}
 		}
@@ -176,6 +183,7 @@ namespace SmashTools.Animations
 		{
 			get
 			{
+				Debug.Assert(curveTickInterval > 0);
 				return curveTickInterval;
 			}
 		}
@@ -207,7 +215,7 @@ namespace SmashTools.Animations
 				if (zoomY != value)
 				{
 					zoomY = Mathf.Clamp(value, 1, MaxFrameZoom);
-					RecalculateTickInterval();
+					RecalculateCurveTickInterval();
 				}
 			}
 		}
@@ -296,20 +304,32 @@ namespace SmashTools.Animations
 
 		public override void OnGUIHighPriority()
 		{
+			base.OnGUIHighPriority();
 			if (KeyBindingDefOf.TogglePause.KeyDownEvent)
 			{
 				Event.current.Use();
 				IsPlaying = !IsPlaying;
 			}
+		}
 
-			if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand))
+		public override void Save()
+		{
+			if (animation)
 			{
-				if (animation && Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.S)
-				{
-					Event.current.Use();
-					AnimationLoader.ExportAnimationXml(animation);
-				}
+				AnimationLoader.Save(animation);
 			}
+		}
+
+		public override void CopyToClipboard()
+		{
+		}
+
+		public override void Paste()
+		{
+		}
+
+		public override void Escape()
+		{
 		}
 
 		public override void Draw(Rect rect)
@@ -733,8 +753,9 @@ namespace SmashTools.Animations
 					KeyFrameInput(inputRect, propertyParent.Single);
 				}
 
-				Rect propertyPropertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
-				if (Widgets.ButtonImage(propertyPropertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
+				Rect propertyParentBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
+				Color propertyBtnColor = propertyParent.Single != null && tab == EditTab.Curves ? propertyParent.Single.Color : keyFrameColor;
+				if (Widgets.ButtonImage(propertyParentBtnRect, keyFrameTexture, propertyBtnColor, keyFrameHighlightColor))
 				{
 					List<FloatMenuOption> options = new List<FloatMenuOption>();
 					var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
@@ -768,7 +789,7 @@ namespace SmashTools.Animations
 				{
 					Widgets.DrawBoxSolid(propertyParentRect, propertyLabelHighlightColor);
 				}
-				Widgets.Label(propertyParentRect, $"{propertyParent.Type.Name} : {propertyParent.Name}");
+				Widgets.Label(propertyParentRect, $"{propertyParent.Identifier} : {propertyParent.Label}");
 
 				if (expanded)
 				{
@@ -794,7 +815,7 @@ namespace SmashTools.Animations
 						}
 
 						Rect propertyBtnRect = new Rect(rowRect.xMax - collapseBtnRect.width, rowRect.y, propertyBtnSize, propertyBtnSize).ContractedBy(6);
-						if (Widgets.ButtonImage(propertyBtnRect, keyFrameTexture, keyFrameColor, keyFrameHighlightColor))
+						if (Widgets.ButtonImage(propertyBtnRect, keyFrameTexture, tab == EditTab.Curves ? property.Color : keyFrameColor, keyFrameHighlightColor))
 						{
 							List<FloatMenuOption> options = new List<FloatMenuOption>();
 							var removePropsOption = new FloatMenuOption("ST_RemoveProperties".Translate(), delegate ()
@@ -834,7 +855,7 @@ namespace SmashTools.Animations
 						{
 							Widgets.DrawBoxSolid(propertyRect, propertyLabelHighlightColor);
 						}
-						Widgets.Label(propertyRect, $"{propertyParent.Name}.{property.Name}");
+						Widgets.Label(propertyRect, $"{propertyParent.Label}.{property.Label}");
 						GUI.color = Color.white;
 					}
 				}
@@ -968,8 +989,8 @@ namespace SmashTools.Animations
 			Rect scrollbarRect = new Rect(visibleRect.xMax + GUI.skin.horizontalScrollbar.margin.left,
 				frameOutRect.y, GUI.skin.verticalScrollbar.fixedWidth, frameViewRect.height);
 			float size = Mathf.Min(visibleRect.height, frameViewRect.height);
-			frameScrollPos.y = GUI.VerticalScrollbar(scrollbarRect, frameScrollPos.y, size, 0f, frameViewRect.height, GUI.skin.verticalScrollbar);
-			UIElements.BeginScrollView(frameOutRect, ref frameScrollPos, frameViewRect, showHorizontalScrollbar: false, showVerticalScrollbar: false);
+			//frameScrollPos.y = GUI.VerticalScrollbar(scrollbarRect, frameScrollPos.y, size, 0f, frameViewRect.height, GUI.skin.verticalScrollbar);
+			UIElements.BeginScrollView(frameOutRect, ref frameScrollPos, frameViewRect, showHorizontalScrollbar: false, showVerticalScrollbar: true);
 			
 			frameViewRect.width += 16;
 
@@ -1007,27 +1028,26 @@ namespace SmashTools.Animations
 					break;
 				case EditTab.Curves:
 					{
-						Rect curveBackgroundRect = new Rect(frameViewRect.x, animationEventBarRect.yMax, frameViewRect.width, frameViewRect.height - animationEventBarRect.height);
+						Rect curveBackgroundRect = new Rect(frameViewRect.x, animationEventBarRect.yMax, 
+							frameViewRect.width, frameViewRect.height - animationEventBarRect.height);
 						DrawBackgroundDark(curveBackgroundRect);
 						DrawCurvesFrameTicks(curveBackgroundRect);
 
 						DrawBlend(blendRect, curveTopFadeColor, curveTopColor);
 
 						float yT = GetScrollPosNormalized(editorRect, frameScrollPos, frameViewRect).y;
-						Rect curveFrameBarRect = new Rect(editorOutRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
+						Rect curveFrameBarRect = new Rect(visibleRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
 						DrawAxis(curveFrameBarRect, yT, visibleRect);
 
 						Rect dragRect = DragRect(rect.position - visibleRect.position);
-						Rect curvesRect = new Rect(frameBarRect.x, curveBackgroundRect.y, FrameBarWidth, curveBackgroundRect.height);
-						DrawCurves(curvesRect);
-
-						Widgets.DrawBoxSolidWithOutline(visibleFrameRect, new Color(0.75f, 0.15f, 0.5f, 0.15f), Color.white);
+						Rect curvesRect = new Rect(frameBarRect.x, 0, FrameBarWidth, curveBackgroundRect.height);
+						DrawCurves(curvesRect, visibleRect, rect.position + editorOutRect.position + frameOutRect.position);
 
 						if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
 						{
 							SetDragPos();
 						}
-						if (dragging == DragItem.None && SelectionBox(rect.position, Rect.zero, curveBackgroundRect, out dragRect))
+						if (dragging == DragItem.None && SelectionBox(rect.position, visibleRect, curveBackgroundRect, out dragRect))
 						{
 
 						}
@@ -1070,7 +1090,9 @@ namespace SmashTools.Animations
 				{
 					float yT = GetScrollPosNormalized(frameOutRect, frameScrollPos, frameViewRect).y;
 
-					if (expandVertical && Mathf.Approximately(yT, 0))
+					bool approx0 = Mathf.Approximately(yT, 0);
+					bool approx1 = Mathf.Approximately(yT, 1);
+					if (expandVertical && (approx0 || (approx1 && mouseDiff.y > 0)))
 					{
 						extraFrameHeight += mouseDiff.y;
 					}
@@ -1078,7 +1100,7 @@ namespace SmashTools.Animations
 					{
 						frameScrollPos.y -= mouseDiff.y;
 
-						if (expandVertical && Mathf.Approximately(yT, 1))
+						if (expandVertical && approx1)
 						{
 							extraFrameHeight -= mouseDiff.y;
 						}
@@ -1292,21 +1314,34 @@ namespace SmashTools.Animations
 			int power = Mathf.FloorToInt(ZoomFrames) - 2;
 			if (power < 0)
 			{
-				tickInterval = 1; //Needs to start at TickInterval = 1, then increment in powers of 2 by base 5
+				tickInterval = InitialTickInterval;
 				return;
 			}
-			int interval = 5 * Ext_Math.PowTwo(power);
-			tickInterval = Mathf.Clamp(interval, 1, int.MaxValue);
+			// 5 * 2^n for even spacing in powers of 5 while remaining scalable for large animations
+			int interval = 5 * Ext_Math.PowTwo(power); 
+			tickInterval = Mathf.Clamp(interval, 5, int.MaxValue);
 		}
 
-		private void LoadAnimation(FileInfo fileInfo)
+		private void RecalculateCurveTickInterval()
+		{
+			int power = Mathf.FloorToInt(ZoomCurve) - 2;
+			if (power < 0)
+			{
+				curveTickInterval = InitialCurveTickInterval;
+				return;
+			}
+			// 0.5 * 2^n for similar scalability as TickInterval, with lower initial values for finer control in animation curves
+			float interval = 0.5f * Ext_Math.PowTwo(power);
+			curveTickInterval = Mathf.Clamp(interval, 0.5f, float.MaxValue);
+		}
+
+		private void LoadAnimation(AnimationClip animationClip)
 		{
 			propertyExpanded.Clear();
-			AnimationClip clip = AnimationLoader.LoadFile<AnimationClip>(fileInfo.FullName);
-			animation = clip;
-			if (!clip)
+			animation = animationClip;
+			if (!animationClip)
 			{
-				Messages.Message($"Unable to load animation file at {fileInfo.FullName}.", MessageTypeDefOf.RejectInput);
+				Messages.Message($"Unable to load animation file.", MessageTypeDefOf.RejectInput);
 			}
 		}
 
@@ -1505,15 +1540,13 @@ namespace SmashTools.Animations
 			return new Rect(tickMarkPos - PropertyEntryHeight / 2 + 0.5f, y, PropertyEntryHeight, PropertyEntryHeight);
 		}
 
-		private void DrawCurves(Rect rect)
+		/// <returns>If any KeyFrame handle is currently being dragged</returns>
+		private void DrawCurves(Rect rect, Rect visibleRect, Vector2 groupPos)
 		{
 			if (!GUI.enabled)
 			{
 				return;
 			}
-
-			FloatRange xRange = new FloatRange(0, 60);
-			FloatRange yRange = new FloatRange(-1, 1);
 
 			if (!selector.AnyPropertySelected)
 			{
@@ -1555,7 +1588,8 @@ namespace SmashTools.Animations
 
 			void DrawProperty(AnimationProperty property)
 			{
-				//Graph.DrawAnimationCurve(rect, property.curve, xRange, yRange);
+				AnimationGraph.DrawAnimationCurve(rect, visibleRect, property.curve, property.Color, CurveAxisSpacing);
+				DragHandle(rect, visibleRect, groupPos, property);
 			}
 		}
 
@@ -1566,36 +1600,108 @@ namespace SmashTools.Animations
 				return;
 			}
 
-			Widgets.BeginGroup(rect);
+			Text.Anchor = TextAnchor.LowerRight;
+			Text.Font = GameFont.Tiny;
+			GUI.color = curveAxisColor;
+
+			DrawAxisTick(0, 0);
+
+			float tick = CurveTickInterval;
+			int tickMarks = CurveTickMarks(rect);
+			for (int i = 1; i < tickMarks; i++)
 			{
-				Text.Anchor = TextAnchor.LowerRight;
-				Text.Font = GameFont.Tiny;
-				GUI.color = curveAxisColor;
-
-				float tick = 0;
-
-				int tickMarks = Mathf.CeilToInt(visibleRect.height / (CurveAxisSpacing * TickInterval));
-				for (int i = 1; i < tickMarks; i++)
-				{
-					DrawAxisTick(0, tick);
-					tick += CurveTickInterval;
-				}
-
-				GUI.color = Color.white;
-				Text.Font = GameFont.Small;
+				// Position is inverted, UI y axis is top down
+				DrawAxisTick(CurveTickInterval * i, -tick);
+				DrawAxisTick(-CurveTickInterval * i, tick);
+				tick += CurveTickInterval;
 			}
-			Widgets.EndGroup();
+
+			GUI.color = Color.white;
+			Text.Font = GameFont.Small;
+			Text.Anchor = TextAnchor.UpperLeft;
 
 			void DrawAxisTick(float value, float tick)
 			{
-				float height = CurveAxisSpacing * TickInterval;
+				float height = CurveAxisSpacing * CurveTickInterval;
 
-				float tickMarkPos = tick * CurveAxisSpacing;
+				float tickMarkPos = rect.height / 2 + tick * CurveAxisSpacing;
 				UIElements.DrawLineHorizontal(rect.x, tickMarkPos, rect.width, frameBarCurveColor);
 				
 				Rect labelUpRect = new Rect(rect.x, tickMarkPos - height, rect.width, height).ContractedBy(3);
 				Widgets.Label(labelUpRect, AxisStamp(value));
 			}
+		}
+
+		private int CurveTickMarks(Rect rect)
+		{
+			return Mathf.CeilToInt(rect.height / (CurveAxisSpacing * CurveTickInterval));
+		}
+
+		#region DragHandling
+
+		private void DragHandle(Rect rect, Rect visibleRect, Vector2 groupPos, AnimationProperty property)
+		{
+			bool resort = false;
+			for (int i = 0; i < property.curve.PointsCount; i++)
+			{
+				KeyFrame keyFrame = property.curve.points[i];
+				int x = keyFrame.frame;
+				float y = property.curve[x];
+
+				Debug.Assert(!property.curve.points.OutOfBounds(i));
+
+				Vector2 dragHandlePos = AnimationGraph.GraphCoordToScreenPos(rect, new Vector2(x, y), property.curve.RangeX, CurveAxisSpacing);
+				Rect texRect = new Rect(dragHandlePos.x - AnimationGraph.DragHandleSize / 2, dragHandlePos.y - AnimationGraph.DragHandleSize / 2, 
+					AnimationGraph.DragHandleSize, AnimationGraph.DragHandleSize);
+
+				GUI.color = Mouse.IsOver(texRect) ? property.Color.AddNoAlpha(0.1f, 0.1f, 0.1f) : property.Color; 
+				GUI.DrawTexture(texRect, keyFrameTexture);
+				GUI.color = Color.black;
+				GUI.DrawTexture(texRect.ContractedBy(AnimationGraph.DragHandleSize / 4), keyFrameTexture);
+				GUI.color = Color.white;
+
+				if (DragWindow(texRect, ref dragPos, SetDragItem, IsDragging, StopDragging) && Matches(property, i))
+				{
+					Vector2 mousePos = MouseUIPos(groupPos);
+
+					//TODO - drag pos is slightly off, needs adjusting for scroll position as well
+					(int frame, float value) = AnimationGraph.ScreenPosToGraphCoord(rect, mousePos, property.curve.RangeX, FrameTickMarkSpacing, CurveAxisSpacing);
+
+					// Equivalent to Mathf.Clamp(0, rect.width / FrameTickMarkSpacing, value)
+					// This lets us avoid casting int -> float -> int unless it's actually past max bounds
+					if (frame < 0) frame = 0;
+					else if (frame >= rect.width / FrameTickMarkSpacing) frame = Mathf.FloorToInt(rect.width / FrameTickMarkSpacing);
+
+					property.curve.points[i] = new KeyFrame(frame, value);
+				}
+				
+				void SetDragItem()
+				{
+					draggingKeyFrame.property = property;
+					draggingKeyFrame.index = i;
+					dragging = DragItem.KeyFrameHandle;
+				}
+
+				bool IsDragging()
+				{
+					return Matches(property, i) && dragging == DragItem.KeyFrameHandle;
+				}
+
+				void StopDragging()
+				{
+					draggingKeyFrame.property = null;
+					draggingKeyFrame.index = -1;
+					dragging = DragItem.None;
+					resort = true;
+				}
+			}
+
+			bool Matches(AnimationProperty property, int index)
+			{
+				return draggingKeyFrame.property == property && draggingKeyFrame.index == index;
+			}
+
+			if (resort) property.curve.points.Sort();
 		}
 
 		private bool DragWindow(Rect rect, DragItem dragItem, int button = 0)
@@ -1617,6 +1723,8 @@ namespace SmashTools.Animations
 				dragging = DragItem.None;
 			}
 		}
+
+		#endregion DragHandling
 
 		private void InjectKeyFramesNewProperty(AnimationPropertyParent propertyParent)
 		{
@@ -1693,6 +1801,7 @@ namespace SmashTools.Animations
 			None,
 			FrameBar,
 			KeyFrameWindow,
+			KeyFrameHandle,
 		}
 
 		private enum EditTab

@@ -8,8 +8,12 @@ namespace SmashTools.Animations
 {
 	public interface IAnimationFile : IXmlExport
 	{
-		public string FilePath { get; set; }
+		string FilePath { get; set; }
 
-		public string FileName { get; set; }
+		string FileName { get; set; }
+
+		string FileNameWithExtension { get; }
+
+		void PostLoad();
 	}
 }

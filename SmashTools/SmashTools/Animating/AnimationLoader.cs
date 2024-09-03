@@ -1,4 +1,5 @@
-﻿using RimWorld;
+﻿using HarmonyLib;
+using RimWorld;
 using SmashTools.Xml;
 using System;
 using System.Collections.Generic;
@@ -13,11 +14,57 @@ using Verse.Sound;
 
 namespace SmashTools.Animations
 {
+	[StaticConstructorOnModInit]
 	public static class AnimationLoader
 	{
 		public const string AnimationFolderName = "Animations";
-		public const string DefaultAnimName = "New-Animation";
-		public const string DefaultControllerName = "New-Controller";
+		public const string AnimationFolder = AnimationFolderName + "/";
+
+		private static readonly Dictionary<Type, string> fileExtensions = new Dictionary<Type, string>
+		{
+			{ typeof(AnimationClip), AnimationClip.FileExtension },
+			{ typeof(AnimationController), AnimationController.FileExtension }
+		};
+
+		static AnimationLoader()
+		{
+			ParseHelper.Parsers<AnimationClip>.Register(ParseAnimationFile<AnimationClip>);
+			ParseHelper.Parsers<AnimationController>.Register(ParseAnimationFile<AnimationController>);
+			LoadAll();
+		}
+
+		private static void LoadAll()
+		{
+			foreach (ModContentPack mod in LoadedModManager.RunningModsListForReading)
+			{
+				LoadAnimationFiles<AnimationClip>(mod);
+				LoadAnimationFiles<AnimationController>(mod);
+			}
+		}
+		
+		private static void LoadAnimationFiles<T>(ModContentPack mod) where T : IAnimationFile, new()
+		{
+			Dictionary<string, FileInfo> allFilesForMod = ModContentPack.GetAllFilesForMod(mod, AnimationFolder, IsAcceptableExtension<T>);
+			foreach ((string path, FileInfo fileInfo) in allFilesForMod)
+			{
+				T file = LoadFile<T>(fileInfo.FullName);
+				string relativePath = path;
+				if (relativePath.StartsWith(AnimationFolder))
+				{
+					relativePath = path.Substring(AnimationFolder.Length);
+				}
+				if (Path.HasExtension(relativePath))
+				{
+					relativePath = Path.GetFileNameWithoutExtension(relativePath);
+				}
+				Cache<T>.Add(relativePath, file);
+			}
+		}
+
+		private static bool IsAcceptableExtension<T>(string ext)
+		{
+			return fileExtensions.TryGetValue(typeof(T), out string fileExt) && ext == fileExt;
+		}
 
 		public static DirectoryInfo AnimationDirectory(ModContentPack modContentPack)
 		{
@@ -34,9 +81,18 @@ namespace SmashTools.Animations
 			return null;
 		}
 
+		private static T ParseAnimationFile<T>(string filePath) where T : IAnimationFile, new()
+		{
+			return LoadFile<T>(filePath);
+		}
+
 		public static T LoadFile<T>(string filePath) where T : IAnimationFile, new()
 		{
-			T file = DirectXmlLoader.ItemFromXmlFile<T>(filePath);
+			if (Cache<T>.Get(filePath, out T file))
+			{
+				return file;
+			}
+			file = DirectXmlLoader.ItemFromXmlFile<T>(filePath);
 			if (file == null)
 			{
 				Log.Error($"Could not load animation at \"{filePath}\". Path not found.");
@@ -44,56 +100,51 @@ namespace SmashTools.Animations
 			}
 			file.FilePath = filePath;
 			file.FileName = Path.GetFileNameWithoutExtension(filePath);
+			file.PostLoad();
 			return file;
 		}
 
-		public static FileInfo CreateEmptyAnimFile(DirectoryInfo directoryInfo)
+		/// <returns>True if AnimationClip saved to path without need for file picker dialog.</returns>
+		public static bool Save<T>(T file) where T : IAnimationFile, new()
 		{
-			string fileName = GetAvailableFileName(directoryInfo, DefaultAnimName, AnimationClip.FileExtension);
-			string fileNameWithExtension = fileName + AnimationClip.FileExtension;
-			string filePath = Path.Combine(directoryInfo.FullName, fileNameWithExtension);
-			AnimationClip animationClip = new AnimationClip();
-			animationClip.FileName = fileName;
-			animationClip.FilePath = filePath;
-			if (ExportAnimationXml(animationClip))
-			{
-				return new FileInfo(filePath);
-			}
-			return null;
-		}
+			if (file == null) return false;
 
-		public static FileInfo CreateEmptyControllerFile(DirectoryInfo directoryInfo)
-		{
-			string fileName = GetAvailableFileName(directoryInfo, DefaultControllerName, AnimationController.FileExtension);
-			string fileNameWithExtension = fileName + AnimationController.FileExtension;
-			string filePath = Path.Combine(directoryInfo.FullName, fileNameWithExtension);
-			AnimationController controller = AnimationController.EmptyController();
-			controller.FileName = fileName;
-			controller.FilePath = filePath;
-			if (ExportControllerXml(controller))
+			if (file.FilePath == null || !File.Exists(file.FilePath))
 			{
-				return new FileInfo(filePath);
-			}
-			return null;
-		}
-
-		public static bool ExportAnimationXml(AnimationClip animationClip)
-		{
-			if (!animationClip)
-			{
+				SaveAs(file);
 				return false;
 			}
+			ExportXml(file);
+			return true;
+		}
+
+		public static void SaveAs<T>(T file) where T : IAnimationFile, new()
+		{
+			if (file == null) return;
+
+			Dialog_FilePicker filePicker = new Dialog_FilePicker(("Save".Translate(), (dir) => ExportXmlToDirectory(file, dir)));
+			Find.WindowStack.Add(filePicker);
+		}
+
+		private static void ExportXmlToDirectory<T>(T file, DirectoryInfo directory) where T : IAnimationFile, new()
+		{
+			file.FilePath = Path.Combine(directory.FullName, file.FileNameWithExtension);
+			ExportXml(file);
+		}
+
+		private static void ExportXml<T>(T file) where T : IAnimationFile, new()
+		{
 			bool exported = true;
 			try
 			{
-				XmlExporter.StartDocument(animationClip.FilePath);
-				XmlExporter.WriteElement(nameof(AnimationClip), animationClip);
+				XmlExporter.StartDocument(file.FilePath);
+				XmlExporter.WriteElement(file.GetType().Name, file);
 			}
 			catch (IOException ex)
 			{
 				exported = false;
 				Log.Error($"Unable to export animation data.\nException = {ex}");
-				Messages.Message($"Failed to save {animationClip.FileName}.", MessageTypeDefOf.RejectInput);
+				Messages.Message($"Failed to save {file.FileName}.", MessageTypeDefOf.RejectInput);
 			}
 			finally
 			{
@@ -102,9 +153,8 @@ namespace SmashTools.Animations
 
 			if (exported)
 			{
-				Messages.Message($"{animationClip.FileName} successfully saved at {animationClip.FilePath}", MessageTypeDefOf.TaskCompletion);
+				Messages.Message($"{file.FileName} successfully saved at {file.FilePath}", MessageTypeDefOf.TaskCompletion);
 			}
-			return exported;
 		}
 
 		public static bool ExportControllerXml(AnimationController controller)
@@ -135,16 +185,6 @@ namespace SmashTools.Animations
 				Messages.Message($"{controller.FileName} successfully saved at {controller.FilePath}", MessageTypeDefOf.TaskCompletion);
 			}
 			return exported;
-		}
-
-		public static List<FileInfo> GetAnimationClipFileInfo(ModContentPack modContentPack)
-		{
-			return GetFiles(modContentPack, AnimationClip.FileExtension);
-		}
-
-		public static List<FileInfo> GetAnimationControllerFileInfo(ModContentPack modContentPack)
-		{
-			return GetFiles(modContentPack, AnimationController.FileExtension);
 		}
 
 		private static List<FileInfo> GetFiles(ModContentPack modContentPack, string fileExtension)
@@ -216,7 +256,20 @@ namespace SmashTools.Animations
 				}
 				name = $"{defaultName} {i}";
 			}
-			return $"{defaultName} {Rand.Range(10000, 99999)}";
+			return $"{defaultName} {Rand.Range(100000, 999999)}";
+		}
+
+		internal static class Cache<T> where T : IAnimationFile
+		{
+			private static readonly Dictionary<string, T> files = new Dictionary<string, T>();
+
+			public static List<T> GetAll() => files.Values.ToList();
+
+			public static void Add(string path, T file) => files[path] = file;
+
+			public static bool Get(string path, out T file) => files.TryGetValue(path, out file);
+
+			public static bool Remove(string path) => files.Remove(path);
 		}
 	}
 }

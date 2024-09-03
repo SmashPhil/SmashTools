@@ -11,8 +11,9 @@ namespace SmashTools.Animations
 {
 	public sealed class AnimationClip : IAnimationFile
 	{
-		public const int DefaultFrameCount = 60;
+		public const string DefaultAnimName = "New-Animation";
 		public const string FileExtension = ".rwa"; //RimWorld Animation
+		public const int DefaultFrameCount = 60;
 
 		public int frameCount = DefaultFrameCount;
 
@@ -71,6 +72,24 @@ namespace SmashTools.Animations
 		internal void ValidateEventOrder()
 		{
 			events.Sort();
+		}
+
+		public static AnimationClip CreateEmpty()
+		{
+			AnimationClip animationClip = new AnimationClip();
+			animationClip.FileName = DefaultAnimName;
+			return animationClip;
+		}
+
+		void IAnimationFile.PostLoad()
+		{
+			if (!properties.NullOrEmpty())
+			{
+				foreach (AnimationPropertyParent propertyParent in properties)
+				{
+					propertyParent.PostLoad();
+				}
+			}
 		}
 
 		void IXmlExport.Export()

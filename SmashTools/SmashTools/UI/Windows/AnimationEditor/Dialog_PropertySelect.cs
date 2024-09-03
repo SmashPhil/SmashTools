@@ -54,12 +54,12 @@ namespace SmashTools.Animations
 			{
 				foreach (AnimationPropertyParent container in animation.properties)
 				{
-					existingProperties.Add((container.Type, container.Name));
+					existingProperties.Add((container.Type, container.Label));
 				}
 			}
 			foreach (AnimationPropertyParent container in AnimationPropertyRegistry.GetAnimationProperties(animator))
 			{
-				if (!existingProperties.Contains((container.Type, container.Name)))
+				if (!existingProperties.Contains((container.Type, container.Label)))
 				{
 					if (!properties.ContainsKey(container.Type))
 					{
@@ -131,7 +131,7 @@ namespace SmashTools.Animations
 						{
 							rowRect.y += rowRect.height;
 							Rect propertyParentRect = new Rect(fileLabelRect.x + SubPropertyPadding, rowRect.y, fileLabelRect.width - SubPropertyPadding, fileLabelRect.height);
-							Widgets.Label(propertyParentRect, container.Name);
+							Widgets.Label(propertyParentRect, container.Label);
 							if (AddPropertyButton(propertyParentRect))
 							{
 								animation.properties.Add(container);

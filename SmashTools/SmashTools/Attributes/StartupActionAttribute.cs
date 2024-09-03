@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace SmashTools
 {
 	[AttributeUsage(AttributeTargets.Method)]
-	public class UnitTestAttribute : Attribute
+	public class StartupActionAttribute : Attribute
 	{
 		/// <summary>
 		/// Name assigned to checkbox label in UnitTesting dialog. Overrides method name.

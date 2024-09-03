@@ -25,8 +25,6 @@ namespace SmashTools
 		// f(x) = y, can be any function that matches the input and output types
 		public delegate Vector2 Function(float x);
 
-		public delegate float FrameFunction(int frame);
-
 		/// <summary>
 		/// Draw graph given function
 		/// </summary>
@@ -46,14 +44,6 @@ namespace SmashTools
 			if (function != null && !plotPoints.NullOrEmpty())
 			{
 				PlotFunction(axisRect, function, xRange, yRange, plotPoints, progress: progress, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
-			}
-		}
-
-		public static void DrawAnimationCurve(Rect rect, AnimationCurve curve, FloatRange xRange, FloatRange yRange, List<CurvePoint> plotPoints = null, bool simplified = false, bool editable = true, bool drawCoordLabels = true)
-		{
-			if (curve != null && !plotPoints.NullOrEmpty())
-			{
-				//PlotFunction(rect, curve.Function, xRange, yRange, plotPoints, progress: -1, simplified: simplified, editable: editable, drawCoordLabels: drawCoordLabels);
 			}
 		}
 
