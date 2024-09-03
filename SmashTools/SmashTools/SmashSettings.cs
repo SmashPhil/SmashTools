@@ -9,7 +9,7 @@ namespace SmashTools
 {
 	public class SmashSettings : IExposable
 	{
-		public static string unitTest;
+		public static string startupAction;
 		public static QuickStartOption quickStartOption = QuickStartOption.None;
 		public static string quickStartFile;
 		public static HashSet<string> profileAssemblies = new HashSet<string>();
@@ -19,9 +19,9 @@ namespace SmashTools
 		public void ExposeData()
 		{
 #if DEBUG
+			Scribe_Values.Look(ref startupAction, nameof(startupAction));
 			Scribe_Values.Look(ref quickStartOption, nameof(quickStartOption), QuickStartOption.None);
 			Scribe_Values.Look(ref quickStartFile, nameof(quickStartFile));
-			Scribe_Values.Look(ref unitTest, nameof(unitTest));
 			Scribe_Collections.Look(ref profileAssemblies, nameof(profileAssemblies));
 #endif
 		}

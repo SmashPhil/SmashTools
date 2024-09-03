@@ -8,13 +8,17 @@ using Verse;
 
 namespace SmashTools.Animations
 {
-	public class AnimationCurve : IXmlExport
+	public sealed class AnimationCurve : IXmlExport
 	{
 		public List<KeyFrame> points = new List<KeyFrame>();
 
 		public KeyFrame LeftBound => points.FirstOrDefault();
 
 		public KeyFrame RightBound => points.LastOrDefault();
+
+		public FloatRange RangeX => new FloatRange(LeftBound.frame, RightBound.frame);
+
+		public FloatRange RangeY => throw new NotImplementedException();
 
 		public int PointsCount => points.Count;
 
@@ -87,7 +91,7 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public bool KeyFrameAt(int frame)
+		public bool KeyFrameAt(float frame)
 		{
 			foreach (KeyFrame keyFrame in points)
 			{
@@ -103,7 +107,7 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		public float Function(int frame)
+		public float Function(float frame)
 		{
 			if (points.NullOrEmpty() || RightBound.frame <= 0)
 			{
@@ -121,7 +125,7 @@ namespace SmashTools.Animations
 			{
 				return RightBound.value;
 			}
-			return LagrangeFunction(points, frame);
+			return Lerp(points, frame);
 		}
 
 		/// <summary>
@@ -130,7 +134,7 @@ namespace SmashTools.Animations
 		/// <remarks>See https://paulbourke.net/miscellaneous/interpolation and https://en.wikipedia.org/wiki/Lagrange_polynomial for reference</remarks>
 		/// <param name="coordinates"></param>
 		/// <param name="x"></param>
-		private float LagrangeFunction(List<KeyFrame> coordinates, int frame)
+		private float Lagrange(List<KeyFrame> coordinates, float frame)
 		{
 			float y = 0;
 			float t = (float)frame / RightBound.frame;
@@ -157,6 +161,27 @@ namespace SmashTools.Animations
 			return y;
 		}
 
+		// Linear function for testing rendering in the animation editor
+		private float Lerp(List<KeyFrame> points, float frame)
+		{
+			KeyFrame leftPoint = points[0];
+			KeyFrame rightPoint = points[points.Count - 1];
+			for (int i = 0; i < points.Count; i++)
+			{
+				if (frame <= points[i].frame)
+				{
+					rightPoint = points[i];
+					if (i > 0)
+					{
+						leftPoint = points[i - 1];
+					}
+					break;
+				}
+			}
+			float t = (frame - leftPoint.frame) / (rightPoint.frame - leftPoint.frame);
+			return Mathf.LerpUnclamped(leftPoint.value, rightPoint.value, t);
+		}
+
 		void IXmlExport.Export()
 		{
 			XmlExporter.WriteList(nameof(points), points);
@@ -166,6 +191,12 @@ namespace SmashTools.Animations
 		{
 			public int frame;
 			public float value;
+
+			public KeyFrame(int frame, float value)
+			{
+				this.frame = frame;
+				this.value = value;
+			}
 
 			void IExposable.ExposeData()
 			{

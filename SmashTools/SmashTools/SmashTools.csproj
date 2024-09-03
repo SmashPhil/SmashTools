@@ -76,18 +76,18 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Animating\AnimationBoolState.cs" />
     <Compile Include="Animating\AnimationClip.cs" />
+    <Compile Include="Animating\AnimationCondition.cs" />
     <Compile Include="Animating\AnimationController.cs" />
     <Compile Include="Animating\AnimationCurve.cs" />
     <Compile Include="Animating\AnimationEvent.cs" />
     <Compile Include="Animating\AnimationLayer.cs" />
     <Compile Include="Animating\AnimationLoader.cs" />
+    <Compile Include="Animating\AnimationParameter.cs" />
     <Compile Include="Animating\AnimationProperty.cs" />
     <Compile Include="Animating\AnimationPropertyParent.cs" />
     <Compile Include="Animating\AnimationPropertyRegistry.cs" />
     <Compile Include="Animating\AnimationState.cs" />
-    <Compile Include="Animating\AnimationSubState.cs" />
     <Compile Include="Animating\AnimationTransition.cs" />
     <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
     <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
@@ -105,7 +105,7 @@
     <Compile Include="Attributes\StaticConstructorOnGameInitAttribute.cs" />
     <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
     <Compile Include="Attributes\TweakFieldAttribute.cs" />
-    <Compile Include="Attributes\UnitTestAttribute.cs" />
+    <Compile Include="Attributes\StartupActionAttribute.cs" />
     <Compile Include="Collections\CircularArray.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
     <Compile Include="Collections\DropOutStack.cs" />
@@ -126,15 +126,19 @@
     <Compile Include="Debugging\MainMenuKeyBindHandler.cs" />
     <Compile Include="Debugging\QuickStartMenu.cs" />
     <Compile Include="Debugging\TimerUtility.cs" />
-    <Compile Include="Debugging\UnitTesting.cs" />
+    <Compile Include="Debugging\StartupAction\StartupTest.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_AnimDynamicMethod.cs" />
     <Compile Include="Enums\MathOp.cs" />
     <Compile Include="Enums\UISettingsType.cs" />
     <Compile Include="Events\EventManager.cs" />
     <Compile Include="Events\EventTrigger.cs" />
-    <Compile Include="Interfaces\IAnimationFile.cs" />
+    <Compile Include="Interfaces\Animations\IAnimationFile.cs" />
+    <Compile Include="Interfaces\Animations\IAnimationObject.cs" />
     <Compile Include="Interfaces\IAnimationTarget.cs" />
     <Compile Include="Debugging\CameraController.cs" />
-    <Compile Include="Interfaces\IAnimator.cs" />
+    <Compile Include="Interfaces\Animations\IAnimator.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
     <Compile Include="Interfaces\IDefIndex.cs" />
     <Compile Include="Interfaces\IEventManager.cs" />
@@ -167,6 +171,7 @@
     <Compile Include="SmashSettings.cs" />
     <Compile Include="DataTypes\RimWorldTime.cs" />
     <Compile Include="DataTypes\Rot8.cs" />
+    <Compile Include="UI\AnimationGraph.cs" />
     <Compile Include="UI\HighPriorityInputs.cs" />
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
@@ -180,7 +185,7 @@
     <Compile Include="UI\Windows\Performance\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_ItemDropdown.cs" />
-    <Compile Include="UI\Windows\Dialog_FolderPicker.cs" />
+    <Compile Include="UI\Windows\Dialog_FilePicker.cs" />
     <Compile Include="UI\Windows\Dialog_Graph.cs" />
     <Compile Include="UI\Windows\Dialog_GraphEditor.cs" />
     <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />

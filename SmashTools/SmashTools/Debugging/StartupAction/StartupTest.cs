@@ -8,7 +8,7 @@ using Verse;
 namespace SmashTools
 {
 	[StaticConstructorOnStartup]
-	public static class UnitTesting
+	public static class StartupTest
 	{
 		internal static Dictionary<GameState, List<Action>> postLoadActions = new Dictionary<GameState, List<Action>>();
 		internal static Dictionary<string, UnitTestAction> unitTests = new Dictionary<string, UnitTestAction>();
@@ -18,7 +18,7 @@ namespace SmashTools
 
 		internal static bool Enabled { get; private set; }
 
-		static UnitTesting()
+		static StartupTest()
 		{
 #if DEBUG
 			Enabled = false;
@@ -61,12 +61,12 @@ namespace SmashTools
 			}
 			unitTests.Clear();
 			unitTestRadioButtons.Clear();
-			unitTestRadioButtons.Add(new Toggle("NoUnitTest", "None", string.Empty, () => NoUnitTest || SmashSettings.unitTest.NullOrEmpty(), delegate (bool value)
+			unitTestRadioButtons.Add(new Toggle("NoUnitTest", "None", string.Empty, () => NoUnitTest || SmashSettings.startupAction.NullOrEmpty(), delegate (bool value)
 			{
 				NoUnitTest = value;
 				if (NoUnitTest)
 				{
-					SmashSettings.unitTest = string.Empty;
+					SmashSettings.startupAction = string.Empty;
 				}
 			}));
 			NoUnitTest = true;
@@ -75,7 +75,7 @@ namespace SmashTools
 			{
 				foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Where(m => !m.GetParameters().Any()))
 				{
-					if (method.GetCustomAttribute<UnitTestAttribute>() is UnitTestAttribute unitTestAttr)
+					if (method.GetCustomAttribute<StartupActionAttribute>() is StartupActionAttribute unitTestAttr)
 					{
 						string name = unitTestAttr.Name;
 						if (string.IsNullOrEmpty(name))
@@ -98,7 +98,7 @@ namespace SmashTools
 							Action = () => method.Invoke(null, new object[] { })
 						};
 
-						if (unitTestFullName == SmashSettings.unitTest)
+						if (unitTestFullName == SmashSettings.startupAction)
 						{
 							NoUnitTest = false;
 						}
@@ -107,13 +107,13 @@ namespace SmashTools
 						unitTestRadioButtons.Add(new Toggle(unitTest.FullName, unitTest.DisplayName, unitTest.Category,
 							stateGetter: delegate ()
 							{
-								return SmashSettings.unitTest == unitTest.FullName;
+								return SmashSettings.startupAction == unitTest.FullName;
 							},
 							stateSetter: delegate (bool value)
 							{
 								if (value)
 								{
-									SmashSettings.unitTest = unitTest.FullName;
+									SmashSettings.startupAction = unitTest.FullName;
 								}
 							}));
 					}
@@ -124,7 +124,7 @@ namespace SmashTools
 
 		private static void PostLoadSetup()
 		{
-			if (!SmashSettings.unitTest.NullOrEmpty() && unitTests.TryGetValue(SmashSettings.unitTest, out UnitTestAction unitTest))
+			if (!SmashSettings.startupAction.NullOrEmpty() && unitTests.TryGetValue(SmashSettings.startupAction, out UnitTestAction unitTest))
 			{
 				postLoadActions[unitTest.GameState].Add(unitTest.Action);
 			}
@@ -132,19 +132,28 @@ namespace SmashTools
 
 		internal static void ExecutePostLoadTesting()
 		{
-			ExecuteTesting(GameState.LoadedSave);
-			ExecuteTesting(GameState.Playing);
+			LongEventHandler.ExecuteWhenFinished(delegate ()
+			{
+				ExecuteTesting(GameState.LoadedSave);
+				ExecuteTesting(GameState.Playing);
+			});
 		}
 
 		internal static void ExecuteNewGameTesting()
 		{
-			ExecuteTesting(GameState.NewGame);
-			ExecuteTesting(GameState.Playing);
+			LongEventHandler.ExecuteWhenFinished(delegate ()
+			{
+				ExecuteTesting(GameState.NewGame);
+				ExecuteTesting(GameState.Playing);
+			});
 		}
 
 		internal static void ExecuteOnStartupTesting()
 		{
-			ExecuteTesting(GameState.OnStartup);
+			LongEventHandler.ExecuteWhenFinished(delegate ()
+			{
+				ExecuteTesting(GameState.OnStartup);
+			});
 		}
 
 		private static void ExecuteTesting(GameState gameState)

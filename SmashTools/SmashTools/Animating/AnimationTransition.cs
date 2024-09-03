@@ -3,18 +3,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Verse;
+using SmashTools.Xml;
 
 namespace SmashTools.Animations
 {
-	public class AnimationTransition : IXmlExport
+	public class AnimationTransition : IXmlExport, IDisposable
 	{
-		public AnimationState fromState;
-		public AnimationState toState;
+		public float exitTime;
+		public Guid toStateGuid; // guid of ToState for lookup
+		public List<AnimationCondition> conditions = new List<AnimationCondition>();
+
+		public AnimationTransition()
+		{
+		}
+
+		public AnimationTransition(AnimationState from, AnimationState to)
+		{
+			FromState = from;
+			ToState = to;
+			toStateGuid = to.guid;
+		}
+
+		public AnimationState FromState { get; internal set; }
+
+		public AnimationState ToState { get; internal set; }
+
+		public void Dispose()
+		{
+			FromState.transitions.Remove(this);
+			ToState.transitions.Remove(this);
+
+			FromState = null;
+			ToState = null;
+		}
+
+		public AnimationTransition CreateCopy()
+		{
+			AnimationTransition copy = new AnimationTransition();
+			copy.exitTime = exitTime;
+			copy.conditions = new List<AnimationCondition>(conditions);
+
+			return copy;
+		}
 
 		void IXmlExport.Export()
 		{
-			throw new NotImplementedException();
+			XmlExporter.WriteObject(nameof(exitTime), exitTime);
+			XmlExporter.WriteObject(nameof(toStateGuid), toStateGuid);
+			XmlExporter.WriteList(nameof(conditions), conditions);
 		}
 
 		//needs conditions

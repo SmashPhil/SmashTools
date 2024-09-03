@@ -26,6 +26,7 @@ namespace SmashTools.Xml
 			ParseHelper.Parsers<ValueTuple<float, float>>.Register(ParseValueTuple2_float);
 			ParseHelper.Parsers<ValueTuple<CurvePoint, CurvePoint>>.Register(ParseValueTuple2_CurvePoint);
 			ParseHelper.Parsers<KeyFrame>.Register(ParseKeyFrame);
+			ParseHelper.Parsers<Guid>.Register(ParseGuid);
 		}
 
 		private static ValueTuple<float, float> ParseValueTuple2_float(string entry)
@@ -57,6 +58,15 @@ namespace SmashTools.Xml
 		private static KeyFrame ParseKeyFrame(string entry)
 		{
 			return KeyFrame.FromString(entry);
+		}
+
+		private static Guid ParseGuid(string entry)
+		{
+			if (entry.NullOrEmpty())
+			{
+				return Guid.Empty;
+			}
+			return Guid.Parse(entry);
 		}
 
 		/// <summary>

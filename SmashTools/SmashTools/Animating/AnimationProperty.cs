@@ -1,89 +1,152 @@
-﻿using SmashTools.Xml;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
+using HarmonyLib;
+using SmashTools.Xml;
+using UnityEngine;
 using Verse;
 
 namespace SmashTools.Animations
 {
 	public class AnimationProperty : IXmlExport
 	{
-		private string name;
-		private Type type;
+		private readonly string label;
+		private readonly string name;
+		private readonly Type type;
 		private PropertyType propertyType;
 
 		public AnimationCurve curve = new AnimationCurve();
 
 		[Unsaved]
-		private MemberInfo memberInfo;
+		private Color color;
+		[Unsaved]
+		public SetValue setValue;
 
-		public delegate void SetProperty(object parent, object value);
+		public delegate void SetValue(ref object parent, float frame);
 
 		public AnimationProperty()
 		{
 		}
 
-		public AnimationProperty(string name, Type type, MemberInfo memberInfo)
+		private AnimationProperty(string label, string name, Type type)
 		{
+			this.label = label;
 			this.name = name;
 			this.type = type;
-
-			this.memberInfo = memberInfo;
 		}
 
+		public string Label => label;
+
 		public string Name => name;
+
+		public Type Type => type;
 
 		public PropertyType PropType => propertyType;
 
 		public bool IsValid => curve != null;
 
-		public void WriteData()
+		public Color Color
 		{
-			Scribe_Values.Look(ref name, nameof(name));
-			Scribe_Values.Look(ref type, nameof(type));
-			Scribe_Values.Look(ref propertyType, nameof(propertyType));
-			Scribe_Deep.Look(ref curve, nameof(curve));
-
-			curve ??= new AnimationCurve(); //Ensure animation curve is never null after scribe process
+			get
+			{
+				if (color == Color.clear)
+				{
+					color = UnityEngine.Random.ColorHSV(0, 1, 1, 1, 0.5f, 1);
+				}
+				return color;
+			}
 		}
 
-		public static AnimationProperty Create(string name, FieldInfo fieldInfo)
+		//public void Set<T>(T parent, int frame) => setValue.Invoke(parent, frame);
+
+		public void Set<T>(ref T parent, int frame)
 		{
-			AnimationProperty animationProperty = new AnimationProperty(name, fieldInfo.FieldType, fieldInfo);
+		}
+
+		public static AnimationProperty Create(string label, FieldInfo fieldInfo)
+		{
+			AnimationProperty animationProperty = new AnimationProperty(label, fieldInfo.Name, fieldInfo.DeclaringType);
 			animationProperty.propertyType = PropertyTypeFrom(fieldInfo.FieldType);
-
+			animationProperty.PostLoad();
 			return animationProperty;
 		}
 
-		public static AnimationProperty Create(string name, PropertyInfo propertyInfo)
+		public static AnimationProperty Create(string label, PropertyInfo propertyInfo)
 		{
-			AnimationProperty animationProperty = new AnimationProperty(name, propertyInfo.PropertyType, propertyInfo);
+			AnimationProperty animationProperty = new AnimationProperty(label, propertyInfo.Name, propertyInfo.DeclaringType);
 			animationProperty.propertyType = PropertyTypeFrom(propertyInfo.PropertyType);
-
+			animationProperty.PostLoad();
 			return animationProperty;
 		}
 
-		//private static SetProperty GetAssignmentDelegate(Type type, MemberInfo memberInfo)
-		//{
-		//	DynamicMethod method;
-		//	if (type.IsValueType)
-		//	{
-		//		method = new DynamicMethod("set", typeof(void), new Type[] { typeof(object), typeof(object) }, type, true);
-		//	}
-		//	else
-		//	{
-		//		method = new DynamicMethod("set", typeof(void), new Type[] { typeof(object), typeof(object) }, type, true);
-		//	}
-		//	ILGenerator ilg = method.GetILGenerator();
-			
-		//	ilg.Emit(OpCodes.Ldarg_0);
-		//	ilg.Emit(OpCodes.Unbox, type);
-		//	ilg.Emit(OpCodes.Ldarg_1);
-		//}
+		internal void PostLoad()
+		{
+			Debug.Assert(propertyType > PropertyType.Invalid, "AnimationProperty has not been properly initialized");
+			//setValue = GetDynamicMethod();
+		}
+
+		private SetValue GetDynamicMethod()
+		{
+			FieldInfo fieldInfo = AccessTools.Field(type, name);
+			if (fieldInfo == null)
+			{
+				Log.Error($"Unable to load {type}.{name} for animation.");
+				return null;
+			}
+			FieldInfo curveField = AccessTools.Field(typeof(AnimationProperty), nameof(curve));
+			Debug.Assert(curveField != null, "AnimationProperty.curve is null");
+			MethodInfo curveFunction = AccessTools.Method(typeof(AnimationCurve), nameof(AnimationCurve.Function));
+			Debug.Assert(curveFunction != null, "AnimationCurve.Function is null");
+
+			DynamicMethod method = new DynamicMethod("SetValueForProperty", 
+				typeof(void), // Return type
+				new Type[] { typeof(AnimationProperty), typeof(object).MakeByRefType(), typeof(float) }, // this*, parent, frame
+				typeof(AnimationProperty).Module, // SmashTools.dll
+				true); // Skip visibility checks
+
+			ILGenerator ilg = method.GetILGenerator();
+
+			// parent
+			ilg.Emit(OpCodes.Ldarg_1);
+			if (type.IsValueType)
+			{
+				ilg.Emit(OpCodes.Unbox_Any, type);
+			}
+			else
+			{
+				ilg.Emit(OpCodes.Castclass, type);
+			}
+
+			// this.curve.Function(frame)
+			ilg.Emit(OpCodes.Ldarg_0);
+			ilg.Emit(OpCodes.Ldfld, curveField);
+			ilg.Emit(OpCodes.Ldarg_2); // frame
+			ilg.Emit(OpCodes.Callvirt, curveFunction);
+
+			switch (propertyType)
+			{
+				// (int)value
+				case PropertyType.Int:
+					Debug.Assert(fieldInfo.FieldType == typeof(int));
+					ilg.Emit(OpCodes.Conv_I4);
+					break;
+				// value != 0
+				case PropertyType.Bool:
+					Debug.Assert(fieldInfo.FieldType == typeof(bool));
+					ilg.Emit(OpCodes.Ldc_R4, 0f);
+					ilg.Emit(OpCodes.Ceq);
+					ilg.Emit(OpCodes.Ldc_I4_0);
+					ilg.Emit(OpCodes.Ceq);
+					break;
+				default:
+					Debug.Assert(fieldInfo.FieldType == typeof(float));
+					break;
+			}
+			// parent.field = value
+			ilg.Emit(OpCodes.Stfld, fieldInfo);
+			ilg.Emit(OpCodes.Ret);
+			return (SetValue)method.CreateDelegate(typeof(SetValue), this);
+		}
 
 		public static PropertyType PropertyTypeFrom(Type type)
 		{
@@ -104,6 +167,7 @@ namespace SmashTools.Animations
 
 		void IXmlExport.Export()
 		{
+			XmlExporter.WriteElement(nameof(label), label);
 			XmlExporter.WriteElement(nameof(name), name);
 			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
 			XmlExporter.WriteElement(nameof(propertyType), propertyType.ToString());
@@ -112,6 +176,7 @@ namespace SmashTools.Animations
 
 		public enum PropertyType
 		{
+			Invalid,
 			Float,
 			Int,
 			Bool

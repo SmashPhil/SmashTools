@@ -101,11 +101,13 @@ namespace SmashTools.Animations
 			}
 			this.animator = animator;
 			controller = animator.Controller;
-			if (!controller)
+			if (!controller || controller.layers.NullOrEmpty())
 			{
 				controller = AnimationController.EmptyController();
 			}
-			animLayer = controller?.layers.FirstOrDefault();
+			animLayer = controller.layers.FirstOrDefault();
+			Debug.Assert(controller != null);
+			Debug.Assert(animLayer != null);
 
 			controllerEditor.AnimatorLoaded(animator);
 			clipEditor.AnimatorLoaded(animator);
@@ -147,8 +149,7 @@ namespace SmashTools.Animations
 					Close();
 				}
 			}
-			controllerEditor.OnGUIHighPriority();
-			clipEditor.OnGUIHighPriority();
+			ActiveTab.OnGUIHighPriority();
 		}
 
 		private void InitializeTabs()

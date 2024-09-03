@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace SmashTools.Animations
 {
-	public class AnimationSubState
+	public interface IAnimationObject
 	{
+		public string AnimObjectKey { get; }
 	}
 }

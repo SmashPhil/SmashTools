@@ -12,6 +12,8 @@ namespace SmashTools.Animations
 {
 	public class AnimationPropertyParent : IXmlExport, IEnumerable<AnimationProperty>
 	{
+		private string identifier;
+		private string label;
 		private string name;
 		private Type type;
 
@@ -22,11 +24,17 @@ namespace SmashTools.Animations
 		{
 		}
 
-		public AnimationPropertyParent(string name, Type type)
+		private AnimationPropertyParent(string identifier, string label, string name, Type type)
 		{
+			this.identifier = identifier;
+			this.label = label;
 			this.name = name;
 			this.type = type;
 		}
+
+		public string Identifier => identifier;
+
+		public string Label => label;
 
 		public string Name => name;
 
@@ -39,6 +47,16 @@ namespace SmashTools.Animations
 		public bool IsValid => Single != null || !Children.NullOrEmpty();
 
 		public AnimationProperty Current => throw new NotImplementedException();
+
+		public static AnimationPropertyParent Create(string identifier, string label, FieldInfo fieldInfo)
+		{
+			return new AnimationPropertyParent(identifier, label, fieldInfo.Name, fieldInfo.DeclaringType);
+		}
+
+		public static AnimationPropertyParent Create(string identifier, string label, PropertyInfo propertyInfo)
+		{
+			return new AnimationPropertyParent(identifier, label, propertyInfo.Name, propertyInfo.DeclaringType);
+		}
 
 		public bool AllKeyFramesAt(int frame)
 		{
@@ -80,8 +98,24 @@ namespace SmashTools.Animations
 			return false;
 		}
 
+		internal void PostLoad()
+		{
+			if (Single != null)
+			{
+				Single.PostLoad();
+			}
+			else if (!Children.NullOrEmpty())
+			{
+				foreach (AnimationProperty property in Children)
+				{
+					property.PostLoad();
+				}
+			}
+		}
+
 		void IXmlExport.Export()
 		{
+			XmlExporter.WriteElement(nameof(label), label);
 			XmlExporter.WriteElement(nameof(name), name);
 			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
 			if (single != null)

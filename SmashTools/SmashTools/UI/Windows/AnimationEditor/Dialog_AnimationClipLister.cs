@@ -11,32 +11,23 @@ using System.Diagnostics;
 
 namespace SmashTools.Animations
 {
-	public class Dialog_AnimationClipLister : Dialog_ItemDropdown<FileInfo>
+	public class Dialog_AnimationClipLister : Dialog_ItemDropdown<AnimationClip>
 	{
 		private readonly IAnimator animator;
 		private readonly AnimationClip animation;
 
-		public Dialog_AnimationClipLister(IAnimator animator, Rect rect, AnimationClip animation, Action<FileInfo> onFilePicked = null) 
-			: base(rect, AnimationLoader.GetAnimationClipFileInfo(animator.ModContentPack), onFilePicked, FileName,
-				  isSelected: (FileInfo file) => animation != null && animation.FilePath == file.FullName, createBtn: ("ST_CreateNewClip", () => CreateNewClip(animator)))
+		public Dialog_AnimationClipLister(IAnimator animator, Rect rect, AnimationClip animation, Action<AnimationClip> onFilePicked = null) 
+			: base(rect, AnimationLoader.Cache<AnimationClip>.GetAll(), onFilePicked, FileName,
+				  isSelected: (AnimationClip other) => other && animation && animation.FilePath == other.FilePath, 
+				  createBtn: ("ST_CreateNewClip", AnimationClip.CreateEmpty))
 		{
 			this.animator = animator;
 			this.animation = animation;
 		}
 
-		private static string FileName(FileInfo file)
+		private static string FileName(AnimationClip clip)
 		{
-			return Path.GetFileNameWithoutExtension(file.Name);
-		}
-
-		private static FileInfo CreateNewClip(IAnimator animator)
-		{
-			DirectoryInfo directoryInfo = AnimationLoader.AnimationDirectory(animator.ModContentPack);
-			if (directoryInfo == null || !directoryInfo.Exists)
-			{
-				directoryInfo = Directory.CreateDirectory(Path.Combine(animator.ModContentPack.RootDir, AnimationLoader.AnimationFolderName));
-			}
-			return AnimationLoader.CreateEmptyAnimFile(directoryInfo);
+			return Path.GetFileNameWithoutExtension(clip.FilePath);
 		}
 	}
 }

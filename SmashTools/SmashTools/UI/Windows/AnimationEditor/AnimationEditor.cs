@@ -55,6 +55,34 @@ namespace SmashTools.Animations
 
 		public bool SingleSelect => Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.LeftShift);
 
+		public bool LeftClick
+		{
+			get
+			{
+				return Event.current != null && 
+					   Event.current.type == EventType.MouseDown && 
+					   Event.current.button == 0;
+			}
+		}
+
+		public bool RightClick
+		{
+			get
+			{
+				return Event.current != null && 
+					   Event.current.type == EventType.MouseDown && 
+					   Event.current.button == 1;
+			}
+		}
+
+		public bool ControlClick
+		{
+			get
+			{
+				return Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand);
+			}
+		}
+
 		public abstract void Draw(Rect rect);
 
 		public virtual void Update()
@@ -65,9 +93,53 @@ namespace SmashTools.Animations
 		{
 		}
 
+		// =========== Keybinding Events ===========
+
 		public virtual void OnGUIHighPriority()
 		{
+			if (Input.GetKeyDown(KeyCode.S) && ControlClick)
+			{
+				Save();
+			}
+			if (Input.GetKeyDown(KeyCode.C) && ControlClick)
+			{
+				CopyToClipboard();
+			}
+			if (Input.GetKeyDown(KeyCode.V) && ControlClick)
+			{
+				Paste();
+			}
+			if (Input.GetKeyDown(KeyCode.Delete))
+			{
+				Delete();
+			}
+			if (Input.GetKeyDown(KeyCode.Escape))
+			{
+				Escape();
+			}
 		}
+
+		public virtual void Save()
+		{
+		}
+
+		public virtual void CopyToClipboard()
+		{
+		}
+
+		public virtual void Paste()
+		{
+		}
+
+		public virtual void Delete()
+		{
+		}
+
+		public virtual void Escape()
+		{
+		}
+
+		// ======== End Keybinding Events ==========
 
 		public virtual void AnimatorLoaded(IAnimator animator)
 		{
@@ -305,6 +377,7 @@ namespace SmashTools.Animations
 			}
 			if (isDragging())
 			{
+				dragAction();
 				if (Input.GetMouseButton(button))
 				{
 					if (UnityGUIBugsFixer.MouseDrag(button))
@@ -456,7 +529,7 @@ namespace SmashTools.Animations
 			float heightMax = viewRect.height - outRect.height;
 			if (viewRect.width > outRect.width)
 			{
-				heightMax -= 16;
+				//heightMax -= 16;
 			}
 
 			float xT = widthMax <= 0 ? 1 : scrollPos.x / widthMax;

@@ -46,15 +46,15 @@ namespace SmashTools.Animations
 						Log.Error($"Type {fieldInfo.FieldType} is not supported as an animation property. It must be registered in the AnimationPropertyRegistry.");
 						continue;
 					}
-					string name = animationPropertyAttribute.Name;
-					if (name.NullOrEmpty())
+					string label = animationPropertyAttribute.Name;
+					if (label.NullOrEmpty())
 					{
-						name = fieldInfo.Name;
+						label = fieldInfo.Name;
 					}
-					AnimationPropertyParent container = new AnimationPropertyParent(name, type);
+					AnimationPropertyParent container = AnimationPropertyParent.Create(type.Name, label, fieldInfo);
 					if (IsSupportedPrimitive(fieldInfo.FieldType))
 					{
-						AnimationProperty property = AnimationProperty.Create(name, fieldInfo);
+						AnimationProperty property = AnimationProperty.Create(label, fieldInfo);
 						container.Single = property;
 						result.Add(container);
 					}
@@ -90,13 +90,13 @@ namespace SmashTools.Animations
 					}
 					if (IsSupportedPrimitive(propertyInfo.PropertyType))
 					{
-						string name = animationPropertyAttribute.Name;
-						if (name.NullOrEmpty())
+						string label = animationPropertyAttribute.Name;
+						if (label.NullOrEmpty())
 						{
-							name = propertyInfo.Name;
+							label = propertyInfo.Name;
 						}
-						AnimationProperty property = AnimationProperty.Create(name, propertyInfo);
-						AnimationPropertyParent container = new AnimationPropertyParent(name, type);
+						AnimationProperty property = AnimationProperty.Create(label, propertyInfo);
+						AnimationPropertyParent container = AnimationPropertyParent.Create(type.Name, label, propertyInfo);
 						container.Single = property;
 						result.Add(container);
 					}

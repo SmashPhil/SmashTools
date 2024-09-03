@@ -80,14 +80,14 @@ namespace SmashTools
 				postfix: new HarmonyMethod(typeof(ProjectSetup),
 				nameof(DrawDebugWindowButton)));
 			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.StartedNewGame)),
-				postfix: new HarmonyMethod(typeof(UnitTesting),
-				nameof(UnitTesting.ExecuteNewGameTesting)));
+				postfix: new HarmonyMethod(typeof(StartupTest),
+				nameof(StartupTest.ExecuteNewGameTesting)));
 			Harmony.Patch(original: AccessTools.Method(typeof(GameComponentUtility), nameof(GameComponentUtility.LoadedGame)),
-				postfix: new HarmonyMethod(typeof(UnitTesting),
-				nameof(UnitTesting.ExecutePostLoadTesting)));
+				postfix: new HarmonyMethod(typeof(StartupTest),
+				nameof(StartupTest.ExecutePostLoadTesting)));
 			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
-				postfix: new HarmonyMethod(typeof(UnitTesting),
-				nameof(UnitTesting.ExecuteOnStartupTesting)));
+				postfix: new HarmonyMethod(typeof(StartupTest),
+				nameof(StartupTest.ExecuteOnStartupTesting)));
 
 			//Input handling (DEBUG)
 			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI)),
@@ -159,7 +159,7 @@ namespace SmashTools
 		{
 			if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu, "Open Unit Testing menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
 			{
-				UnitTesting.OpenMenu();
+				StartupTest.OpenMenu();
 			}
 			if (___widgetRow.ButtonIcon(TexButton.OpenStatsReport, "Open Profiler.\n\n View profiler entries from ProfilerWatch."))
 			{
