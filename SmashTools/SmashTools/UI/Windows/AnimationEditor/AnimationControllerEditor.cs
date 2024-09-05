@@ -198,19 +198,60 @@ namespace SmashTools.Animations
 			DoSeparatorHorizontal(rect.x, rect.y, rect.width);
 			DoSeparatorHorizontal(rect.x, tabRect.yMax, rect.width);
 
-			switch (leftSectionTab)
+			if (selector.AnyStatesSelected)
 			{
-				case LeftSection.Layers:
-					DrawLayersTab(rect);
-					break;
-				case LeftSection.Parameters:
-					DrawParametersTab(rect);
-					break;
+				DrawStateProperties(rect);
+			}
+			else
+			{
+				switch (leftSectionTab)
+				{
+					case LeftSection.Layers:
+						DrawLayersTab(rect);
+						break;
+					case LeftSection.Parameters:
+						DrawParametersTab(rect);
+						break;
+				}
 			}
 
 			rect.yMin += tabRect.height;
 
 			DoResizerButton(rect, ref leftWindowSize, MinLeftWindowSize, MinRightWindowSize);
+		}
+
+		private void DrawStateProperties(Rect rect)
+		{
+			rect = rect.ContractedBy(4);
+
+			AnimationState state = selector.SelectedStates.FirstOrDefault();
+
+			Rect nameRect = new Rect(rect.x, rect.y + WidgetBarHeight, rect.width, WidgetBarHeight);
+			state.name = Widgets.TextField(nameRect, state.name);
+			nameRect.y += 5;
+
+			DoSeparatorHorizontal(nameRect.x, nameRect.y, nameRect.width);
+
+			nameRect.y += WidgetBarHeight;
+			nameRect.SplitVertically(nameRect.width * 0.4f, out Rect labelRect, out Rect inputRect);
+
+			// Motion
+			Widgets.Label(labelRect, "ST_MotionFile".Translate());
+			Widgets.TextField(inputRect, state.clip?.FileName);
+
+			// Speed
+			labelRect.y += WidgetBarHeight;
+			inputRect.y += WidgetBarHeight;
+			Widgets.Label(labelRect, "ST_MotionSpeed".Translate());
+			Widgets.TextField(inputRect, state.clip?.FileName);
+
+			// Multiplier
+
+			// Motion Time
+			// Mirror
+			// Cycle Offset
+			// Write Defaults
+			// Transitions
 		}
 
 		private void DrawLayersTab(Rect rect)
@@ -235,7 +276,7 @@ namespace SmashTools.Animations
 				}
 				Rect dragHandleRect = new Rect(layerRect.x, layerRect.y, layerRect.height, layerRect.height);
 				Rect entryRect = new Rect(dragHandleRect.xMax, layerRect.y, LayerInputWidth, layerRect.height);
-				Rect labelRect = new Rect(dragHandleRect.xMax, layerRect.y, layerRect.width - dragHandleRect.width - entryRect.width, layerRect.height);
+				Rect labelRect = new Rect(dragHandleRect.xMax, layerRect.y + 5, layerRect.width - dragHandleRect.width - entryRect.width, WidgetBarHeight);
 
 				Text.Anchor = TextAnchor.MiddleLeft;
 				if (EditingLayer == layer)
@@ -255,7 +296,7 @@ namespace SmashTools.Animations
 				else
 				{
 					Widgets.Label(labelRect, layer.name);
-					if (Widgets.ButtonInvisible(labelRect))
+					if (Widgets.ButtonInvisible(layerRect))
 					{
 						// Double clicking layer (even late) will begin name edit
 						if (parent.animLayer == layer) 

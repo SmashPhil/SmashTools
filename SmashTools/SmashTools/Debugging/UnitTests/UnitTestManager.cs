@@ -9,7 +9,7 @@ using Verse;
 
 namespace SmashTools.Debugging
 {
-	internal static class UnitTestManager
+	public static class UnitTestManager
 	{
 		private static List<UnitTest> unitTests = new List<UnitTest>();
 
@@ -29,27 +29,57 @@ namespace SmashTools.Debugging
 			ExecuteTests();
 		}
 
-		private static void ExecuteTests()
+		public static void ExecuteTests()
 		{
 			Log.Message($"---------- Unit Tests ----------");
+			List<string> results = new List<string>();
 			foreach (UnitTest unitTest in unitTests)
 			{
-				SmashLog.Message($"Running {unitTest.Name}");
-				foreach (UTResult result in unitTest.Execute())
+				try
 				{
-					string output;
-					try
+					bool success = true;
+					results.Clear();
+					foreach (Func<UTResult> test in unitTest.Execute())
 					{
-						output = result.Passed ? "<success>Success</success>" : "<error>Failed</error>";
+						string output;
+						try
+						{
+							UTResult result = test();
+							output = result.Passed ? $"    {result.Name} <success>Passed</success>" : $"    {result.Name} <error>Failed</error>";
+							// Dump all results for this unit test if any sub-test fails
+							success &= result.Passed; 
+						}
+						catch (Exception ex)
+						{
+							output = $"<error>Exception thrown!</error>\n{ex}";
+						}
+						results.Add(output);
 					}
-					catch (Exception ex)
+					if (success)
 					{
-						output = $"<error>{ex.GetType().Name}</error>\n{ex}";
+						SmashLog.Message($"[{unitTest.Name}] <success>{results.Count} Succeeded</success>");
 					}
-					SmashLog.Message($"    {result.Name}{output}");
+					else
+					{
+						SmashLog.Message($"<error>{unitTest.Name} Failed</error>");
+						DumpResults(results);
+					}
+				}
+				catch (Exception ex)
+				{
+					SmashLog.Message($"<error>[{unitTest.Name} Exception thrown!]</error>\n{ex}");
+					continue;
 				}
 			}
 			Log.Message($"-------- End Unit Tests --------");
+		}
+
+		private static void DumpResults(List<string> results)
+		{
+			foreach (string result in results)
+			{
+				SmashLog.Message($"    {result}");
+			}
 		}
 
 		[StartupAction(Category = "UnitTesting", Name = "Run All", GameState = GameState.OnStartup)]

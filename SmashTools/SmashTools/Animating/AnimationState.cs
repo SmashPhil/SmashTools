@@ -35,6 +35,14 @@ namespace SmashTools.Animations
 
 		public StateType Type => stateType;
 
+		public void EvaluateFrame(IAnimator animator, int frame)
+		{
+			for (int i = 0; i < clip.properties.Count; i++)
+			{
+				clip.properties[i].EvaluateFrame(animator, frame);
+			}
+		}
+
 		public void AddTransition(AnimationState to)
 		{
 			AnimationTransition transition = new AnimationTransition(this, to);
@@ -60,7 +68,7 @@ namespace SmashTools.Animations
 
 			XmlExporter.WriteObject(nameof(stateType), stateType);
 
-			XmlExporter.WriteList(nameof(transitions), transitions);
+			XmlExporter.WriteCollection(nameof(transitions), transitions);
 		}
 
 		// Pass in layer to add to, allowing for copy / pasting across layers

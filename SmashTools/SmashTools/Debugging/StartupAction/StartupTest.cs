@@ -28,7 +28,7 @@ namespace SmashTools
 			}
 			catch (Exception ex1)
 			{
-				Log.Warning($"UnitTest startup threw exception. Clearing config for unit testing and trying again. Exception={ex1.Message}");
+				Log.Warning($"UnitTest startup threw exception. Clearing config for startup actions and trying again. Exception={ex1.Message}");
 				Utilities.DeleteSettings();
 				try
 				{
@@ -48,7 +48,7 @@ namespace SmashTools
 		[Conditional("DEBUG")]
 		public static void OpenMenu()
 		{
-			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Unit Testing", unitTestRadioButtons, postClose: SmashMod.Serialize));
+			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Startup Actions", unitTestRadioButtons, postClose: SmashMod.Serialize));
 		}
 
 		private static void InitializeUnitTesting()

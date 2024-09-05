@@ -26,6 +26,40 @@ namespace SmashTools.Animations
 
 		public string FileNameWithExtension => FileName + FileExtension;
 
+		public void SetFrame()
+		{
+			frameCount = DefaultFrameCount;
+			if (properties.Count > 0)
+			{
+				int max = 0;
+				foreach (AnimationPropertyParent propertyParent in properties)
+				{
+					int propertyMax = -1;
+					if (propertyParent.Single != null)
+					{
+						propertyMax = MaxFrame(propertyParent.Single);
+					}
+					else if (!propertyParent.Children.NullOrEmpty())
+					{
+						foreach (AnimationProperty property in propertyParent.Children)
+						{
+							propertyMax = MaxFrame(property);
+						}
+					}
+
+					if (propertyMax > max)
+					{
+						max = propertyMax;
+					}
+				}
+
+				if (max >= 0)
+				{
+					frameCount = max;
+				}
+			}
+		}
+
 		public void RecacheFrameCount()
 		{
 			frameCount = DefaultFrameCount;
@@ -97,8 +131,8 @@ namespace SmashTools.Animations
 			ValidateEventOrder();
 
 			XmlExporter.WriteObject(nameof(frameCount), frameCount);
-			XmlExporter.WriteList(nameof(properties), properties);
-			XmlExporter.WriteList(nameof(events), events);
+			XmlExporter.WriteCollection(nameof(properties), properties);
+			XmlExporter.WriteCollection(nameof(events), events);
 		}
 
 		public static implicit operator bool(AnimationClip clip)

@@ -30,6 +30,7 @@ namespace SmashTools.Animations
 		{
 			ParseHelper.Parsers<AnimationClip>.Register(ParseAnimationFile<AnimationClip>);
 			ParseHelper.Parsers<AnimationController>.Register(ParseAnimationFile<AnimationController>);
+			
 			LoadAll();
 		}
 
@@ -64,21 +65,6 @@ namespace SmashTools.Animations
 		private static bool IsAcceptableExtension<T>(string ext)
 		{
 			return fileExtensions.TryGetValue(typeof(T), out string fileExt) && ext == fileExt;
-		}
-
-		public static DirectoryInfo AnimationDirectory(ModContentPack modContentPack)
-		{
-			List<string> loadFolders = FilePaths.ModFoldersForVersion(modContentPack);
-			foreach (string folder in loadFolders)
-			{
-				string assetDirectory = Path.Combine(modContentPack.RootDir, folder, AnimationFolderName);
-				DirectoryInfo directoryInfo = new DirectoryInfo(assetDirectory);
-				if (directoryInfo.Exists)
-				{
-					return directoryInfo;
-				}
-			}
-			return null;
 		}
 
 		private static T ParseAnimationFile<T>(string filePath) where T : IAnimationFile, new()
@@ -155,84 +141,6 @@ namespace SmashTools.Animations
 			{
 				Messages.Message($"{file.FileName} successfully saved at {file.FilePath}", MessageTypeDefOf.TaskCompletion);
 			}
-		}
-
-		public static bool ExportControllerXml(AnimationController controller)
-		{
-			if (!controller)
-			{
-				return false;
-			}
-			bool exported = true;
-			try
-			{
-				XmlExporter.StartDocument(controller.FilePath);
-				XmlExporter.WriteElement(nameof(AnimationController), controller);
-			}
-			catch (IOException ex)
-			{
-				exported = false;
-				Log.Error($"Unable to export controller data.\nException = {ex}");
-				Messages.Message($"Failed to save {controller.FileName}.", MessageTypeDefOf.RejectInput);
-			}
-			finally
-			{
-				XmlExporter.Close();
-			}
-
-			if (exported)
-			{
-				Messages.Message($"{controller.FileName} successfully saved at {controller.FilePath}", MessageTypeDefOf.TaskCompletion);
-			}
-			return exported;
-		}
-
-		private static List<FileInfo> GetFiles(ModContentPack modContentPack, string fileExtension)
-		{
-			List<FileInfo> files = new List<FileInfo>();
-			try
-			{
-				DirectoryInfo directoryInfo = AnimationDirectory(modContentPack);
-				if (directoryInfo != null && directoryInfo.Exists)
-				{
-					foreach (FileInfo fileInfo in directoryInfo.GetFiles("*", SearchOption.AllDirectories))
-					{
-						if (fileInfo.Extension == fileExtension)
-						{
-							files.Add(fileInfo);
-						}
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				SmashLog.Error($"Unable to load AssetBundle.\nException = {ex}");
-			}
-			return files;
-		}
-
-		public static string GetAvailableFileName(DirectoryInfo directoryInfo, string defaultName, string fileExtension)
-		{
-			string name = defaultName;
-			for (int i = 0; i < 100; i++)
-			{
-				bool result = true;
-				foreach (FileInfo fileInfo in directoryInfo.GetFiles("*", SearchOption.AllDirectories))
-				{
-					if (fileInfo.Name == name + fileExtension)
-					{
-						result = false;
-						break;
-					}
-				}
-
-				if (result)
-				{
-					return name;
-				}
-				name = $"{defaultName}({i})";
-			}
-			return $"{defaultName}-{Rand.Range(10000, 99999)}";
 		}
 
 		public static string GetAvailableName(IEnumerable<string> takenNames, string defaultName)

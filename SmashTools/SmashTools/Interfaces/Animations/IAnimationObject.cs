@@ -8,6 +8,6 @@ namespace SmashTools.Animations
 {
 	public interface IAnimationObject
 	{
-		public string AnimObjectKey { get; }
+		public string ObjectId { get; }
 	}
 }

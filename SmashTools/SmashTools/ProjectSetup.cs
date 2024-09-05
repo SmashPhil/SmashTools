@@ -157,7 +157,7 @@ namespace SmashTools
 
 		private static void DrawDebugWindowButton(WidgetRow ___widgetRow, ref float ___widgetRowFinalX)
 		{
-			if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu, "Open Unit Testing menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
+			if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu, "Open Startup Actions menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
 			{
 				StartupTest.OpenMenu();
 			}

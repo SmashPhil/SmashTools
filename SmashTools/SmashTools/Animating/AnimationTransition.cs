@@ -28,6 +28,9 @@ namespace SmashTools.Animations
 
 		public AnimationState ToState { get; internal set; }
 
+		public bool DefaultTransition => FromState != null && FromState.Type == AnimationState.StateType.Entry &&
+										 ToState != null && ToState.Type == AnimationState.StateType.Default;
+
 		public void Dispose()
 		{
 			FromState.transitions.Remove(this);
@@ -50,7 +53,7 @@ namespace SmashTools.Animations
 		{
 			XmlExporter.WriteObject(nameof(exitTime), exitTime);
 			XmlExporter.WriteObject(nameof(toStateGuid), toStateGuid);
-			XmlExporter.WriteList(nameof(conditions), conditions);
+			XmlExporter.WriteCollection(nameof(conditions), conditions);
 		}
 
 		//needs conditions

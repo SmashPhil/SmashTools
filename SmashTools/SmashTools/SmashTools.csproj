@@ -83,6 +83,7 @@
     <Compile Include="Animating\AnimationEvent.cs" />
     <Compile Include="Animating\AnimationLayer.cs" />
     <Compile Include="Animating\AnimationLoader.cs" />
+    <Compile Include="Animating\AnimationManager.cs" />
     <Compile Include="Animating\AnimationParameter.cs" />
     <Compile Include="Animating\AnimationProperty.cs" />
     <Compile Include="Animating\AnimationPropertyParent.cs" />
@@ -112,7 +113,7 @@
     <Compile Include="Collections\SimpleDictionary.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
-    <Compile Include="Animating\Obsolete\AnimationManager.cs" />
+    <Compile Include="Animating\Obsolete\AnimationSimulator.cs" />
     <Compile Include="DataTypes\Components\DetachedMapComponent.cs" />
     <Compile Include="DataTypes\Graphing\BezierCurve.cs" />
     <Compile Include="DataTypes\Graphing\LagrangeCurve.cs" />

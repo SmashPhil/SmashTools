@@ -1,42 +1,52 @@
-﻿using System;
+﻿#define DISABLE_PROPERTY_ANIMATIONS
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using Verse;
 using UnityEngine;
-using static SmashTools.ConditionalPatch;
 
 namespace SmashTools.Animations
 {
-	[StaticConstructorOnStartup]
 	public static class AnimationPropertyRegistry
 	{
+		private static readonly Dictionary<Type, List<AnimationPropertyParent>> cachedProperties = new Dictionary<Type, List<AnimationPropertyParent>>();
+
 		private static readonly Dictionary<Type, List<FieldInfo>> fieldRegistry = new Dictionary<Type, List<FieldInfo>>();
 		private static readonly Dictionary<Type, List<PropertyInfo>> propertyRegistry = new Dictionary<Type, List<PropertyInfo>>();
 
 		static AnimationPropertyRegistry()
 		{
 			RegisterType<Color>((typeof(float), nameof(Color.r)), (typeof(float), nameof(Color.g)), (typeof(float), nameof(Color.b)), (typeof(float), nameof(Color.a)));
+			RegisterType<Vector2>((typeof(float), nameof(Vector2.x)), (typeof(float), nameof(Vector2.y)));
 			RegisterType<Vector3>((typeof(float), nameof(Vector3.x)), (typeof(float), nameof(Vector3.y)), (typeof(float), nameof(Vector3.z)));
+			RegisterType<IntVec2>((typeof(int), nameof(IntVec2.x)), (typeof(int), nameof(IntVec2.z)));
+			RegisterType<IntVec3>((typeof(int), nameof(IntVec3.x)), (typeof(int), nameof(IntVec3.y)), (typeof(int), nameof(IntVec3.z)));
 		}
 
 		public static List<AnimationPropertyParent> GetAnimationProperties(this IAnimator animator)
 		{
-			List<AnimationPropertyParent> result = new List<AnimationPropertyParent>();
-
-			GetAnimationProperties(animator, result);
-			foreach (object obj in animator.ExtraAnimators)
+			if (!cachedProperties.TryGetValue(animator.GetType(), out List<AnimationPropertyParent> result))
 			{
-				GetAnimationProperties(obj, result);
+				result = new List<AnimationPropertyParent>();
+				GetAnimationProperties(animator, result);
+				//foreach (object obj in animator.ExtraAnimators)
+				//{
+				//	GetAnimationProperties(obj, result);
+				//}
+				cachedProperties.Add(animator.GetType(), result);
 			}
-
 			return result;
 		}
 
-		private static void GetAnimationProperties(object parent, List<AnimationPropertyParent> result)
+		/// <param name="parent">Object fields are being retrieved from</param>
+		/// <param name="fieldInfo"></param>
+		/// <param name="result"></param>
+		private static void GetAnimationProperties(IAnimator animator, List<AnimationPropertyParent> result)
 		{
-			Type type = parent.GetType();
+			Type type = animator.GetType();
 			foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
 				if (fieldInfo.TryGetAttribute<AnimationPropertyAttribute>(out var animationPropertyAttribute))
@@ -54,7 +64,7 @@ namespace SmashTools.Animations
 					AnimationPropertyParent container = AnimationPropertyParent.Create(type.Name, label, fieldInfo);
 					if (IsSupportedPrimitive(fieldInfo.FieldType))
 					{
-						AnimationProperty property = AnimationProperty.Create(label, fieldInfo);
+						AnimationProperty property = AnimationProperty.Create(type, label, fieldInfo);
 						container.Single = property;
 						result.Add(container);
 					}
@@ -67,13 +77,14 @@ namespace SmashTools.Animations
 								Log.Error($"Type {innerFieldInfo.FieldType} is not supported as an animation property. Nested fields must be a supported primitive type {{ int, float, bool }}");
 								continue;
 							}
-							AnimationProperty property = AnimationProperty.Create(innerFieldInfo.Name, innerFieldInfo);
+							AnimationProperty property = AnimationProperty.Create(type, innerFieldInfo.Name, innerFieldInfo, fieldInfo);
 							container.Children.Add(property);
 						}
 						result.Add(container);
 					}
 				}
 			}
+#if !DISABLE_PROPERTY_ANIMATIONS
 			foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
 				if (propertyInfo.TryGetAttribute<AnimationPropertyAttribute>(out var animationPropertyAttribute))
@@ -102,6 +113,7 @@ namespace SmashTools.Animations
 					}
 				}
 			}
+#endif
 		}
 
 		private static bool IsSupportedPrimitive(Type type)
@@ -112,11 +124,6 @@ namespace SmashTools.Animations
 		private static bool IsContainerProperty(Type type)
 		{
 			return fieldRegistry.ContainsKey(type) || propertyRegistry.ContainsKey(type);
-		}
-
-		public static bool HandlesType<T>()
-		{
-			return HandlesType(typeof(T));
 		}
 
 		public static bool HandlesType(Type type)
@@ -142,26 +149,24 @@ namespace SmashTools.Animations
 				if (fieldInfo != null)
 				{
 					fieldRegistry.AddOrInsert(typeof(T), fieldInfo);
+					return;
 				}
-				else
+#if !DISABLE_PROPERTY_ANIMATIONS
+				PropertyInfo propertyInfo = AccessTools.Property(type, name);
+				if (propertyInfo != null)
 				{
-					PropertyInfo propertyInfo = AccessTools.Property(type, name);
-					if (propertyInfo != null)
+					if (!propertyInfo.CanRead || !propertyInfo.CanWrite) //Properties must have both a getter and setter in order to be usable for animations
 					{
-						if (!propertyInfo.CanRead || !propertyInfo.CanWrite) //Properties must have both a getter and setter in order to be usable for animations
-						{
-							propertyRegistry.AddOrInsert(typeof(T), propertyInfo);
-						}
-						else
-						{
-							Log.Error($"{typeof(T)}::{name} property must have both a getter and setter in order to be used as an animation property.");
-						}
+						propertyRegistry.AddOrInsert(typeof(T), propertyInfo);
 					}
 					else
 					{
-						Log.Error($"Unable to locate {typeof(T)}::{name}.");
+						Log.Error($"{typeof(T)}.{name} property must have both a getter and setter in order to be used as an animation property.");
 					}
+					return;
 				}
+#endif
+				Log.Error($"Unable to locate {typeof(T)}.{name}.");
 			}
 		}
 	}

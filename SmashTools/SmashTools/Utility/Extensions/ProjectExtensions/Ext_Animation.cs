@@ -10,7 +10,7 @@ namespace SmashTools
 	{
 		public static bool AnimationLocked(this IAnimationTarget animationTarget)
 		{
-			return AnimationManager.AnimationTarget == animationTarget && AnimationManager.CurrentDriver != null;
+			return AnimationSimulator.AnimationTarget == animationTarget && AnimationSimulator.CurrentDriver != null;
 		}
 	}
 }
