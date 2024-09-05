@@ -158,7 +158,7 @@ namespace SmashTools.Xml
 			}
 		}
 
-		public static void WriteList<T>(string localName, IList<T> value) where T : IXmlExport
+		public static void WriteCollection<T>(string localName, IEnumerable<T> value) where T : IXmlExport
 		{
 			try
 			{

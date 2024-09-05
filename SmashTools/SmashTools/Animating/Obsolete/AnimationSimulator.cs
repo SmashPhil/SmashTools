@@ -8,7 +8,7 @@ using Verse.Sound;
 
 namespace SmashTools
 {
-	public static class AnimationManager
+	public static class AnimationSimulator
 	{
 		internal static readonly float[] playbackSpeeds = { 0.25f, 0.5f, 0.75f, 1, 2, 3, 4 };
 		private static float realTimeToTick;
@@ -69,13 +69,13 @@ namespace SmashTools
 
 		public static bool Reserve(IAnimationTarget animationTarget, Ticker ticker)
 		{
-			if (AnimationManager.animationTarget != null && AnimationManager.animationTarget != animationTarget)
+			if (AnimationSimulator.animationTarget != null && AnimationSimulator.animationTarget != animationTarget)
 			{
 				Log.Error($"Attempting to reserve AnimationManager while it's already in use.  It should only be used by 1 updater at a time to avoid duplicating tick calls.");
 				return false;
 			}
-			AnimationManager.animationTarget = animationTarget;
-			AnimationManager.ticker = ticker;
+			AnimationSimulator.animationTarget = animationTarget;
+			AnimationSimulator.ticker = ticker;
 			Paused = true;
 			return true;
 		}
@@ -97,8 +97,8 @@ namespace SmashTools
 
 		public static void SetDriver(AnimationDriver animationDriver)
 		{
-			AnimationManager.animationDriver = animationDriver;
-			AnimationManager.animationDriver?.Select();
+			AnimationSimulator.animationDriver = animationDriver;
+			AnimationSimulator.animationDriver?.Select();
 		}
 
 		public static void TogglePause(bool validate = false)

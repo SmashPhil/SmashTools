@@ -13,50 +13,69 @@ namespace SmashTools.Debugging
 {
 	internal class UnitTest_AnimDynamicMethod : UnitTest
 	{
+		private const int TestCount = 10;
+
 		public override string Name => "AnimationProperty.DynamicMethod";
 
-		public override IEnumerable<UTResult> Execute()
+		public override IEnumerable<Func<UTResult>> Execute()
 		{
 			TestObject testObject = new TestObject();
-			
-			yield return TestField(testObject, nameof(TestObject.tInt));
-			yield return TestField(testObject, nameof(TestObject.tFloat));
-			yield return TestField(testObject, nameof(TestObject.tBool));
 
-			Vector3 vector = new Vector3(0, 0, 0);
-			//yield return TestField(vector, nameof(Vector3.x));
-			//yield return TestField(vector, nameof(Vector3.y));
-			//yield return TestField(vector, nameof(Vector3.z));
+			yield return () => TestField(testObject, typeof(TestObject), nameof(TestObject.tInt));
+			yield return () => TestField(testObject, typeof(TestObject), nameof(TestObject.tFloat));
+			yield return () => TestField(testObject, typeof(TestObject), nameof(TestObject.tBool));
 
-			//Rect rect = new Rect(0, 0, 0, 0);
-			//yield return TestField(rect, nameof(Rect.x));
-			//yield return TestField(rect, nameof(Rect.y));
-			//yield return TestField(rect, nameof(Rect.width));
-			//yield return TestField(rect, nameof(Rect.height));
+			FieldInfo vector3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.vector));
+			Debug.Assert(vector3 != null);
+			yield return () => TestField(testObject, typeof(Vector3), nameof(Vector3.x), vector3);
+			yield return () => TestField(testObject, typeof(Vector3), nameof(Vector3.y), vector3);
+			yield return () => TestField(testObject, typeof(Vector3), nameof(Vector3.z), vector3);
+
+			FieldInfo color = AccessTools.Field(typeof(TestObject), nameof(TestObject.color));
+			Debug.Assert(color != null);
+			yield return () => TestField(testObject, typeof(Color), nameof(Color.r), color);
+			yield return () => TestField(testObject, typeof(Color), nameof(Color.g), color);
+			yield return () => TestField(testObject, typeof(Color), nameof(Color.b), color);
+			yield return () => TestField(testObject, typeof(Color), nameof(Color.a), color);
+
+			FieldInfo intVec3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.intVec3));
+			Debug.Assert(intVec3 != null);
+			yield return () => TestField(testObject, typeof(IntVec3), nameof(IntVec3.x), intVec3);
+			yield return () => TestField(testObject, typeof(IntVec3), nameof(IntVec3.y), intVec3);
+			yield return () => TestField(testObject, typeof(IntVec3), nameof(IntVec3.z), intVec3);
 		}
 
-		private UTResult TestField<T>(T obj, string name)
+		private UTResult TestField<T>(T obj, Type type, string name, params FieldInfo[] objectPath) where T : IAnimator
 		{
-			FieldInfo fieldInfo = AccessTools.Field(typeof(T), name);
+			FieldInfo fieldInfo = AccessTools.Field(type, name);
 			Debug.Assert(fieldInfo != null);
-			AnimationProperty property = AnimationProperty.Create(name, fieldInfo);
-			
-			(int frame, float value)[] results = {
-				(0, 5),
-				(1, 2),
-				(2, 999)
-			};
+			AnimationProperty property = AnimationProperty.Create(typeof(T), name, fieldInfo, objectPath);
+			(int frame, float value)[] results = new (int frame, float value)[TestCount];
 			for (int i = 0; i < results.Length; i++)
 			{
-				property.curve.Add(results[i].frame, results[i].value);
+				float value = Rand.Range(0, 99999);
+				results[i] = (i, value);
+				property.curve.Add(i, value);
 			}
-			string label = string.Format("[{0}] {1}", typeof(T).Name, name);
+			string label = string.Format("[{0}] {1}", type.Name, name);
 			for (int i = 0; i < results.Length; i++)
 			{
 				// Only testing the actual KeyFrame values to make sure they are assigned
 				// to the object. Any tests on curve evaluations should be done separately
-				property.Set(ref obj, i);
-				if (!IsEqual(fieldInfo.GetValue(obj), results[i].value))
+				property.Set(obj, i);
+
+				object container = obj;
+				if (!objectPath.NullOrEmpty())
+				{
+					// Traverse down the object path to get to the property value
+					foreach (FieldInfo path in objectPath)
+					{
+						container = path.GetValue(container);
+					}
+				}
+
+				object value = fieldInfo.GetValue(container);
+				if (!IsEqual(value, results[i].value))
 				{
 					return UTResult.For(label, false);
 				}
@@ -66,13 +85,13 @@ namespace SmashTools.Debugging
 
 		private bool IsEqual(object lhs, float rhs)
 		{
-			if (lhs is float f)
-			{
-				return f == rhs;
-			}
 			if (lhs is int i)
 			{
 				return i == (int)rhs;
+			}
+			if (lhs is float f)
+			{
+				return f == rhs;
 			}
 			if (lhs is bool b)
 			{
@@ -81,11 +100,25 @@ namespace SmashTools.Debugging
 			return false;
 		}
 
-		private class TestObject
+		internal class TestObject : IAnimator
 		{
 			public int tInt;
 			public float tFloat;
 			public bool tBool;
+
+			public Vector3 vector = new Vector3();
+			public Color color = new Color();
+			public IntVec3 intVec3 = new IntVec3();
+
+			AnimationController IAnimator.Controller => throw new NotImplementedException();
+
+			ModContentPack IAnimator.ModContentPack => throw new NotImplementedException();
+
+			IEnumerable<IAnimationObject> IAnimator.ExtraAnimators => throw new NotImplementedException();
+
+			Vector3 IAnimator.DrawPos => throw new NotImplementedException();
+
+			string IAnimationObject.ObjectId => throw new NotImplementedException();
 		}
 	}
 }

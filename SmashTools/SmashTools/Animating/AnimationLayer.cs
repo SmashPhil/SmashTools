@@ -37,7 +37,8 @@ namespace SmashTools.Animations
 			state.position = position;
 			if (type == StateType.Default)
 			{
-				//TODO - Add Transition from entry to default that cannot be removed
+				AnimationState entryState = states.First(state => state.Type == StateType.Entry);
+				entryState.AddTransition(state);
 			}
 			states.Add(state);
 			return state;
@@ -79,7 +80,7 @@ namespace SmashTools.Animations
 		void IXmlExport.Export()
 		{
 			XmlExporter.WriteObject(nameof(name), name);
-			XmlExporter.WriteList(nameof(states), states);
+			XmlExporter.WriteCollection(nameof(states), states);
 		}
 
 		public static AnimationLayer CreateLayer(string name)

@@ -184,7 +184,7 @@ namespace SmashTools.Animations
 
 		void IXmlExport.Export()
 		{
-			XmlExporter.WriteList(nameof(points), points);
+			XmlExporter.WriteCollection(nameof(points), points);
 		}
 
 		public struct KeyFrame : IExposable, IXmlExport, IComparable<KeyFrame>

@@ -163,7 +163,7 @@ namespace SmashTools
 			{
 				potentialAnimationTargets = Find.Maps.SelectMany(map => map.spawnedThings.Where(thing => thing is IAnimationTarget)).Cast<IAnimationTarget>().ToList();
 			}
-			if (!DisableCameraView && AnimationManager.Reserve(animationTarget, AnimationTick))
+			if (!DisableCameraView && AnimationSimulator.Reserve(animationTarget, AnimationTick))
 			{
 				TryStartCamera(animationTarget);
 			}
@@ -173,7 +173,7 @@ namespace SmashTools
 		{
 			base.PostClose();
 			CameraView.Close();
-			AnimationManager.Release();
+			AnimationSimulator.Release();
 		}
 
 		private void TryStartCamera(IAnimationTarget animationTarget)
@@ -189,8 +189,8 @@ namespace SmashTools
 				CameraJumper.TryJump(animationTarget.Thing, mode: CameraJumper.MovementMode.Cut);
 				CameraView.Start(orthographicSize: CameraView.animationSettings.orthographicSize);
 				Find.Selector.ClearSelection();
-				AnimationManager.Reset();
-				AnimationManager.SetDriver(null);
+				AnimationSimulator.Reset();
+				AnimationSimulator.SetDriver(null);
 				RecacheAnimationDriverStartingTick();
 			}
 		}
@@ -247,11 +247,11 @@ namespace SmashTools
 
 		private void SelectAnimationDriver(AnimationDriver animationDriver)
 		{
-			if (AnimationManager.CurrentDriver != null && AnimationManager.CurrentDriver != animationDriver)
+			if (AnimationSimulator.CurrentDriver != null && AnimationSimulator.CurrentDriver != animationDriver)
 			{
-				AnimationManager.Reset();
+				AnimationSimulator.Reset();
 			}
-			AnimationManager.SetDriver(animationDriver);
+			AnimationSimulator.SetDriver(animationDriver);
 			RecacheAnimationDriverStartingTick();
 			SelectAnimator(null);
 		}
@@ -259,12 +259,12 @@ namespace SmashTools
 		private void RecacheAnimationDriverStartingTick()
 		{
 			StartingAnimationDriverTick = 0;
-			if (AnimationManager.CurrentDriver != null)
+			if (AnimationSimulator.CurrentDriver != null)
 			{
 				int totalLength = 0;
 				foreach (AnimationDriver animationDriver in animationTarget.Animations)
 				{
-					if (animationDriver == AnimationManager.CurrentDriver)
+					if (animationDriver == AnimationSimulator.CurrentDriver)
 					{
 						StartingAnimationDriverTick = totalLength;
 						return;
@@ -311,34 +311,34 @@ namespace SmashTools
 					CameraView.DrawMapGridInView();
 				}
 				(Vector3 drawPos, float rotation) = animationTarget.DrawData;
-				if (AnimationManager.CurrentDriver != null)
+				if (AnimationSimulator.CurrentDriver != null)
 				{
-					(drawPos, _) = AnimationManager.CurrentDriver.Draw(drawPos, rotation);
+					(drawPos, _) = AnimationSimulator.CurrentDriver.Draw(drawPos, rotation);
 				}
 				CameraView.Update(drawPos);
 			}
-			AnimationManager.Update();
+			AnimationSimulator.Update();
 		}
 
 		public void AnimationTick()
 		{
-			if (AnimationManager.CurrentDriver != null)
+			if (AnimationSimulator.CurrentDriver != null)
 			{
-				if (AnimationManager.TicksPassed >= AnimationManager.CurrentDriver.AnimationLength)
+				if (AnimationSimulator.TicksPassed >= AnimationSimulator.CurrentDriver.AnimationLength)
 				{
-					AnimationManager.Reset();
-					AnimationManager.Paused = !CameraView.animationSettings.loop;
+					AnimationSimulator.Reset();
+					AnimationSimulator.Paused = !CameraView.animationSettings.loop;
 				}
 				else
 				{
-					AnimationManager.CurrentDriver.Tick(AnimationManager.TicksPassed);
+					AnimationSimulator.CurrentDriver.Tick(AnimationSimulator.TicksPassed);
 				}
 			}
 		}
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			AnimationManager.OnGUI();
+			AnimationSimulator.OnGUI();
 
 			Rect inputRect = new Rect(inRect)
 			{
@@ -418,7 +418,7 @@ namespace SmashTools
 						Rect drawLabelsRect = new Rect(inputRect.xMax - 250, xRangeRect.y, 250, 30);
 						if (animationTarget != null && !animators.NullOrEmpty())
 						{
-							if (Widgets.ButtonText(drawLabelsRect, AnimationManager.CurrentDriver?.Name ?? "Select Animation Driver"))
+							if (Widgets.ButtonText(drawLabelsRect, AnimationSimulator.CurrentDriver?.Name ?? "Select Animation Driver"))
 							{
 								List<FloatMenuOption> options = new List<FloatMenuOption>();
 								options.Add(new FloatMenuOption("None", () => SelectAnimationDriver(null)));
@@ -433,9 +433,9 @@ namespace SmashTools
 							{
 								List<FloatMenuOption> options = new List<FloatMenuOption>();
 								options.Add(new FloatMenuOption("None", () => SelectAnimator(null)));
-								if (AnimationManager.CurrentDriver != null)
+								if (AnimationSimulator.CurrentDriver != null)
 								{
-									foreach (AnimatorObject animatorObject in animators.Where(anim => !anim.category.NullOrEmpty() && anim.category.Split('.')[0] == AnimationManager.CurrentDriver.Name))
+									foreach (AnimatorObject animatorObject in animators.Where(anim => !anim.category.NullOrEmpty() && anim.category.Split('.')[0] == AnimationSimulator.CurrentDriver.Name))
 									{
 										options.Add(new FloatMenuOption($"{animatorObject.DisplayName}", () => SelectAnimator(animatorObject)));
 									}
@@ -611,13 +611,13 @@ namespace SmashTools
 								lister.Header("Settings", anchor: TextAnchor.MiddleCenter);
 
 								CameraView.OrthographicSize = lister.SliderLabeled("Orthographic Size", CameraView.OrthographicSize, "Camera Zoom", string.Empty, string.Empty, ZoomRange.min, ZoomRange.max, decimalPlaces: 1);
-								if (lister.Button($"Playback Speed: {AnimationManager.PlaybackSpeed}", highlightTag: "Speed multiplier on animation window"))
+								if (lister.Button($"Playback Speed: {AnimationSimulator.PlaybackSpeed}", highlightTag: "Speed multiplier on animation window"))
 								{
 									List<FloatMenuOption> options = new List<FloatMenuOption>();
 
-									foreach (float speed in AnimationManager.playbackSpeeds)
+									foreach (float speed in AnimationSimulator.playbackSpeeds)
 									{
-										options.Add(new FloatMenuOption($"{speed}", () => AnimationManager.PlaybackSpeed = speed));
+										options.Add(new FloatMenuOption($"{speed}", () => AnimationSimulator.PlaybackSpeed = speed));
 									}
 
 									Find.WindowStack.Add(new FloatMenu(options));
@@ -639,23 +639,23 @@ namespace SmashTools
 
 								float buttonSpacing = PlaybackRectHeight / 2;
 								Rect playerBarRect = new Rect(cameraRect.x + buttonSpacing, cameraRect.yMax - PlaybackRectHeight - 5, PlaybackRectHeight, PlaybackRectHeight).ContractedBy(2);
-								Texture2D pauseTex = AnimationManager.Paused ? viewerButtonTextures[1] : viewerButtonTextures[0];
+								Texture2D pauseTex = AnimationSimulator.Paused ? viewerButtonTextures[1] : viewerButtonTextures[0];
 								if (Widgets.ButtonImage(playerBarRect, pauseTex))
 								{
-									if (AnimationManager.CurrentDriver != null && AnimationManager.TicksPassed >= AnimationManager.CurrentDriver.AnimationLength)
+									if (AnimationSimulator.CurrentDriver != null && AnimationSimulator.TicksPassed >= AnimationSimulator.CurrentDriver.AnimationLength)
 									{
-										AnimationManager.Reset();
+										AnimationSimulator.Reset();
 									}
-									AnimationManager.TogglePause(true);
+									AnimationSimulator.TogglePause(true);
 									SoundDefOf.Click.PlayOneShotOnCamera();
 								}
 								Rect invisibleClickableWindowRect = new Rect(cameraRect.x, cameraRect.y, cameraRect.width, cameraRect.height - playerBarRect.height * 2.5f);
 								float playButtonAnimatedSize = cameraRect.width / 5;
 								Rect playButtonAnimated = new Rect(cameraRect.x, cameraRect.y, playButtonAnimatedSize, playButtonAnimatedSize);
-								if (AnimationManager.ButtonUpdated(invisibleClickableWindowRect, () => timeFading += Time.deltaTime, () => ButtonFadeHandler(playButtonAnimated), () => timeFading <= 0, doMouseoverSound: false))
+								if (AnimationSimulator.ButtonUpdated(invisibleClickableWindowRect, () => timeFading += Time.deltaTime, () => ButtonFadeHandler(playButtonAnimated), () => timeFading <= 0, doMouseoverSound: false))
 								{
 									timeFading = 0;
-									AnimationManager.TogglePause(true);
+									AnimationSimulator.TogglePause(true);
 									SoundDefOf.Click.PlayOneShotOnCamera();
 								}
 
@@ -663,16 +663,16 @@ namespace SmashTools
 								Text.Font = GameFont.Small;
 
 								string timeCount = CameraView.animationSettings.displayTicks ? "0 / 0" : "0:00/0:00";
-								if (AnimationManager.CurrentDriver != null)
+								if (AnimationSimulator.CurrentDriver != null)
 								{
 									if (CameraView.animationSettings.displayTicks)
 									{
-										timeCount = $"{AnimationManager.TicksPassed} / {AnimationManager.CurrentDriver.AnimationLength}";
+										timeCount = $"{AnimationSimulator.TicksPassed} / {AnimationSimulator.CurrentDriver.AnimationLength}";
 									}
 									else
 									{
-										TimeSpan timePassed = new TimeSpan(0, 0, Mathf.CeilToInt(AnimationManager.TicksPassed.TicksToSeconds()));
-										TimeSpan timeMax = new TimeSpan(0, 0, Mathf.CeilToInt(AnimationManager.CurrentDriver.AnimationLength.TicksToSeconds()));
+										TimeSpan timePassed = new TimeSpan(0, 0, Mathf.CeilToInt(AnimationSimulator.TicksPassed.TicksToSeconds()));
+										TimeSpan timeMax = new TimeSpan(0, 0, Mathf.CeilToInt(AnimationSimulator.CurrentDriver.AnimationLength.TicksToSeconds()));
 										timeCount = $"{timePassed:m\\:ss} / {timeMax:m\\:ss}";
 									}
 								}
@@ -691,9 +691,9 @@ namespace SmashTools
 									progressBarRect.y -= (progressBarRect.height - PlaybackBarHeight) / 2;
 								}
 								float viewerPercent = 0;
-								if (AnimationManager.CurrentDriver != null)
+								if (AnimationSimulator.CurrentDriver != null)
 								{
-									viewerPercent = (float)AnimationManager.TicksPassed / AnimationManager.CurrentDriver.AnimationLength;
+									viewerPercent = (float)AnimationSimulator.TicksPassed / AnimationSimulator.CurrentDriver.AnimationLength;
 								}
 								UIElements.FillableBar(progressBarRect, viewerPercent, UIData.FillableBarProgressBar, UIData.FillableBarProgressBarBG);
 								
@@ -703,20 +703,20 @@ namespace SmashTools
 								GUIState.Reset();
 
 								Widgets.DraggableResult result = Widgets.ButtonInvisibleDraggable(progressBarRect);
-								if (result == Widgets.DraggableResult.Dragged && AnimationManager.CurrentDriver != null)
+								if (result == Widgets.DraggableResult.Dragged && AnimationSimulator.CurrentDriver != null)
 								{
 									dragging = true;
-									AnimationManager.EditingTicks = true;
+									AnimationSimulator.EditingTicks = true;
 								}
 								if (!Input.GetMouseButton(0))
 								{
 									dragging = false;
-									AnimationManager.EditingTicks = false;
+									AnimationSimulator.EditingTicks = false;
 								}
-								if ((dragging || result == Widgets.DraggableResult.Pressed) && AnimationManager.CurrentDriver != null)
+								if ((dragging || result == Widgets.DraggableResult.Pressed) && AnimationSimulator.CurrentDriver != null)
 								{
 									float percentDrag = Mathf.Clamp01((Event.current.mousePosition.x - progressBarRect.x) / progressBarRect.width);
-									AnimationManager.TicksPassed = Mathf.RoundToInt(AnimationManager.CurrentDriver.AnimationLength * percentDrag);
+									AnimationSimulator.TicksPassed = Mathf.RoundToInt(AnimationSimulator.CurrentDriver.AnimationLength * percentDrag);
 								}
 							}
 						}

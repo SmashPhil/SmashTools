@@ -32,8 +32,8 @@ namespace SmashTools.Animations
 
 		void IXmlExport.Export()
 		{
-			XmlExporter.WriteList(nameof(parameters), parameters);
-			XmlExporter.WriteList(nameof(layers), layers);
+			XmlExporter.WriteCollection(nameof(parameters), parameters);
+			XmlExporter.WriteCollection(nameof(layers), layers);
 		}
 
 		void IAnimationFile.PostLoad()

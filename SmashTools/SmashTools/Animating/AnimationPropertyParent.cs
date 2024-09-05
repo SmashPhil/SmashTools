@@ -48,14 +48,19 @@ namespace SmashTools.Animations
 
 		public AnimationProperty Current => throw new NotImplementedException();
 
-		public static AnimationPropertyParent Create(string identifier, string label, FieldInfo fieldInfo)
+		public void EvaluateFrame(IAnimator animator, int frame)
 		{
-			return new AnimationPropertyParent(identifier, label, fieldInfo.Name, fieldInfo.DeclaringType);
-		}
-
-		public static AnimationPropertyParent Create(string identifier, string label, PropertyInfo propertyInfo)
-		{
-			return new AnimationPropertyParent(identifier, label, propertyInfo.Name, propertyInfo.DeclaringType);
+			if (Single != null)
+			{
+				Single.Set(animator, frame);
+			}
+			else
+			{
+				for (int i = 0; i < Children.Count; i++)
+				{
+					Children[i].Set(animator, frame);
+				}
+			}
 		}
 
 		public bool AllKeyFramesAt(int frame)
@@ -124,7 +129,7 @@ namespace SmashTools.Animations
 			}
 			if (!children.NullOrEmpty())
 			{
-				XmlExporter.WriteList(nameof(children), children);
+				XmlExporter.WriteCollection(nameof(children), children);
 			}
 		}
 
@@ -146,6 +151,16 @@ namespace SmashTools.Animations
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		public static AnimationPropertyParent Create(string identifier, string label, FieldInfo fieldInfo)
+		{
+			return new AnimationPropertyParent(identifier, label, fieldInfo.Name, fieldInfo.DeclaringType);
+		}
+
+		public static AnimationPropertyParent Create(string identifier, string label, PropertyInfo propertyInfo)
+		{
+			return new AnimationPropertyParent(identifier, label, propertyInfo.Name, propertyInfo.DeclaringType);
 		}
 	}
 }
