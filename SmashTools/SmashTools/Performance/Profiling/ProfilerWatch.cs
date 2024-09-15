@@ -45,9 +45,7 @@ namespace SmashTools.Performance
 		private static bool profiling;
 		private static bool routineRunning;
 
-#if DEBUG
 		private static Harmony harmony;
-#endif
 
 		static ProfilerWatch()
 		{
