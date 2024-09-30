@@ -35,7 +35,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Unstable|AnyCPU' ">
     <OutputPath>bin\UNSTABLE\</OutputPath>
     <Optimize>true</Optimize>
-	  <DefineConstants>TRACE;UNSTABLE</DefineConstants>
+    <DefineConstants>TRACE;UNSTABLE</DefineConstants>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <LangVersion>8.0</LangVersion>
@@ -166,9 +166,10 @@
     <Compile Include="Pathfinding\BFS.cs" />
     <Compile Include="Pathfinding\Dijkstra.cs" />
     <Compile Include="Performance\Caching\MapComponentCache.cs" />
+    <Compile Include="Performance\Coroutines\WaitForTicks.cs" />
     <Compile Include="Performance\Multithreading\AsyncAction.cs" />
     <Compile Include="Performance\Multithreading\AsyncPool.cs" />
-    <Compile Include="Performance\Asynchronous\CoroutineManager.cs" />
+    <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
     <Compile Include="Performance\Profiling\ProfilerLogger.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />

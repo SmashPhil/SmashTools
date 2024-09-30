@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SmashTools;
 
 namespace SmashTools.Debugging
 {
 	public abstract class UnitTest
 	{
+		public abstract TestType ExecuteOn { get; }
+
 		public abstract string Name { get; }
 
 		public abstract IEnumerable<Func<UTResult>> Execute();
@@ -15,20 +18,34 @@ namespace SmashTools.Debugging
 		protected UTResult True => new UTResult(string.Empty, true);
 
 		protected UTResult False => new UTResult(string.Empty, false);
+
+		public enum TestType
+		{
+			None = 0,
+			MainMenu,
+			GameLoaded,
+		}
 	}
 
-	public readonly struct UTResult
+	public struct UTResult
 	{
 		public UTResult(string name, bool passed)
 		{
-			Name = !name.NullOrEmpty() ? $"{name}=" : string.Empty;
-			Passed = passed;
+			string adjustedName = !name.NullOrEmpty() ? $"{name} = " : string.Empty;
+			Results = new List<(string name, bool result)>() { (adjustedName, passed) };
 		}
 
-		public string Name { get; }
+		public List<(string name, bool result)> Results { get; private set; }
 
-		public bool Passed { get; }
+		public void Add(string name, bool passed)
+		{
+			Results ??= new List<(string name, bool result)>();
+			Results.Add((name, passed));
+		}
 
-		public static UTResult For(string name, bool passed) => new UTResult(name, passed);
+		public static UTResult For(string name, bool passed)
+		{
+			return new UTResult(name, passed);
+		}
 	}
 }

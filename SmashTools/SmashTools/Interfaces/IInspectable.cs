@@ -8,12 +8,6 @@ namespace SmashTools
 	/// </summary>
 	public interface IInspectable
 	{
-		void InspectOpen();
-
-		void InspectClose();
-
-		void DrawInspectDialog(Rect rect);
-
 		float DoInspectPaneButtons(float x);
 	}
 }

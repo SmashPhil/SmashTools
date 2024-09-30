@@ -173,10 +173,7 @@ namespace SmashTools
 			if (Find.Selector.SingleSelectedThing is IInspectable inspectable)
 			{
 				lineEndWidth += 30;
-				if (UIElements.InfoCardButton(new Rect(rect.width - lineEndWidth, 0f, 30, 30)))
-				{
-					Find.WindowStack.Add(new Dialog_InspectWindow(inspectable));
-				}
+				Widgets.InfoCardButton(rect.width - lineEndWidth, 0f, Find.Selector.SingleSelectedThing);
 				lineEndWidth += inspectable.DoInspectPaneButtons(rect.width - lineEndWidth);
 				return false;
 			}

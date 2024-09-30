@@ -17,6 +17,8 @@ namespace SmashTools.Debugging
 
 		public override string Name => "AnimationProperty.DynamicMethod";
 
+		public override TestType ExecuteOn => TestType.GameLoaded;
+
 		public override IEnumerable<Func<UTResult>> Execute()
 		{
 			TestObject testObject = new TestObject();

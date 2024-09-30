@@ -163,7 +163,7 @@ namespace SmashTools
 		/// <param name="roundTo"></param>
 		public static int RoundTo(this int num, int roundTo)
 		{
-			return Mathf.RoundToInt(num / roundTo) * roundTo;
+			return Mathf.RoundToInt((float)num / roundTo) * roundTo;
 		}
 
 		public static int PowTwo(int exp)

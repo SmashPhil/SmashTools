@@ -7,6 +7,7 @@ using RimWorld;
 
 namespace SmashTools
 {
+	[Obsolete]
 	public class Dialog_InspectWindow : Window
 	{
 		private IInspectable inspectable;
@@ -36,18 +37,18 @@ namespace SmashTools
 		public override void PreOpen()
 		{
 			base.PreOpen();
-			inspectable.InspectOpen();
+			//inspectable.InspectOpen();
 		}
 
 		public override void PostClose()
 		{
 			base.PostClose();
-			inspectable.InspectClose();
+			//inspectable.InspectClose();
 		}
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			inspectable.DrawInspectDialog(inRect);
+			//inspectable.DrawInspectDialog(inRect);
 		}
 	}
 }
