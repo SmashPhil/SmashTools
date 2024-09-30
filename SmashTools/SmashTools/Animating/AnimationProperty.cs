@@ -169,11 +169,6 @@ namespace SmashTools.Animations
 			setValue = (SetValue)method.CreateDelegate(typeof(SetValue), this);
 		}
 
-		private void Test(IAnimator animator, float frame)
-		{
-			((UnitTest_AnimDynamicMethod.TestObject)animator).vector.x = (float)curve.Function(frame);
-		}
-
 		public static PropertyType PropertyTypeFrom(Type type)
 		{
 			if (type == typeof(float))

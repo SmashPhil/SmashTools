@@ -23,12 +23,29 @@ namespace SmashTools
 			if (Debugger.IsAttached) Debugger.Break();
 		}
 
+		public static void Trace(bool condition, string message)
+		{
+			if (condition) return;
+
+			Log.Error(message);
+#if DEBUG
+			if (Debugger.IsAttached) Debugger.Break();
+#endif
+		}
+
 		/// <summary>
 		/// Thread Safe message logging, passes to coroutine to invoke on main thread in bulk.
 		/// </summary>
 		public static void TSMessage(string message)
 		{
-			CoroutineManager.QueueInvoke(() => Log.Message(message));
+			if (UnityData.IsInMainThread)
+			{
+				Log.Message(message);
+			}
+			else
+			{
+				CoroutineManager.QueueInvoke(() => Log.Message(message));
+			}
 		}
 
 		/// <summary>
@@ -36,7 +53,14 @@ namespace SmashTools
 		/// </summary>
 		public static void TSWarning(string message)
 		{
-			CoroutineManager.QueueInvoke(() => Log.Warning(message));
+			if (UnityData.IsInMainThread)
+			{
+				Log.Warning(message);
+			}
+			else
+			{
+				CoroutineManager.QueueInvoke(() => Log.Warning(message));
+			}
 		}
 
 		/// <summary>
@@ -44,7 +68,14 @@ namespace SmashTools
 		/// </summary>
 		public static void TSError(string message)
 		{
-			CoroutineManager.QueueInvoke(() => Log.Error(message));
+			if (UnityData.IsInMainThread)
+			{
+				Log.Error(message);
+			}
+			else
+			{
+				CoroutineManager.QueueInvoke(() => Log.Error(message));
+			}
 		}
 	}
 }
