@@ -19,7 +19,6 @@ namespace SmashTools.Animations
 	{
 		private const float MinLeftWindowSize = 300;
 		private const float MinRightWindowSize = 250;
-		public const float DropdownWidth = 300;
 
 		private const float WidgetBarHeight = 24;
 		private const float KeyframeSize = 20;
@@ -466,7 +465,8 @@ namespace SmashTools.Animations
 			string animPath = animation?.FilePath ?? string.Empty;
 			if (Dropdown(animClipDropdownRect, animLabel, animPath))
 			{
-				Find.WindowStack.Add(new Dialog_AnimationClipLister(parent.animator, animClipSelectRect, animation, onFilePicked: LoadAnimation));
+				Find.WindowStack.Add(new Dialog_AnimationClipLister(parent.animator, animClipSelectRect, animation,
+					createItem: ("ST_CreateNewClip", AnimationClip.CreateEmpty), onFilePicked: LoadAnimation));
 			}
 			DoSeparatorVertical(animClipDropdownRect.xMax, animClipDropdownRect.y, animClipDropdownRect.height);
 

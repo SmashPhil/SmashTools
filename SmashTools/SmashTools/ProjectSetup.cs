@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using HarmonyLib;
+using LudeonTK;
+using RimWorld;
+using SmashTools.Performance;
+using SmashTools.Xml;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using HarmonyLib;
 using Verse;
-using RimWorld;
-using RimWorld.Planet;
-using SmashTools.Xml;
-using SmashTools.Performance;
-using LudeonTK;
-using static RimWorld.ColonistBar;
 
 namespace SmashTools
 {
@@ -114,13 +108,6 @@ namespace SmashTools
 				prefix: new HarmonyMethod(typeof(ProjectSetup),
 				nameof(InspectablePaneButtons)));
 
-			//Debugging
-#if DEBUG
-			Harmony.Patch(original: AccessTools.Method(typeof(UIRoot), nameof(UIRoot.UIRootOnGUI)),
-				postfix: new HarmonyMethod(typeof(ProjectSetup),
-				nameof(ValidateGUIState)));
-#endif
-
 			//Mod Init
 			StaticConstructorOnModInit();
 
@@ -161,9 +148,9 @@ namespace SmashTools
 			{
 				StartupTest.OpenMenu();
 			}
-			if (___widgetRow.ButtonIcon(TexButton.OpenStatsReport, "Open Profiler.\n\n View profiler entries from ProfilerWatch."))
+			if (___widgetRow.ButtonIcon(TexButton.OpenStatsReport, "Start Profiling.\n\nNOTE: Requires JetBrains DotTrace license to run."))
 			{
-				Find.WindowStack.Add(new Dialog_Profiler());
+				
 			}
 			___widgetRowFinalX = ___widgetRow.FinalX;
 		}
@@ -178,16 +165,6 @@ namespace SmashTools
 				return false;
 			}
 			return true;
-		}
-
-		private static void ValidateGUIState()
-		{
-			if (!GUIState.Empty)
-			{
-				Log.Error($"GUIState is not empty on end of frame.  GUIStates need to be popped from the stack when the containing method is finished.");
-
-				while (!GUIState.Empty) GUIState.Pop();
-			}
 		}
 
 		private static void ClearCaches()

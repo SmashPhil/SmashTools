@@ -6,8 +6,7 @@ using System.IO;
 using Verse;
 using RimWorld;
 using UnityEngine;
-using Verse.Noise;
-using System.Diagnostics;
+using static SmashTools.Dialog_ItemDropdown<SmashTools.Animations.AnimationClip>.CreateItemButton;
 
 namespace SmashTools.Animations
 {
@@ -16,10 +15,11 @@ namespace SmashTools.Animations
 		private readonly IAnimator animator;
 		private readonly AnimationClip animation;
 
-		public Dialog_AnimationClipLister(IAnimator animator, Rect rect, AnimationClip animation, Action<AnimationClip> onFilePicked = null) 
+		public Dialog_AnimationClipLister(IAnimator animator, Rect rect, AnimationClip animation,
+			CreateItemButton createItem = null, Action<AnimationClip> onFilePicked = null) 
 			: base(rect, AnimationLoader.Cache<AnimationClip>.GetAll(), onFilePicked, FileName,
-				  isSelected: (AnimationClip other) => other && animation && animation.FilePath == other.FilePath, 
-				  createBtn: ("ST_CreateNewClip", AnimationClip.CreateEmpty))
+				  isSelected: (AnimationClip other) => other && animation && animation.FilePath == other.FilePath,
+				  createItem: createItem)
 		{
 			this.animator = animator;
 			this.animation = animation;

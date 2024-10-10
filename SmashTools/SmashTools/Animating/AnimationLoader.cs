@@ -30,11 +30,11 @@ namespace SmashTools.Animations
 		{
 			ParseHelper.Parsers<AnimationClip>.Register(ParseAnimationFile<AnimationClip>);
 			ParseHelper.Parsers<AnimationController>.Register(ParseAnimationFile<AnimationController>);
-			
+
 			LoadAll();
 		}
 
-		private static void LoadAll()
+		internal static void LoadAll()
 		{
 			foreach (ModContentPack mod in LoadedModManager.RunningModsListForReading)
 			{
@@ -170,6 +170,8 @@ namespace SmashTools.Animations
 		internal static class Cache<T> where T : IAnimationFile
 		{
 			private static readonly Dictionary<string, T> files = new Dictionary<string, T>();
+
+			public static int Count => files.Count;
 
 			public static List<T> GetAll() => files.Values.ToList();
 

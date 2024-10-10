@@ -16,11 +16,13 @@ namespace SmashTools
 
 		public static bool Empty => stack.Count == 0;
 
+		[Obsolete("Use TextBlock instead.")]
 		public static void Push()
 		{
 			stack.Push(StateValues.Capture());
 		}
 
+		[Obsolete("Use TextBlock instead.")]
 		public static void Reset()
 		{
 			if (Empty)
@@ -32,12 +34,14 @@ namespace SmashTools
 			state.Reset(); //Can still be performed on copy of StateValues. GUI settings get set with its values, state does not change
 		}
 
+		[Obsolete("Use TextBlock instead.")]
 		public static void Pop()
 		{
 			Reset();
 			stack.Pop();
 		}
 
+		[Obsolete("Use TextBlock instead.")]
 		public static void Disable()
 		{
 			if (Empty)
@@ -49,6 +53,7 @@ namespace SmashTools
 			GUI.color = UIElements.InactiveColor;
 		}
 
+		[Obsolete("Use TextBlock instead.")]
 		public static void Enable()
 		{
 			if (Empty)

@@ -17,6 +17,9 @@ namespace SmashTools.Animations
 		private static readonly Dictionary<Type, List<FieldInfo>> fieldRegistry = new Dictionary<Type, List<FieldInfo>>();
 		private static readonly Dictionary<Type, List<PropertyInfo>> propertyRegistry = new Dictionary<Type, List<PropertyInfo>>();
 
+		// Faster type look-up and handles UnityEngine types which are not parseable by RimWorld
+		private static readonly Dictionary<string, Type> typeNames = new Dictionary<string, Type>();
+
 		static AnimationPropertyRegistry()
 		{
 			RegisterType<Color>((typeof(float), nameof(Color.r)), (typeof(float), nameof(Color.g)), (typeof(float), nameof(Color.b)), (typeof(float), nameof(Color.a)));
@@ -24,6 +27,11 @@ namespace SmashTools.Animations
 			RegisterType<Vector3>((typeof(float), nameof(Vector3.x)), (typeof(float), nameof(Vector3.y)), (typeof(float), nameof(Vector3.z)));
 			RegisterType<IntVec2>((typeof(int), nameof(IntVec2.x)), (typeof(int), nameof(IntVec2.z)));
 			RegisterType<IntVec3>((typeof(int), nameof(IntVec3.x)), (typeof(int), nameof(IntVec3.y)), (typeof(int), nameof(IntVec3.z)));
+		}
+
+		public static bool CachedTypeByName(string name, out Type type)
+		{
+			return typeNames.TryGetValue(name, out type);
 		}
 
 		public static List<AnimationPropertyParent> GetAnimationProperties(this IAnimator animator)
@@ -142,7 +150,7 @@ namespace SmashTools.Animations
 				Log.Error($"Trying to register AnimationProperty in registry with no properties.");
 				return;
 			}
-
+			typeNames[GenTypes.GetTypeNameWithoutIgnoredNamespaces(typeof(T))] = typeof(T);
 			foreach ((Type type, string name) in properties)
 			{
 				FieldInfo fieldInfo = AccessTools.Field(typeof(T), name);

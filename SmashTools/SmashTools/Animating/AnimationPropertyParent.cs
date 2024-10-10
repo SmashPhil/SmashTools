@@ -52,13 +52,13 @@ namespace SmashTools.Animations
 		{
 			if (Single != null)
 			{
-				Single.Set(animator, frame);
+				Single.Evaluate(animator, frame);
 			}
 			else
 			{
 				for (int i = 0; i < Children.Count; i++)
 				{
-					Children[i].Set(animator, frame);
+					Children[i].Evaluate(animator, frame);
 				}
 			}
 		}

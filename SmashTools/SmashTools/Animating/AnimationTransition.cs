@@ -9,7 +9,7 @@ namespace SmashTools.Animations
 {
 	public class AnimationTransition : IXmlExport, IDisposable
 	{
-		public float exitTime;
+		public int exitTicks;
 		public Guid toStateGuid; // guid of ToState for lookup
 		public List<AnimationCondition> conditions = new List<AnimationCondition>();
 
@@ -43,21 +43,37 @@ namespace SmashTools.Animations
 		public AnimationTransition CreateCopy()
 		{
 			AnimationTransition copy = new AnimationTransition();
-			copy.exitTime = exitTime;
+			copy.exitTicks = exitTicks;
 			copy.conditions = new List<AnimationCondition>(conditions);
 
 			return copy;
 		}
 
+		public void AddCondition()
+		{
+			AnimationCondition condition = new AnimationCondition();
+			condition.Transition = this;
+			condition.Parameter = FromState.Layer.Controller.parameters.FirstOrDefault();
+			conditions.Add(condition);
+		}
+
+		public void PostLoad()
+		{
+			if (!conditions.NullOrEmpty())
+			{
+				foreach (AnimationCondition condition in conditions)
+				{
+					condition.Transition = this;
+					condition.PostLoad();
+				}
+			}
+		}
+
 		void IXmlExport.Export()
 		{
-			XmlExporter.WriteObject(nameof(exitTime), exitTime);
+			XmlExporter.WriteObject(nameof(exitTicks), exitTicks);
 			XmlExporter.WriteObject(nameof(toStateGuid), toStateGuid);
 			XmlExporter.WriteCollection(nameof(conditions), conditions);
 		}
-
-		//needs conditions
-
-		//needs exit time
 	}
 }

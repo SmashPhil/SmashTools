@@ -1,10 +1,7 @@
-﻿using SmashTools.Xml;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Xml;
-using System.Xml.Linq;
-using Verse;
+using SmashTools.Xml;
+using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -26,7 +23,8 @@ namespace SmashTools.Animations
 		{
 			name = AnimationLoader.GetAvailableName(layers.Select(layer => layer.name), name);
 			AnimationLayer layer = AnimationLayer.CreateLayer(name);
-			Debug.Assert(layer != null, "Layer null");
+			layer.Controller = this;
+			Assert(layer != null, "Layer null");
 			layers.Add(layer);
 		}
 
@@ -40,7 +38,8 @@ namespace SmashTools.Animations
 		{
 			foreach (AnimationLayer layer in layers)
 			{
-				layer.ResolveConnections();
+				layer.Controller = this;
+				layer.PostLoad();
 			}
 		}
 

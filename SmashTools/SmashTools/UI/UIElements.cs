@@ -14,9 +14,6 @@ namespace SmashTools
 	{
 		public static readonly Regex ValidInputRegex = new Regex(@"^(\#[A-Fa-f0-9]{0,7}$)");
 
-		public static readonly Texture2D RadioButOffTex = ContentFinder<Texture2D>.Get("UI/Widgets/RadioButOff", true);
-		public static readonly Texture2D TargetLevelArrow = ContentFinder<Texture2D>.Get("UI/Misc/BarInstantMarkerRotated");
-
 		public static readonly Color InactiveColor = new Color(0.37f, 0.37f, 0.37f, 0.8f);
 		public static readonly Color MenuSectionBGBorderColor = new ColorInt(135, 135, 135).ToColor;
 		public static readonly Color RangeControlTextColor = new Color(0.6f, 0.6f, 0.6f);
@@ -155,7 +152,7 @@ namespace SmashTools
 				}
 				else
 				{
-					image = RadioButOffTex;
+					image = UIData.RadioButOffTex;
 				}
 				GUI.DrawTexture(new Rect(x, y, 24f, 24f), image);
 			}
@@ -203,7 +200,7 @@ namespace SmashTools
 				}
 
 				Rect inputRect = new Rect(labelRect.xMax, rect.y, rect.width - labelRect.width, rect.height);
-				Rect[] rects = inputRect.Split(2, buffer);
+				Rect[] rects = inputRect.SplitVertically(2, buffer);
 
 				NumericBox(rects[0], ref x, leftBox.label, string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
 				NumericBox(rects[1], ref y, rightBox.label, string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
@@ -233,7 +230,7 @@ namespace SmashTools
 				Widgets.Label(labelRect, label);
 
 				Rect inputRect = new Rect(rect.x + labelRect.width, rect.y, rect.width - labelRect.width, rect.height);
-				Rect[] rects = inputRect.Split(3, buffer);
+				Rect[] rects = inputRect.SplitVertically(3, buffer);
 
 				NumericBox(rects[0], ref x, "x", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
 				NumericBox(rects[1], ref y, "y", string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
@@ -433,7 +430,7 @@ namespace SmashTools
 				GUI.color = Color.white;
 
 				float x = Mathf.Clamp(sliderRect.x - 6f + sliderRect.width * Mathf.InverseLerp(min, max, valueChange), sliderRect.xMin - 6f, sliderRect.xMax - 6f);
-				GUI.DrawTexture(new Rect(x, atlasRect.center.y - 6f, handleScale, handleScale), TargetLevelArrow);
+				GUI.DrawTexture(new Rect(x, atlasRect.center.y - 6f, handleScale, handleScale), UIData.TargetLevelArrow);
 
 				if (Event.current.type == EventType.MouseDown && Mouse.IsOver(rect) && sliderDraggingID != screenPointHashCode)
 				{

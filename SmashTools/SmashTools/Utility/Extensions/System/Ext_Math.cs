@@ -330,16 +330,33 @@ namespace SmashTools
 		}
 
 		/// <summary>
-		/// Angle between 2 points in the in-game map. 0 is North, 270 is West
+		/// Angle between 2 points
 		/// </summary>
 		/// <param name="pos"></param>
 		/// <param name="point"></param>
-		/// <param name="map"></param>
+		public static float AngleToPoint(float x1, float y1, float x2, float y2)
+		{
+			return (180 + Mathf.Atan2(x1 - x2, y1 - y2) * Mathf.Rad2Deg) % 360;
+		}
+
+		/// <summary>
+		/// Angle between 2 points
+		/// </summary>
+		/// <param name="pos"></param>
+		/// <param name="point"></param>
+		public static float AngleToPoint(this Vector2 pos, Vector2 point)
+		{
+			return AngleToPoint(pos.x, pos.y, point.x, point.y);
+		}
+
+		/// <summary>
+		/// Angle between 2 points relative to <see cref="Vector3.forward"/>
+		/// </summary>
+		/// <param name="pos"></param>
+		/// <param name="point"></param>
 		public static float AngleToPoint(this Vector3 pos, Vector3 point)
 		{
-			float xPrime = pos.x - point.x;
-			float yPrime = pos.z - point.z;
-			return (180 + Mathf.Atan2(xPrime, yPrime) * Mathf.Rad2Deg) % 360;
+			return AngleToPoint(pos.x, pos.z, point.x, point.z);
 		}
 
 		/// <summary>

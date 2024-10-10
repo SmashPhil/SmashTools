@@ -23,9 +23,6 @@ namespace SmashTools.Performance
 	/// Better implementation of <see cref="DeepProfiler"/> with exclusion from release builds and proper UI panel.
 	/// </summary>
 	/// <remarks>Results are joined and averaged across threads, the only separator is depth within a profile block.</remarks>
-#if DEBUG
-	[StaticConstructorOnStartup]
-#endif
 	[NoProfiling]
 	public static class ProfilerWatch
 	{

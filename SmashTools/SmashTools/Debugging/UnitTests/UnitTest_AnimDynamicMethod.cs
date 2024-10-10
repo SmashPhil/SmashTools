@@ -17,7 +17,7 @@ namespace SmashTools.Debugging
 
 		public override string Name => "AnimationProperty.DynamicMethod";
 
-		public override TestType ExecuteOn => TestType.GameLoaded;
+		public override TestType ExecuteOn => TestType.MainMenu;
 
 		public override IEnumerable<Func<UTResult>> Execute()
 		{
@@ -59,12 +59,12 @@ namespace SmashTools.Debugging
 				results[i] = (i, value);
 				property.curve.Add(i, value);
 			}
-			string label = string.Format("[{0}] {1}", type.Name, name);
+			// Curve evaluation
 			for (int i = 0; i < results.Length; i++)
 			{
 				// Only testing the actual KeyFrame values to make sure they are assigned
 				// to the object. Any tests on curve evaluations should be done separately
-				property.Set(obj, i);
+				property.Evaluate(obj, i);
 
 				object container = obj;
 				if (!objectPath.NullOrEmpty())
@@ -79,10 +79,35 @@ namespace SmashTools.Debugging
 				object value = fieldInfo.GetValue(container);
 				if (!IsEqual(value, results[i].value))
 				{
-					return UTResult.For(label, false);
+					return UTResult.For($"[Evaluate] {type.Name}.{name}", false);
 				}
 			}
-			return UTResult.For(label, true);
+			// Set / Get
+			{
+				object container = obj;
+				if (!objectPath.NullOrEmpty())
+				{
+					// Traverse down the object path to get to the property value
+					foreach (FieldInfo path in objectPath)
+					{
+						container = path.GetValue(container);
+					}
+				}
+
+				object value = fieldInfo.GetValue(container);
+				float getValue = property.GetProperty(obj);
+				if (!IsEqual(value, getValue))
+				{
+					return UTResult.For($"[GetValue] {type.Name}.{name}", false);
+				}
+				property.SetProperty(obj, 0);
+				float setValue = property.GetProperty(obj);
+				if (setValue != 0f)
+				{
+					return UTResult.For($"[SetValue] {type.Name}.{name}", false);
+				}
+			}
+			return UTResult.For($"{type.Name}.{name}", true);
 		}
 
 		private bool IsEqual(object lhs, float rhs)
@@ -111,6 +136,9 @@ namespace SmashTools.Debugging
 			public Vector3 vector = new Vector3();
 			public Color color = new Color();
 			public IntVec3 intVec3 = new IntVec3();
+
+			// None of these should be getting called, these are strictly for allowing this object to pass
+			// as an IAnimator object to SetValue and GetValue delegates.
 
 			AnimationController IAnimator.Controller => throw new NotImplementedException();
 

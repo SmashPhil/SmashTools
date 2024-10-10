@@ -42,6 +42,9 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="JetBrains.Profiler.Api">
+      <Version>1.4.8</Version>
+    </PackageReference>
     <PackageReference Include="Lib.Harmony">
       <Version>2.3.3</Version>
     </PackageReference>
@@ -168,10 +171,11 @@
     <Compile Include="Performance\Caching\MapComponentCache.cs" />
     <Compile Include="Performance\Coroutines\WaitForTicks.cs" />
     <Compile Include="Performance\Multithreading\AsyncAction.cs" />
+    <Compile Include="Performance\Multithreading\AsyncLongOperationAction.cs" />
     <Compile Include="Performance\Multithreading\AsyncPool.cs" />
     <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
-    <Compile Include="Performance\Profiling\ProfilerLogger.cs" />
+    <Compile Include="Performance\Profiling\DotTrace.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
     <Compile Include="Performance\Multithreading\TaskManager.cs" />
     <Compile Include="Performance\Multithreading\ThreadManager.cs" />
