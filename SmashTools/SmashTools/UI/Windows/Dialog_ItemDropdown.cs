@@ -25,9 +25,8 @@ namespace SmashTools
 		private readonly Func<T, string> itemName;
 		private readonly Func<T, string> itemTooltip;
 		private readonly Func<T, bool> isSelected;
-		private readonly Func<T> createItem;
-		private readonly string createBtnLabelKey;
-		
+		private readonly CreateItemButton createItem;
+
 		private QuickSearchFilter filter = new QuickSearchFilter();
 		private Vector2 windowSize;
 		private Vector2 position;
@@ -37,7 +36,7 @@ namespace SmashTools
 		private readonly List<T> items;
 
 		public Dialog_ItemDropdown(Rect rect, List<T> items, Action<T> onItemPicked, Func<T, string> itemName, Func<T, bool> isSelected, Func<T, string> itemTooltip = null,
-			(string labelKey, Func<T> createItem)? createBtn = null)
+			CreateItemButton createItem = null)
 		{
 			this.items = items;
 			this.width = rect.width;
@@ -47,11 +46,7 @@ namespace SmashTools
 			this.itemTooltip = itemTooltip;
 			this.isSelected = isSelected;
 
-			if (createBtn != null)
-			{
-				this.createItem = createBtn.Value.createItem;
-				this.createBtnLabelKey = createBtn.Value.labelKey;
-			}
+			this.createItem = createItem;
 
 			this.closeOnClickedOutside = true;
 			this.absorbInputAroundWindow = false;
@@ -190,9 +185,9 @@ namespace SmashTools
 					UIElements.DrawLineHorizontalGrey(createItemBtnRect.x, createItemBtnRect.y, createItemBtnRect.width);
 					createItemBtnRect.y += LabelPadding + 1;
 				}
-				if (Widgets.ButtonText(createItemBtnRect, createBtnLabelKey.Translate(), drawBackground: false))
+				if (Widgets.ButtonText(createItemBtnRect, createItem.labelKey.Translate(), drawBackground: false))
 				{
-					T item = createItem();
+					T item = createItem.onClick();
 					onItemPicked?.Invoke(item);
 					Close();
 				}
@@ -205,6 +200,23 @@ namespace SmashTools
 			Widgets.EndScrollView();
 
 			GUIState.Pop();
+		}
+
+		public class CreateItemButton
+		{
+			public readonly string labelKey;
+			public readonly Func<T> onClick;
+
+			public CreateItemButton(string labelKey, Func<T> onClick)
+			{
+				this.labelKey = labelKey;
+				this.onClick = onClick;
+			}
+
+			public static implicit operator CreateItemButton((string labelKey, Func<T> onClick) tuple)
+			{
+				return new CreateItemButton(tuple.labelKey, tuple.onClick);
+			}
 		}
 	}
 }

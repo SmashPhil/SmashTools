@@ -22,6 +22,8 @@ namespace SmashTools.Animations
 		private const float WidgetBarHeight = 24;
 		private const float LayerItemHeight = 38;
 		private const float LayerInputWidth = 75;
+		private const float ParameterItemHeight = 32;
+		private const float ParameterInputWidth = 100;
 		private const float TransitionLineWidth = 2;
 		private const float TransitionAnchorSpacing = 5;
 		private const float TabWidth = 110;
@@ -54,6 +56,7 @@ namespace SmashTools.Animations
 
 		private readonly Selector selector = new Selector();
 		private readonly Clipboard clipboard = new Clipboard();
+		private readonly QuickSearchFilter parameterFilter = new QuickSearchFilter();
 
 		private readonly Vector2 gridSize = new Vector2(GridSize * GridSquareSize, GridSize * GridSquareSize);
 
@@ -74,7 +77,10 @@ namespace SmashTools.Animations
 		private IntVec2 draggingStateOrigPos;
 		private bool draggingState;
 		private AnimationState makingTransitionFrom;
-		
+
+		// Input
+		private string motionSpeedBuffer;
+
 		public AnimationControllerEditor(Dialog_AnimationEditor parent) : base(parent)
 		{
 			scrollPos = new Vector2(gridSize.x / 2f, gridSize.y / 2f);
@@ -83,6 +89,7 @@ namespace SmashTools.Animations
 		private bool UnsavedChanges { get; set; }
 
 		private AnimationLayer EditingLayer { get; set; }
+		private AnimationParameter EditingParameter { get; set; }
 
 		private GameFont Font
 		{
@@ -198,21 +205,31 @@ namespace SmashTools.Animations
 			DoSeparatorHorizontal(rect.x, rect.y, rect.width);
 			DoSeparatorHorizontal(rect.x, tabRect.yMax, rect.width);
 
+			switch (leftSectionTab)
+			{
+				case LeftSection.Layers:
+					DrawLayersTab(rect);
+					break;
+				case LeftSection.Parameters:
+					DrawParametersTab(rect);
+					break;
+			}
+
 			if (selector.AnyStatesSelected)
 			{
-				DrawStateProperties(rect);
+				float extraPanelHeight = rect.height * 0.65f;
+				Rect extraPanelRect = new Rect(rect.x, rect.yMax - extraPanelHeight, rect.width, extraPanelHeight);
+				DoSeparatorHorizontal(rect.x, extraPanelRect.y - 1, rect.width);
+				DrawBackground(extraPanelRect);
+				DrawStateProperties(extraPanelRect);
 			}
-			else
+			if (selector.AnyTransitionsSelected)
 			{
-				switch (leftSectionTab)
-				{
-					case LeftSection.Layers:
-						DrawLayersTab(rect);
-						break;
-					case LeftSection.Parameters:
-						DrawParametersTab(rect);
-						break;
-				}
+				float extraPanelHeight = rect.height * 0.65f;
+				Rect extraPanelRect = new Rect(rect.x, rect.yMax - extraPanelHeight, rect.width, extraPanelHeight);
+				DoSeparatorHorizontal(rect.x, extraPanelRect.y - 1, rect.width);
+				DrawBackground(extraPanelRect);
+				DrawTransitionProperties(extraPanelRect);
 			}
 
 			rect.yMin += tabRect.height;
@@ -225,6 +242,7 @@ namespace SmashTools.Animations
 			rect = rect.ContractedBy(4);
 
 			AnimationState state = selector.SelectedStates.FirstOrDefault();
+			if (state.Type == StateType.Entry || state.Type == StateType.Exit) return;
 
 			Rect nameRect = new Rect(rect.x, rect.y + WidgetBarHeight, rect.width, WidgetBarHeight);
 			state.name = Widgets.TextField(nameRect, state.name);
@@ -233,17 +251,29 @@ namespace SmashTools.Animations
 			DoSeparatorHorizontal(nameRect.x, nameRect.y, nameRect.width);
 
 			nameRect.y += WidgetBarHeight;
-			nameRect.SplitVertically(nameRect.width * 0.4f, out Rect labelRect, out Rect inputRect);
+			nameRect.SplitVertically(nameRect.width * 0.45f, out Rect labelRect, out Rect inputRect);
 
 			// Motion
+			GUI.enabled = AnimationLoader.Cache<AnimationClip>.Count > 0;
 			Widgets.Label(labelRect, "ST_MotionFile".Translate());
-			Widgets.TextField(inputRect, state.clip?.FileName);
+			if (Dropdown(inputRect, state.clip?.FileName ?? string.Empty, state.clip?.FilePath))
+			{
+				Rect dropdownRect = new Rect(parent.windowRect.x + parent.EditorMargin + nameRect.x,
+					parent.windowRect.y + parent.EditorMargin + inputRect.yMax, DropdownWidth, 500);
+				Find.WindowStack.Add(new Dialog_AnimationClipLister(parent.animator, dropdownRect, state.clip,
+					onFilePicked: delegate (AnimationClip clip)
+					{
+						state.clip = clip;
+					}));
+			}
+			GUI.enabled = true;
+
+			nameRect.y += WidgetBarHeight;
+			nameRect.SplitVertically(nameRect.width * 0.65f, out Rect speedLabelRect, out Rect speedInputRect);
 
 			// Speed
-			labelRect.y += WidgetBarHeight;
-			inputRect.y += WidgetBarHeight;
-			Widgets.Label(labelRect, "ST_MotionSpeed".Translate());
-			Widgets.TextField(inputRect, state.clip?.FileName);
+			Widgets.Label(speedLabelRect, "ST_MotionSpeed".Translate());
+			Widgets.TextFieldNumeric(speedInputRect, ref state.speed, ref motionSpeedBuffer);
 
 			// Multiplier
 
@@ -252,6 +282,40 @@ namespace SmashTools.Animations
 			// Cycle Offset
 			// Write Defaults
 			// Transitions
+		}
+
+		private void DrawTransitionProperties(Rect rect)
+		{
+			using var textBlock = new TextBlock(GameFont.Small, TextAnchor.MiddleLeft, false);
+
+			rect = rect.ContractedBy(4);
+
+			AnimationTransition transition = selector.SelectedTransitions.LastOrDefault();
+			if (transition.FromState.Type == StateType.Entry || transition.ToState.Type == StateType.Exit)
+			{
+				return;
+			}
+
+			Rect fieldRect = new Rect(rect.x, rect.y + WidgetBarHeight, rect.width, WidgetBarHeight);
+
+			// Speed
+			Widgets.Label(fieldRect, "ST_Conditions".Translate());
+			DoSeparatorHorizontal(fieldRect.x, fieldRect.yMax, fieldRect.width);
+
+			foreach (AnimationCondition condition in transition.conditions)
+			{
+				fieldRect.y += fieldRect.height;
+
+				condition.DrawConditionInput(fieldRect);
+			}
+
+			fieldRect.y += fieldRect.height;
+
+			Rect addConditionBtnRect = new Rect(fieldRect.xMax - WidgetBarHeight - 5, fieldRect.y, WidgetBarHeight, WidgetBarHeight);
+			if (Widgets.ButtonImage(addConditionBtnRect.ContractedBy(2), TexButton.Plus))
+			{
+				transition.AddCondition();
+			}
 		}
 
 		private void DrawLayersTab(Rect rect)
@@ -275,8 +339,8 @@ namespace SmashTools.Animations
 					Widgets.DrawBoxSolid(layerRect, backgroundDopesheetColor.Add255NoAlpha(10, 10, 10));
 				}
 				Rect dragHandleRect = new Rect(layerRect.x, layerRect.y, layerRect.height, layerRect.height);
-				Rect entryRect = new Rect(dragHandleRect.xMax, layerRect.y, LayerInputWidth, layerRect.height);
-				Rect labelRect = new Rect(dragHandleRect.xMax, layerRect.y + 5, layerRect.width - dragHandleRect.width - entryRect.width, WidgetBarHeight);
+				Rect labelRect = new Rect(dragHandleRect.xMax, layerRect.y + 5, 
+					layerRect.width - dragHandleRect.width - LayerInputWidth, WidgetBarHeight);
 
 				Text.Anchor = TextAnchor.MiddleLeft;
 				if (EditingLayer == layer)
@@ -309,7 +373,7 @@ namespace SmashTools.Animations
 
 
 				DoSeparatorHorizontal(layerRect.x, layerRect.yMax, layerRect.width);
-				layerRect.y += LayerItemHeight;
+				layerRect.y += layerRect.height;
 			}
 		}
 
@@ -320,19 +384,99 @@ namespace SmashTools.Animations
 			EditingLayer = null;
 		}
 
+		private void ConfirmParameterEdit()
+		{
+			EditingParameter.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Where(param => param != EditingParameter)
+																								 .Select(param => param.Name), EditingParameter.Name);
+			EditingParameter = null;
+		}
+
 		private void DrawParametersTab(Rect rect)
 		{
 			Rect buttonBarRect = new Rect(rect.x, rect.y + WidgetBarHeight, rect.width, WidgetBarHeight);
-			Rect addParameterBtnRect = new Rect(buttonBarRect.xMax - WidgetBarHeight - 5, rect.y, WidgetBarHeight, WidgetBarHeight);
 
-			GUI.DrawTexture(addParameterBtnRect.ContractedBy(5), TexButton.Reveal);
+			Rect searchBarRect = new Rect(buttonBarRect.x + 10, buttonBarRect.y, buttonBarRect.width - WidgetBarHeight * 2 - 20, WidgetBarHeight).ContractedBy(2);
+			Rect addParameterBtnRect = new Rect(buttonBarRect.xMax - WidgetBarHeight - 5, buttonBarRect.y, WidgetBarHeight, WidgetBarHeight);
+
+			parameterFilter.Text = Widgets.TextField(searchBarRect, parameterFilter.Text);
+
 			GUI.DrawTexture(addParameterBtnRect.ContractedBy(2), TexButton.Plus);
 			if (Widgets.ButtonInvisible(addParameterBtnRect))
 			{
-				// TODO - Add Parameter via dropdown
+				List<FloatMenuOption> options = new List<FloatMenuOption>
+				{
+					new FloatMenuOption(FloatParam.ParamName, delegate ()
+					{
+						FloatParam param = new FloatParam();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {FloatParam.ParamName}");
+						parent.controller.parameters.Add(param);
+					}),
+					new FloatMenuOption(IntParam.ParamName, delegate ()
+					{
+						IntParam param = new IntParam();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {IntParam.ParamName}");
+						parent.controller.parameters.Add(param);
+					}),
+					new FloatMenuOption(BoolParam.ParamName, delegate ()
+					{
+						BoolParam param = new BoolParam();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {BoolParam.ParamName}");
+						parent.controller.parameters.Add(param);
+					}),
+					new FloatMenuOption(TriggerParam.ParamName, delegate ()
+					{
+						TriggerParam param = new TriggerParam();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {TriggerParam.ParamName}");
+						parent.controller.parameters.Add(param);
+					}),
+				};
+				Find.WindowStack.Add(new FloatMenu(options));
 			}
 
 			DoSeparatorHorizontal(rect.x, buttonBarRect.yMax, rect.width);
+
+			Text.Anchor = TextAnchor.MiddleLeft;
+			Rect parameterRect = new Rect(rect.x, buttonBarRect.yMax, rect.width, ParameterItemHeight);
+			foreach (AnimationParameter parameter in parent.controller.parameters)
+			{
+				using var textBlock = new TextBlock(GameFont.Small, TextAnchor.MiddleLeft, false);
+
+				Rect dragHandleRect = new Rect(parameterRect.x, parameterRect.y, parameterRect.height, parameterRect.height);
+
+				Rect entryRect = new Rect(parameterRect.xMax - 5 - ParameterInputWidth, parameterRect.y, 
+					ParameterInputWidth, parameterRect.height).ContractedBy(2);
+				Rect labelRect = new Rect(dragHandleRect.xMax, parameterRect.y,
+					parameterRect.width - dragHandleRect.width - entryRect.width - 5, parameterRect.height).ContractedBy(2);
+
+				Text.Anchor = TextAnchor.MiddleLeft;
+				if (EditingParameter == parameter)
+				{
+					parameter.Name = Widgets.TextField(labelRect, parameter.Name);
+					// Clicking anywhere outside of the text field control will confirm edit
+					if (Input.GetMouseButtonDown(0) && !Mouse.IsOver(labelRect))
+					{
+						ConfirmParameterEdit();
+					}
+					// Return keys confirm edit
+					if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+					{
+						ConfirmParameterEdit();
+					}
+				}
+				else
+				{
+					Widgets.Label(labelRect, parameter.Name);
+					if (Widgets.ButtonInvisible(labelRect))
+					{
+						// Double clicking parameter will begin name edit
+						EditingParameter = parameter;
+					}
+
+					parameter.DrawInput(entryRect);
+				}
+
+				parameterRect.y += parameterRect.height;
+			}
 		}
 
 		#endregion Left Section
@@ -482,9 +626,8 @@ namespace SmashTools.Animations
 			{
 				return;
 			}
-
+			bool selected = false;
 			Vector2 mousePos = StatePosition(viewRect, mouseGridPos);
-
 			foreach (AnimationState state in parent.animLayer.states)
 			{
 				Vector2 sizeFrom = SizeFor(state.Type);
@@ -502,9 +645,14 @@ namespace SmashTools.Animations
 					Vector2 positionTo = StatePosition(viewRect, transition.ToState.position);
 					//positionTo.x += TransitionAnchorSpacing;
 					Rect stateRectTo = new Rect(positionTo, sizeTo);
+					Color color = selector.IsSelected(transition) ? highlightColor : Color.white;
 
-					Widgets.DrawLine(stateRectFrom.center, stateRectTo.center, Color.white, TransitionLineWidth);
-					TransitionArrows(stateRectFrom.center, stateRectTo.center);
+					Widgets.DrawLine(stateRectFrom.center, stateRectTo.center, color, TransitionLineWidth);
+					if (TransitionArrows(stateRectFrom.center, stateRectTo.center, color))
+					{
+						selected = true;
+						selector.Select(transition, clear: !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl));
+					}
 				}
 			}
 
@@ -515,11 +663,10 @@ namespace SmashTools.Animations
 				Rect stateRect = new Rect(position, size);
 
 				Widgets.DrawLine(stateRect.center, mousePos, Color.white, TransitionLineWidth + 1);
-				TransitionArrows(stateRect.center, mousePos);
+				TransitionArrows(stateRect.center, mousePos, Color.white);
 			}
 
 			bool mouseClick = LeftClick || RightClick;
-			bool selected = false;
 			foreach (AnimationState state in parent.animLayer.states)
 			{
 				Vector2 size = SizeFor(state.Type);
@@ -591,6 +738,18 @@ namespace SmashTools.Animations
 					{
 						selector.Select(state, clear: false);
 						selected = true;
+
+						foreach (AnimationTransition transition in state.transitions)
+						{
+							if (selector.IsSelected(transition.ToState))
+							{
+								selector.Select(transition, clear: false);
+							}
+							else
+							{
+								selector.Unselect(transition);
+							}
+						}
 					}
 					else
 					{
@@ -619,13 +778,33 @@ namespace SmashTools.Animations
 			if (LeftClick && Mouse.IsOver(viewRect) && !selected)
 			{
 				selector.ClearSelectedStates();
+				selector.ClearSelectedTransitions();
 			}
 
-			static void TransitionArrows(Vector2 from, Vector2 to) // TODO - enable multiple transitions
+			static bool TransitionArrows(Vector2 from, Vector2 to, Color color) // TODO - enable multiple transitions
 			{
+				float size = 14;
+
 				Vector2 point = Vector2.Lerp(from, to, 0.5f);
-				float rotation = Vector2.Angle(from - to, Vector2.up) - 90;
-				Widgets.DrawTextureRotated(point, TexButton.Play, rotation, scale: 0.65f);
+
+				// invert y values since UI is top to bottom
+				float rotation = Ext_Math.AngleToPoint(from.x, -from.y, to.x, -to.y) - 90;
+				bool clicked = false;
+
+				Matrix4x4 matrix = GUI.matrix;
+				{
+					Rect buttonRect = new Rect(point.x - size / 2f, point.y - size / 2f, size, size);
+					UI.RotateAroundPivot(rotation, buttonRect.center);
+					GUI.color = color;
+					if (Widgets.ButtonImage(buttonRect, TexButton.Play))
+					{
+						clicked = true;
+					}
+					GUI.color = Color.white;
+				}
+				GUI.matrix = matrix;
+
+				return clicked;
 			}
 		}
 
@@ -844,9 +1023,23 @@ namespace SmashTools.Animations
 				selectedStates.Add(state);
 			}
 
+			public void Select(AnimationTransition transition, bool clear = true)
+			{
+				if (clear)
+				{
+					ClearSelectedTransitions();
+				}
+				selectedTransitions.Add(transition);
+			}
+
 			public void Unselect(AnimationState state)
 			{
 				selectedStates.Remove(state);
+			}
+
+			public void Unselect(AnimationTransition transition)
+			{
+				selectedTransitions.Remove(transition);
 			}
 
 			public void ClearSelectedStates()

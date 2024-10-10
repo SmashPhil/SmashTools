@@ -22,6 +22,8 @@ namespace SmashTools.Animations
 		{
 		}
 
+		public AnimationController Controller { get; internal set; }
+
 		public AnimationState AddState(string name, IntVec2 position, StateType type = StateType.None)
 		{
 			if (type != StateType.None && states.Any(state => state.Type == type))
@@ -40,6 +42,7 @@ namespace SmashTools.Animations
 				AnimationState entryState = states.First(state => state.Type == StateType.Entry);
 				entryState.AddTransition(state);
 			}
+			state.Layer = this;
 			states.Add(state);
 			return state;
 		}
@@ -56,7 +59,7 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void ResolveConnections()
+		private void ResolveConnections()
 		{
 			if (states.NullOrEmpty()) return;
 
@@ -74,6 +77,16 @@ namespace SmashTools.Animations
 				// Cleanup to avoid broken transitions. Will need intervention by modder
 				int count = state.transitions.RemoveAll(transition => transition.ToState == null);
 				if (count > 0) Log.Error($"{count} invalid transitions purged! This may break some animation states.");
+			}
+		}
+
+		public void PostLoad()
+		{
+			ResolveConnections();
+			foreach (AnimationState state in states)
+			{
+				state.Layer = this;
+				state.PostLoad();
 			}
 		}
 

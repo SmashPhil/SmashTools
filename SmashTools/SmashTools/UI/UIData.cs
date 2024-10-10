@@ -19,6 +19,11 @@ namespace SmashTools
 		public static readonly Texture2D FillableBarProgressBarBG = SolidColorMaterials.NewSolidColorTexture(0.35f, 0.35f, 0.35f, 1f);
 		public static readonly Texture2D TransparentBlackBG = SolidColorMaterials.NewSolidColorTexture(0.1f, 0.1f, 0.1f, 0.1f);
 
-		public static readonly Texture2D CurvePoint = ContentFinder<Texture2D>.Get("UI/Widgets/Dev/CurvePoint", true);
+		public static readonly Texture2D CurvePoint = ContentFinder<Texture2D>.Get("UI/Widgets/Dev/CurvePoint");
+
+		// For some reason Ludeon made the Off texture private, but the On texture public... stupid, I know.
+		public static readonly Texture2D RadioButOffTex = ContentFinder<Texture2D>.Get("UI/Widgets/RadioButOff");
+
+		public static readonly Texture2D TargetLevelArrow = ContentFinder<Texture2D>.Get("UI/Misc/BarInstantMarkerRotated");
 	}
 }

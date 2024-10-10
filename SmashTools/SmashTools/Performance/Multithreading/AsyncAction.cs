@@ -9,6 +9,8 @@ namespace SmashTools.Performance
 {
 	public abstract class AsyncAction
 	{
+		public virtual bool LongOperation => false;
+
 		public virtual bool IsValid => true;
 
 		public abstract void Invoke();

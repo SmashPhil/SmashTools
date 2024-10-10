@@ -14,6 +14,8 @@ namespace SmashTools.Animations
 {
 	public abstract class AnimationEditor
 	{
+		public const float DropdownWidth = 300;
+
 		protected readonly Dialog_AnimationEditor parent;
 
 		//Blend
@@ -254,13 +256,10 @@ namespace SmashTools.Animations
 
 		protected bool ButtonText(Rect rect, string label)
 		{
-			bool pressed = false;
-			var anchor = Text.Anchor;
-			Text.Anchor = TextAnchor.MiddleCenter;
-			var font = Text.Font;
-			Text.Font = GameFont.Small;
+			using var block = new TextBlock(GameFont.Small, TextAnchor.MiddleCenter);
 
-			var color = GUI.color;
+			bool pressed = false;
+			
 			Color buttonColor = this.buttonColor;
 			if (GUI.enabled && Mouse.IsOver(rect))
 			{
@@ -277,38 +276,34 @@ namespace SmashTools.Animations
 				pressed = true;
 				SoundDefOf.Click.PlayOneShotOnCamera();
 			}
-			GUI.color = color;
-			Text.Anchor = anchor;
-			Text.Font = font;
 			return pressed;
 		}
 
-		protected bool Dropdown(Rect rect, string label, string tooltip)
+		public static bool Dropdown(Rect rect, string label, string tooltip)
 		{
+			using var block = new TextBlock(GameFont.Small, TextAnchor.MiddleCenter);
+
 			bool pressed = false;
-			var anchor = Text.Anchor;
-			Text.Anchor = TextAnchor.MiddleCenter;
-			var font = Text.Font;
-			var color = GUI.color;
+			
 			if (GUI.enabled && Mouse.IsOver(rect))
 			{
 				GUI.color = new Color(0.75f, 0.75f, 0.75f);
 			}
 			float dropdownSize = rect.height;
 			rect.SplitVertically(rect.width - dropdownSize, out Rect labelRect, out Rect dropdownRect);
-			Text.Font = GameFont.Small;
 			if (Text.CalcSize(label).x > labelRect.width)
 			{
 				Text.Font--;
 			}
 			Widgets.Label(labelRect, label.Truncate(labelRect.width));
 
-			GUIState.Push();
+			Matrix4x4 matrix = GUI.matrix;
 			{
 				UI.RotateAroundPivot(90, dropdownRect.center);
 				GUI.DrawTexture(dropdownRect, TexButton.Reveal);
 			}
-			GUIState.Pop();
+			GUI.matrix = matrix;
+
 			if (!tooltip.NullOrEmpty())
 			{
 				TooltipHandler.TipRegion(rect, tooltip);
@@ -318,9 +313,6 @@ namespace SmashTools.Animations
 				pressed = true;
 				SoundDefOf.Click.PlayOneShotOnCamera();
 			}
-			GUI.color = color;
-			Text.Anchor = anchor;
-			Text.Font = font;
 			return pressed;
 		}
 

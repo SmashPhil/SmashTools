@@ -19,11 +19,12 @@ namespace SmashTools.Debugging
 
 		protected UTResult False => new UTResult(string.Empty, false);
 
+		[Flags]
 		public enum TestType
 		{
 			None = 0,
-			MainMenu,
-			GameLoaded,
+			MainMenu = 1 << 0,
+			GameLoaded = 1 << 1,
 		}
 	}
 

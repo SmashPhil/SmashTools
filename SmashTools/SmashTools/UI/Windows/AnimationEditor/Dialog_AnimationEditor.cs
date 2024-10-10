@@ -85,7 +85,7 @@ namespace SmashTools.Animations
 			this.closeOnCancel = false;
 			this.absorbInputAroundWindow = false;
 			this.preventCameraMotion = true;
-			this.forcePause = true;
+			//this.forcePause = true;
 		}
 
 		public void ChangeMade()

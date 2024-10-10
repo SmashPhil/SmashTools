@@ -35,6 +35,8 @@ namespace SmashTools.Animations
 
 		public StateType Type => stateType;
 
+		public AnimationLayer Layer { get; internal set; }
+
 		public void EvaluateFrame(IAnimator animator, int frame)
 		{
 			for (int i = 0; i < clip.properties.Count; i++)
@@ -54,6 +56,18 @@ namespace SmashTools.Animations
 			for (int i = transitions.Count - 1; i >= 0; i--)
 			{
 				transitions[i].Dispose();
+			}
+		}
+
+		public void PostLoad()
+		{
+			if (!transitions.NullOrEmpty())
+			{
+				foreach (AnimationTransition transition in transitions)
+				{
+					transition.FromState = this;
+					transition.PostLoad();
+				}
 			}
 		}
 

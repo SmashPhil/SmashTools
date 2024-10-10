@@ -7,45 +7,73 @@ using SmashTools.Debugging;
 using SmashTools.Xml;
 using UnityEngine;
 using Verse;
+using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
 	public class AnimationProperty : IXmlExport
 	{
-		private readonly ObjectPath[] objectPath;
-		private readonly string label;
-		private readonly string name;
-		private readonly Type type;
-		private readonly Type animatorType;
+		// Treated as an array, but RimWorld is incapable of parsing in arrays so a fixed-capacity list is required.
+		private List<ObjectPath> objectPath;
+		private string label;
+		private string name;
 		private PropertyType propertyType;
+
+		// Strictly used for serialization, UnityEngine types are not supported by RimWorld's parser
+		// so the types are resolved post-load w/ these strings.
+		private string type;
+		private string animatorType;
 
 		public AnimationCurve curve = new AnimationCurve();
 
 		[Unsaved]
-		private Color color;
+		private Type loadedType;
 		[Unsaved]
-		public SetValue setValue;
+		private Type loadedAnimatorType;
 
-		public delegate void SetValue(IAnimator animator, float frame);
+		/// <summary>
+		/// Color of property in animation curve tab
+		/// </summary>
+		[Unsaved]
+		private Color color;
+		/// <summary>
+		/// Sets value of field given value from curve evaluation
+		/// </summary>
+		[Unsaved]
+		private SetValue evaluateValue;
+		/// <summary>
+		/// Sets value of field passed in from function.
+		/// </summary>
+		/// <remarks>Note: Must be able to convert to field's type</remarks>
+		[Unsaved]
+		private SetValue setValue;
+		/// <summary>
+		/// Gets value of field from property instance
+		/// </summary>
+		[Unsaved]
+		private GetValue getValue;
 
+		public delegate float GetValue(IAnimator animator);
+		public delegate void SetValue(IAnimator animator, float value);
+		
 		public AnimationProperty()
 		{
 		}
 
 		private AnimationProperty(Type animatorType, string label, string name, Type type, FieldInfo[] fieldPath)
 		{
-			this.animatorType = animatorType;
+			loadedAnimatorType = animatorType;
 			this.label = label;
 			this.name = name;
-			this.type = type;
+			loadedType = type;
 
 			if (!fieldPath.NullOrEmpty())
 			{
-				objectPath = new ObjectPath[fieldPath.Length];
+				objectPath = new List<ObjectPath>(fieldPath.Length);
 				for (int i = 0; i < fieldPath.Length; i++)
 				{
 					FieldInfo fieldInfo = fieldPath[i];
-					objectPath[i] = new ObjectPath(fieldInfo);
+					objectPath.Add(new ObjectPath(fieldInfo));
 				}
 			}
 		}
@@ -54,11 +82,19 @@ namespace SmashTools.Animations
 
 		public string Name => name;
 
-		public Type Type => type;
+		public Type Type => loadedType;
+
+		public Type AnimatorType => loadedAnimatorType;
 
 		public PropertyType PropType => propertyType;
 
 		public bool IsValid => curve != null;
+
+		internal GetValue GetProperty => getValue;
+
+		internal SetValue SetProperty => setValue;
+
+		public FieldInfo FieldInfo { get; private set; }
 
 		public Color Color
 		{
@@ -72,7 +108,7 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void Set(IAnimator animator, int frame) => setValue.Invoke(animator, frame);
+		public void Evaluate(IAnimator animator, int frame) => evaluateValue.Invoke(animator, frame);
 
 		public static AnimationProperty Create(Type animatorType, string label, FieldInfo fieldInfo, params FieldInfo[] objectPath)
 		{
@@ -82,35 +118,44 @@ namespace SmashTools.Animations
 			return animationProperty;
 		}
 
-		public static AnimationProperty Create(Type animatorType, string label, PropertyInfo propertyInfo)
-		{
-			throw new NotSupportedException("Property modifying animations");
-			//AnimationProperty animationProperty = new AnimationProperty(objectPath, label, propertyInfo.Name, propertyInfo.DeclaringType);
-			//animationProperty.propertyType = PropertyTypeFrom(propertyInfo.PropertyType);
-			//animationProperty.PostLoad();
-			//return animationProperty;
-		}
-
 		internal void PostLoad()
 		{
-			Debug.Assert(propertyType > PropertyType.Invalid, "AnimationProperty has not been properly initialized");
-			GenerateDynamicMethod();
+			// Unity types are not parsed by RimWorld so must first check cached string -> type map.
+			if (loadedType == null && !AnimationPropertyRegistry.CachedTypeByName(type, out loadedType))
+			{
+				loadedType = ParseHelper.ParseType(type);
+			}
+			if (loadedAnimatorType == null && !AnimationPropertyRegistry.CachedTypeByName(animatorType, out loadedAnimatorType))
+			{
+				loadedAnimatorType = ParseHelper.ParseType(animatorType);
+			}
+			
+			try
+			{
+				Assert(propertyType > PropertyType.Invalid, "AnimationProperty has not been properly initialized");
+				FieldInfo = AccessTools.Field(Type, name);
+				Trace(FieldInfo != null, $"Unable to load {Type.Name}.{name} for animation.");
+				if (FieldInfo != null)
+				{
+					GenerateEvaluateCurveMethod();
+					GenerateSetValueMethod();
+					GenerateGetValueMethod();
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"Exception caught while generating dynamic methods. Exception={ex}");
+			}
 		}
 
-		private void GenerateDynamicMethod()
+		private void GenerateEvaluateCurveMethod()
 		{
-			FieldInfo fieldInfo = AccessTools.Field(type, name);
-			if (fieldInfo == null)
-			{
-				Log.Error($"Unable to load {type}.{name} for animation.");
-				return;
-			}
 			FieldInfo curveField = AccessTools.Field(typeof(AnimationProperty), nameof(curve));
-			Debug.Assert(curveField != null, "AnimationProperty.curve is null");
+			Assert(curveField != null, "AnimationProperty.curve is null");
 			MethodInfo curveFunction = AccessTools.Method(typeof(AnimationCurve), nameof(AnimationCurve.Function));
-			Debug.Assert(curveFunction != null, "AnimationCurve.Function is null");
+			Assert(curveFunction != null, "AnimationCurve.Function is null");
 
-			DynamicMethod method = new DynamicMethod("SetValueForProperty", 
+			DynamicMethod method = new DynamicMethod("EvaluateCurveForProperty", 
 				typeof(void), // Return type
 				new Type[] { typeof(AnimationProperty), typeof(IAnimator), typeof(float) }, // this*, parent, frame
 				typeof(AnimationProperty).Module, // SmashTools.dll
@@ -120,7 +165,7 @@ namespace SmashTools.Animations
 
 			// (T)animator
 			ilg.Emit(OpCodes.Ldarg_1);
-			ilg.Emit(OpCodes.Castclass, animatorType);
+			ilg.Emit(OpCodes.Castclass, AnimatorType);
 
 			if (!objectPath.NullOrEmpty())
 			{
@@ -148,23 +193,143 @@ namespace SmashTools.Animations
 			{
 				// (int)value
 				case PropertyType.Int:
-					Debug.Assert(fieldInfo.FieldType == typeof(int));
+					Assert(FieldInfo.FieldType == typeof(int));
 					ilg.Emit(OpCodes.Conv_I4);
 					break;
 				// value != 0
 				case PropertyType.Bool:
-					Debug.Assert(fieldInfo.FieldType == typeof(bool));
+					Assert(FieldInfo.FieldType == typeof(bool));
 					ilg.Emit(OpCodes.Ldc_R4, 0f);
 					ilg.Emit(OpCodes.Ceq);
 					ilg.Emit(OpCodes.Ldc_I4_0);
 					ilg.Emit(OpCodes.Ceq);
 					break;
 				default:
-					Debug.Assert(fieldInfo.FieldType == typeof(float));
+					Assert(FieldInfo.FieldType == typeof(float));
 					break;
 			}
 			// parent.field = value
-			ilg.Emit(OpCodes.Stfld, fieldInfo);
+			ilg.Emit(OpCodes.Stfld, FieldInfo);
+			ilg.Emit(OpCodes.Ret);
+			evaluateValue = (SetValue)method.CreateDelegate(typeof(SetValue), this);
+		}
+
+		private void GenerateGetValueMethod()
+		{
+			DynamicMethod method = new DynamicMethod("GetValueForProperty",
+				typeof(float), // Return type
+				new Type[] { typeof(AnimationProperty), typeof(IAnimator) }, // this*, parent
+				typeof(AnimationProperty).Module, // SmashTools.dll
+				true); // Skip visibility checks
+
+			ILGenerator ilg = method.GetILGenerator();
+
+			// (T)animator
+			ilg.Emit(OpCodes.Ldarg_1);
+			ilg.Emit(OpCodes.Castclass, AnimatorType);
+			
+			if (!objectPath.NullOrEmpty())
+			{
+				foreach (ObjectPath path in objectPath)
+				{
+					FieldInfo field = path.FieldInfo;
+					if (field.FieldType.IsValueType)
+					{
+						ilg.Emit(OpCodes.Ldflda, field);
+					}
+					else
+					{
+						ilg.Emit(OpCodes.Ldfld, field);
+					}
+				}
+			}
+
+			// [parameter] value
+			ilg.Emit(OpCodes.Ldfld, FieldInfo);
+
+			switch (propertyType)
+			{
+				// (int)value
+				case PropertyType.Int:
+					Assert(FieldInfo.FieldType == typeof(int));
+					ilg.Emit(OpCodes.Conv_R4);
+					break;
+				// value = bool ? 1f : 0f
+				case PropertyType.Bool:
+					Assert(FieldInfo.FieldType == typeof(bool));
+					Label brTrueLabel = ilg.DefineLabel();
+					Label brLabel = ilg.DefineLabel();
+					ilg.Emit(OpCodes.Brtrue_S, brTrueLabel);
+					ilg.Emit(OpCodes.Ldc_I4_0);
+					ilg.Emit(OpCodes.Br_S, brLabel);
+					ilg.MarkLabel(brTrueLabel);
+					ilg.Emit(OpCodes.Ldc_I4_1);
+					ilg.MarkLabel(brLabel);
+					ilg.Emit(OpCodes.Conv_R4);
+					break;
+				default:
+					Assert(FieldInfo.FieldType == typeof(float));
+					break;
+			}
+
+			ilg.Emit(OpCodes.Ret);
+			getValue = (GetValue)method.CreateDelegate(typeof(GetValue), this);
+		}
+
+		private void GenerateSetValueMethod()
+		{
+			DynamicMethod method = new DynamicMethod("SetValueForProperty",
+				typeof(void), // Return type
+				new Type[] { typeof(AnimationProperty), typeof(IAnimator), typeof(float) }, // this*, parent, value
+				typeof(AnimationProperty).Module, // SmashTools.dll
+				true); // Skip visibility checks
+
+			ILGenerator ilg = method.GetILGenerator();
+
+			// (T)animator
+			ilg.Emit(OpCodes.Ldarg_1);
+			ilg.Emit(OpCodes.Castclass, AnimatorType);
+
+			if (!objectPath.NullOrEmpty())
+			{
+				foreach (ObjectPath path in objectPath)
+				{
+					FieldInfo field = path.FieldInfo;
+					if (field.FieldType.IsValueType)
+					{
+						ilg.Emit(OpCodes.Ldflda, field);
+					}
+					else
+					{
+						ilg.Emit(OpCodes.Ldfld, field);
+					}
+				}
+			}
+
+			// [parameter] value
+			ilg.Emit(OpCodes.Ldarg_2);
+
+			switch (propertyType)
+			{
+				// (int)value
+				case PropertyType.Int:
+					Assert(FieldInfo.FieldType == typeof(int));
+					ilg.Emit(OpCodes.Conv_I4);
+					break;
+				// value != 0
+				case PropertyType.Bool:
+					Assert(FieldInfo.FieldType == typeof(bool));
+					ilg.Emit(OpCodes.Ldc_R4, 0f);
+					ilg.Emit(OpCodes.Ceq);
+					ilg.Emit(OpCodes.Ldc_I4_0);
+					ilg.Emit(OpCodes.Ceq);
+					break;
+				default:
+					Assert(FieldInfo.FieldType == typeof(float));
+					break;
+			}
+			// parent.field = value
+			ilg.Emit(OpCodes.Stfld, FieldInfo);
 			ilg.Emit(OpCodes.Ret);
 			setValue = (SetValue)method.CreateDelegate(typeof(SetValue), this);
 		}
@@ -191,8 +356,8 @@ namespace SmashTools.Animations
 			XmlExporter.WriteCollection(nameof(objectPath), objectPath);
 			XmlExporter.WriteElement(nameof(label), label);
 			XmlExporter.WriteElement(nameof(name), name);
-			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
-			XmlExporter.WriteElement(nameof(animatorType), GenTypes.GetTypeNameWithoutIgnoredNamespaces(animatorType));
+			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(Type));
+			XmlExporter.WriteElement(nameof(animatorType), GenTypes.GetTypeNameWithoutIgnoredNamespaces(AnimatorType));
 			XmlExporter.WriteObject(nameof(propertyType), propertyType);
 			XmlExporter.WriteElement(nameof(curve), curve);
 		}
@@ -207,8 +372,8 @@ namespace SmashTools.Animations
 
 		public class ObjectPath : IXmlExport
 		{
-			private readonly Type type;
-			private readonly string name;
+			private Type type;
+			private string name;
 
 			public ObjectPath()
 			{

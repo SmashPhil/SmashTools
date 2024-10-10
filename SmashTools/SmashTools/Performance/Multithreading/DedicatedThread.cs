@@ -18,7 +18,6 @@ namespace SmashTools.Performance
 		private readonly ConcurrentQueue<AsyncAction> queue;
 
 		private bool shouldExit;
-		private bool inLongOperation;
 
 		public delegate void UpdateLoop();
 
@@ -35,7 +34,7 @@ namespace SmashTools.Performance
 			thread.Start();
 		}
 
-		public bool InLongOperation { get => inLongOperation; set => inLongOperation = value; }
+		public bool InLongOperation { get; private set; }
 
 		public int QueueCount => queue.Count;
 
@@ -47,9 +46,10 @@ namespace SmashTools.Performance
 			return queue.GetEnumerator();
 		}
 
-		public void Queue(AsyncAction action)
+		public bool Queue(AsyncAction action)
 		{
 			queue.Enqueue(action);
+			return true;
 		}
 
 		internal void Stop()
@@ -67,6 +67,7 @@ namespace SmashTools.Performance
 					{
 						try
 						{
+							InLongOperation = asyncAction.LongOperation;
 							asyncAction.Invoke();
 						}
 						catch (Exception ex)
