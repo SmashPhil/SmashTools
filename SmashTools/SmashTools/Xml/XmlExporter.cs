@@ -128,6 +128,20 @@ namespace SmashTools.Xml
 			}
 		}
 
+		public static void WriteNullElement(string localName)
+		{
+			try
+			{
+				OpenNode(localName, ("IsNull", "TRUE"));
+				CloseNode();
+			}
+			catch (Exception ex)
+			{
+				Close();
+				throw ex;
+			}
+		}
+
 		public static void WriteElement(string localName, IXmlExport value)
 		{
 			try
@@ -162,6 +176,11 @@ namespace SmashTools.Xml
 		{
 			try
 			{
+				if (value == null)
+				{
+					WriteNullElement(localName);
+					return;
+				}
 				OpenNode(localName);
 				{
 					foreach (T item in value)
@@ -186,6 +205,11 @@ namespace SmashTools.Xml
 		{
 			try
 			{
+				if (value == null)
+				{
+					WriteNullElement(localName);
+					return;
+				}
 				OpenNode(localName);
 				{
 					foreach (T item in value)

@@ -1,17 +1,12 @@
-﻿using RimWorld;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
+using RimWorld;
 using UnityEngine;
 using Verse;
-using Verse.Noise;
 using Verse.Sound;
-using KeyFrame = SmashTools.Animations.AnimationCurve.KeyFrame;
-using Debug = SmashTools.Debug;
-using HarmonyLib;
+using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -84,8 +79,8 @@ namespace SmashTools.Animations
 		private readonly Selector selector = new Selector();
 
 		private readonly List<AnimationPropertyParent> propertiesToRemove = new List<AnimationPropertyParent>();
-		private readonly HashSet<int> framesToDraw = new HashSet<int>();
-		private readonly HashSet<int> parentFramesToDraw = new HashSet<int>();
+		private readonly HashSet<(int index, int frame)> framesToDraw = new HashSet<(int index, int frame)>();
+		private readonly HashSet<(int index, int frame)> parentFramesToDraw = new HashSet<(int index, int frame)>();
 
 		private AnimationClip animation;
 		private float zoomX = 1;
@@ -111,8 +106,9 @@ namespace SmashTools.Animations
 
 		private float realTimeToTick;
 
+		private KeyFrameDragHandler keyFrameDragger = new KeyFrameDragHandler();
+
 		private Vector2 dragPos;
-		private (AnimationProperty property, int index) draggingKeyFrame;
 		private DragItem dragging = DragItem.None;
 
 		private EditTab tab = EditTab.Dopesheet;
@@ -130,6 +126,21 @@ namespace SmashTools.Animations
 		public float FrameBarWidth => EditorWidth - FrameBarPadding * 2;
 
 		private int FrameCountShown { get; set; }
+
+		private int Frame
+		{
+			get
+			{
+				return frame;
+			}
+			set
+			{
+				if (frame == value) return;
+
+				frame = value;
+				parent.animator.Manager.SetFrame(frame);
+			}
+		}
 
 		private int FrameCount
 		{
@@ -257,7 +268,7 @@ namespace SmashTools.Animations
 			{
 				previewWindow.Close();
 			}
-			if (parent.animator != null)
+			if (parent?.animator?.Manager != null)
 			{
 				previewWindow = new Dialog_CameraView(DisableCameraView, () => animator.DrawPos, new Vector2(parent.windowRect.xMax - 50, parent.windowRect.yMax - 50));
 				if (animator is Thing thing)
@@ -283,11 +294,11 @@ namespace SmashTools.Animations
 				}
 				if (realTimeToTick >= SecondsPerFrame)
 				{
-					frame++;
+					Frame++;
 					realTimeToTick -= SecondsPerFrame;
-					if (frame >= FrameCount)
+					if (Frame >= FrameCount)
 					{
-						frame = 0;
+						Frame = 0;
 					}
 				}
 			}
@@ -382,7 +393,7 @@ namespace SmashTools.Animations
 			Rect buttonRect = new Rect(toggleRect.xMax, rect.y, WidgetBarHeight, WidgetBarHeight);
 			if (AnimationButton(buttonRect, skipToBeginningTexture, "ST_SkipFrameBeginningTooltip".Translate()))
 			{
-				frame = 0;
+				Frame = 0;
 			}
 			DoSeparatorVertical(buttonRect.x, buttonRect.y, buttonRect.height);
 			buttonRect.x += 1;
@@ -414,14 +425,16 @@ namespace SmashTools.Animations
 			buttonRect.x += buttonRect.width;
 			if (AnimationButton(buttonRect, skipToEndTexture, "ST_SkipFrameEndTooltip".Translate()))
 			{
-				frame = FrameCount;
+				Frame = FrameCount;
 			}
 			DoSeparatorVertical(buttonRect.x, buttonRect.y, buttonRect.height);
 			DoSeparatorVertical(buttonRect.xMax, buttonRect.y, buttonRect.height);
 			
 			Rect frameNumberRect = new Rect(rect.xMax - FrameInputWidth, rect.y, FrameInputWidth, buttonRect.height).ContractedBy(2);
 			string nullBuffer = null;
-			Widgets.TextFieldNumeric(frameNumberRect, ref frame, ref nullBuffer);
+			int tmpFrame = Frame;
+			Widgets.TextFieldNumeric(frameNumberRect, ref tmpFrame, ref nullBuffer);
+			Frame = tmpFrame;
 			CheckTextFieldControlFocus(frameNumberRect);
 
 			#endregion TimelineButtons
@@ -433,7 +446,7 @@ namespace SmashTools.Animations
 			if (AnimationButton(animButtonRect, addAnimationEventTexture, "ST_AddAnimationEvent".Translate()))
 			{
 				AnimationEvent newEvent = new AnimationEvent();
-				newEvent.frame = frame;
+				newEvent.frame = Frame;
 				animation.events.Add(newEvent);
 				animation.ValidateEventOrder();
 				ChangeMade();
@@ -515,6 +528,7 @@ namespace SmashTools.Animations
 					EditTab.Curves => EditTab.Dopesheet,
 					_ => throw new NotImplementedException(),
 				};
+				keyFrameDragger.Configure(tab == EditTab.Dopesheet ? KeyframeSize : 0);
 			}
 		}
 
@@ -537,16 +551,16 @@ namespace SmashTools.Animations
 				{
 					foreach (KeyFrame keyFrame in property.curve.points)
 					{
-						if (offset > 0 && keyFrame.frame <= frame) //Skip Forward & not at current frame
+						if (offset > 0 && keyFrame.frame <= Frame) //Skip Forward & not at current frame
 						{
 							continue;
 						}
-						if (offset < 0 && keyFrame.frame >= frame) //Skip Backward & not at current frame
+						if (offset < 0 && keyFrame.frame >= Frame) //Skip Backward & not at current frame
 						{
 							continue;
 						}
 
-						float diff = Mathf.Abs(keyFrame.frame - frame + offset);
+						float diff = Mathf.Abs(keyFrame.frame - Frame + offset);
 						if (diff < minDiff)
 						{
 							closestKeyFrame = keyFrame.frame;
@@ -557,7 +571,7 @@ namespace SmashTools.Animations
 			}
 			if (closestKeyFrame >= 0)
 			{
-				frame = closestKeyFrame;
+				Frame = closestKeyFrame;
 			}
 		}
 
@@ -770,7 +784,7 @@ namespace SmashTools.Animations
 						AddKeyFramesForParent(propertyParent);
 						ChangeMade();
 					});
-					addKeyOption.Disabled = propertyParent.AllKeyFramesAt(frame);
+					addKeyOption.Disabled = propertyParent.AllKeyFramesAt(Frame);
 					options.Add(addKeyOption);
 
 					var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
@@ -778,7 +792,7 @@ namespace SmashTools.Animations
 						RemoveKeyFramesForParent(propertyParent);
 						ChangeMade();
 					});
-					removeKeyOption.Disabled = !propertyParent.AnyKeyFrameAt(frame);
+					removeKeyOption.Disabled = !propertyParent.AnyKeyFrameAt(Frame);
 					options.Add(removeKeyOption);
 
 					Find.WindowStack.Add(new FloatMenu(options));
@@ -827,19 +841,19 @@ namespace SmashTools.Animations
 
 							var addKeyOption = new FloatMenuOption("ST_AddKey".Translate(), delegate ()
 							{
-								float curValue = property.curve[frame];
-								property.curve.Add(frame, curValue);
+								float curValue = property.curve[Frame];
+								property.curve.Add(Frame, curValue);
 								ChangeMade();
 							});
-							addKeyOption.Disabled = property.curve.KeyFrameAt(frame);
+							addKeyOption.Disabled = property.curve.KeyFrameAt(Frame);
 							options.Add(addKeyOption);
 
 							var removeKeyOption = new FloatMenuOption("ST_RemoveKey".Translate(), delegate ()
 							{
-								property.curve.Remove(frame);
+								property.curve.Remove(Frame);
 								ChangeMade();
 							});
-							removeKeyOption.Disabled = !property.curve.KeyFrameAt(frame);
+							removeKeyOption.Disabled = !property.curve.KeyFrameAt(Frame);
 							options.Add(removeKeyOption);
 
 							Find.WindowStack.Add(new FloatMenu(options));
@@ -889,12 +903,12 @@ namespace SmashTools.Animations
 			{
 				case AnimationProperty.PropertyType.Float:
 					{
-						float value = property.curve[frame];
+						float value = property.curve[Frame];
 						float valueBefore = value;
 						Widgets.TextFieldNumeric(inputRect, ref value, ref nullBuffer, float.MinValue, float.MaxValue);
 						if (!Mathf.Approximately(value, valueBefore))
 						{
-							property.curve.Set(frame, value);
+							property.curve.Set(Frame, value);
 							animation.RecacheFrameCount();
 							ChangeMade();
 						}
@@ -902,12 +916,12 @@ namespace SmashTools.Animations
 					break;
 				case AnimationProperty.PropertyType.Int:
 					{
-						int value = Mathf.RoundToInt(property.curve[frame]);
+						int value = Mathf.RoundToInt(property.curve[Frame]);
 						int valueBefore = value;
 						Widgets.TextFieldNumeric(inputRect, ref value, ref nullBuffer, float.MinValue, float.MaxValue);
 						if (value != valueBefore)
 						{
-							property.curve.Set(frame, value);
+							property.curve.Set(Frame, value);
 							animation.RecacheFrameCount();
 							ChangeMade();
 						}
@@ -942,12 +956,6 @@ namespace SmashTools.Animations
 				ExtraPadding = editorRect.width - EditorWidth; //Pad all the way to the edge of the screen if necessary
 			}
 
-			if (dragging == DragItem.None)
-			{
-				//TODO - scrolling with scrollbar back to normal boundaries should auto-resize to minimum extra size
-				//TryResetExtraScrollSize(editorOutRect, editorScrollPos, editorViewRect, ref extraScrollSize);
-			}
-
 			FrameCountShown = Mathf.CeilToInt((FrameBarWidth + ExtraPadding + extraPanelWidth + FrameBarPadding) / FrameTickMarkSpacing);
 
 			#region RightPanel
@@ -958,6 +966,11 @@ namespace SmashTools.Animations
 			}
 
 			Rect editorOutRect = new Rect(editorRect.x, editorRect.y, editorRect.width, editorRect.height);
+
+			if (dragging == DragItem.None)
+			{
+				//TryResetExtraScrollSize(editorOutRect, panelScrollPos, editorViewRect, ref extraScrollSize);
+			}
 
 			//Area where clicking will select / unselect objects in the animator
 			Rect selectableRect = new Rect(editorOutRect.x, editorRect.y + WidgetBarHeight, editorOutRect.width, editorOutRect.height - WidgetBarHeight - 16);
@@ -1041,13 +1054,14 @@ namespace SmashTools.Animations
 
 						Rect dragRect = DragRect(rect.position - visibleRect.position);
 						Rect curvesRect = new Rect(frameBarRect.x, 0, FrameBarWidth, curveBackgroundRect.height);
-						DrawCurves(curvesRect, visibleRect, rect.position + editorOutRect.position + frameOutRect.position);
-
+						DrawCurves(curvesRect, visibleRect, Vector2.zero);
+						
 						if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
 						{
 							SetDragPos();
 						}
-						if (dragging == DragItem.None && SelectionBox(rect.position, visibleRect, curveBackgroundRect, out dragRect))
+						if (dragging == DragItem.None && 
+							SelectionBox(rect.position, visibleRect, curveBackgroundRect, out dragRect))
 						{
 
 						}
@@ -1059,7 +1073,7 @@ namespace SmashTools.Animations
 
 			if (GUI.enabled)
 			{
-				float frameLinePos = frameBarRect.x + frame * FrameTickMarkSpacing;
+				float frameLinePos = frameBarRect.x + Frame * FrameTickMarkSpacing;
 				UIElements.DrawLineVertical(frameLinePos, frameBarRect.y, 2000, Color.white);
 			}
 
@@ -1251,7 +1265,7 @@ namespace SmashTools.Animations
 		{
 			if (DragWindow(rect, DragItem.FrameBar))
 			{
-				frame = FrameAtMousePos(rect);
+				Frame = FrameAtMousePos(rect);
 			}
 		}
 
@@ -1433,9 +1447,13 @@ namespace SmashTools.Animations
 				{
 					property.curve.Remove(frame);
 				}
+				selector.ClearSelectedKeyFrames();
 			}
 
 			bool clickedOutside = Input.GetMouseButtonDown(0);
+
+			// Handles dragging multiple keyframes together, allowing for batch movement
+			Vector4 selectRectBounds = new Vector4(float.MaxValue, float.MaxValue, float.MinValue, float.MinValue);
 
 			framesToDraw.Clear();
 			Rect rowRect = new Rect(rect.x, rect.y, rect.width, PropertyEntryHeight);
@@ -1448,12 +1466,13 @@ namespace SmashTools.Animations
 				Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightColor, frameBarHighlightOutlineColor);
 				if (propertyParent.Single?.curve != null && !propertyParent.Single.curve.points.NullOrEmpty())
 				{
-					foreach (AnimationCurve.KeyFrame keyFrame in propertyParent.Single.curve.points)
+					for (int i = 0; i < propertyParent.Single.curve.points.Count; i++)
 					{
-						framesToDraw.Add(keyFrame.frame);
-						if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(propertyParent.Single, keyFrame.frame)))
+						KeyFrame keyFrame = propertyParent.Single.curve.points[i];
+						framesToDraw.Add((i, keyFrame.frame));
+						if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(propertyParent.Single, i)))
 						{
-							selector.SelectFrame(propertyParent, keyFrame.frame);
+							selector.SelectFrame(propertyParent, i);
 						}
 					}
 				}
@@ -1470,40 +1489,41 @@ namespace SmashTools.Animations
 							Widgets.DrawBoxSolidWithOutline(rowRect.ContractedBy(1), frameBarHighlightMinorColor, frameBarHighlightOutlineColor);
 						}
 
-						foreach (AnimationCurve.KeyFrame keyFrame in property.curve.points)
+						for (int i = 0; i < property.curve.points.Count; i++)
 						{
-							framesToDraw.Add(keyFrame.frame);
-							parentFramesToDraw.Add(keyFrame.frame);
+							KeyFrame keyFrame = property.curve.points[i];
+							framesToDraw.Add((i, keyFrame.frame));
+							parentFramesToDraw.Add((i, keyFrame.frame));
 							if (expanded)
 							{
-								if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(property, keyFrame.frame)))
+								if (KeyFrameButton(rowRect.y, keyFrame.frame, keyFrameColor, selector.IsSelected(property, i)))
 								{
 									keyFrameSelected = true;
-									selector.SelectFrame(property, keyFrame.frame);
+									selector.SelectFrame(property, i);
 								}
 							}
 						}
 					}
 				}
 
-				foreach (int frame in parentFramesToDraw)
+				foreach ((int index, int frame) in parentFramesToDraw)
 				{
-					if (KeyFrameButton(propertyIconY, frame, keyFrameColor, selector.IsSelected(propertyParent, frame)))
+					if (KeyFrameButton(propertyIconY, frame, keyFrameColor, selector.IsSelected(propertyParent, index)))
 					{
 						keyFrameSelected = true;
-						selector.SelectFrame(propertyParent, frame);
+						selector.SelectFrame(propertyParent, index);
 					}
 				}
 
 				rowRect.y += rowRect.height;
 			}
 
-			foreach (int frame in framesToDraw)
+			foreach ((int index, int frame) in framesToDraw)
 			{
-				if (KeyFrameButton(parentIconY, frame, keyFrameTopColor, selector.IsSelected(frame)))
+				if (KeyFrameButton(parentIconY, frame, keyFrameTopColor, selector.IsSelected(index)))
 				{
 					keyFrameSelected = true;
-					selector.SelectAll(animation, frame);
+					selector.SelectAll(animation, index);
 				}
 			}
 
@@ -1512,13 +1532,78 @@ namespace SmashTools.Animations
 				selector.ClearSelectedKeyFrames();
 			}
 
+			if (selector.AnyKeyFrameSelected)
+			{
+				// Converting from (x, y, xMax, yMax) to (x, y, width, height)
+				Rect dragRect = new Rect(selectRectBounds.x, selectRectBounds.y, 
+					selectRectBounds.z - selectRectBounds.x, selectRectBounds.w - selectRectBounds.y);
+				if (selector.selPropKeyFrames.Count > 1 && selector.selPropKeyFrames.Any(pair => pair.property != selector.selPropKeyFrames[0].property))
+				{
+					Widgets.DrawBoxSolid(dragRect, selectBoxFillColor);
+				}
+				// TODO - DragWindow needs better method of 'starting' the drag so it can wait for the threshold to be reached
+				if (keyFrameDragger.ReachedThreshold && DragWindow(dragRect, ref dragPos, SetDragItem, IsDragging,
+					dragStarted: StartDragging, dragStopped: StopDragging))
+				{
+					Vector2 diff = keyFrameDragger.MouseDiff;
+					
+					foreach ((AnimationProperty property, int index) in selector.selPropKeyFrames)
+					{
+						//int drag_frame = originalKeyFrame.frame + Mathf.RoundToInt(diff.x / FrameTickMarkSpacing);
+						//float value = originalKeyFrame.value + diff.y / CurveAxisSpacing;
+						//(int frame, float value) = AnimationGraph.ScreenPosToGraphCoord(rect, visibleRect, mousePos, 
+						//	property.curve.RangeX, scrollY, CurveAxisSpacing);
+
+						// Equivalent to Mathf.Clamp(0, rect.width / FrameTickMarkSpacing, value)
+						// This lets us avoid casting int -> float -> int unless it's actually past max bounds
+						//if (drag_frame < 0) drag_frame = 0;
+						//else if (drag_frame >= rect.width / FrameTickMarkSpacing) drag_frame = Mathf.FloorToInt(rect.width / FrameTickMarkSpacing);
+
+						//property.curve.points[index] = new KeyFrame(drag_frame, value);
+					}
+				}
+
+				void SetDragItem()
+				{
+				}
+
+				bool IsDragging()
+				{
+					return false;
+					//return keyFrameDragger.Contains(()) && dragging == DragItem.KeyFrameHandle;
+				}
+
+				void StartDragging()
+				{
+					keyFrameDragger.Start();
+					dragging = DragItem.KeyFrameHandle;
+				}
+
+				void StopDragging()
+				{
+					//draggingKeyFrame.property = null;
+					//draggingKeyFrame.index = -1;
+					//dragging = DragItem.None;
+					//resort = true;
+				}
+			}
+
 			bool KeyFrameButton(float y, int frame, Color color, bool selected)
 			{
 				bool result = false;
-
 				GUI.color = selected ? itemSelectedColor : color;
 				Rect keyFrameRect = DopesheetIconRect(y, frame).ContractedBy(4);
 				GUI.DrawTexture(keyFrameRect, keyFrameTexture);
+
+				if (selected)
+				{
+					// Form selection rect based on the area between all selected KeyFrames
+					if (keyFrameRect.xMin < selectRectBounds.x) selectRectBounds.x = keyFrameRect.xMin;
+					if (keyFrameRect.yMin < selectRectBounds.y) selectRectBounds.y = keyFrameRect.yMin;
+					if (keyFrameRect.xMax > selectRectBounds.z) selectRectBounds.z = keyFrameRect.xMax;
+					if (keyFrameRect.yMax > selectRectBounds.w) selectRectBounds.w = keyFrameRect.yMax;
+				}
+
 				if (Input.GetMouseButtonDown(0) && Mouse.IsOver(keyFrameRect))
 				{
 					result = true;
@@ -1641,6 +1726,8 @@ namespace SmashTools.Animations
 
 		private void DragHandle(Rect rect, Rect visibleRect, Vector2 groupPos, AnimationProperty property)
 		{
+			using var textBlock = new TextBlock();
+
 			bool resort = false;
 			for (int i = 0; i < property.curve.PointsCount; i++)
 			{
@@ -1648,57 +1735,66 @@ namespace SmashTools.Animations
 				int x = keyFrame.frame;
 				float y = property.curve[x];
 
-				Debug.Assert(!property.curve.points.OutOfBounds(i));
-
 				Vector2 dragHandlePos = AnimationGraph.GraphCoordToScreenPos(rect, new Vector2(x, y), property.curve.RangeX, CurveAxisSpacing);
-				Rect texRect = new Rect(dragHandlePos.x - AnimationGraph.DragHandleSize / 2, dragHandlePos.y - AnimationGraph.DragHandleSize / 2, 
-					AnimationGraph.DragHandleSize, AnimationGraph.DragHandleSize);
+				float size = selector.IsSelected(property, x) ? AnimationGraph.DragHandleSize * 1.25f : AnimationGraph.DragHandleSize;
+				Rect texRect = new Rect(dragHandlePos.x - AnimationGraph.DragHandleSize / 2, 
+										dragHandlePos.y - AnimationGraph.DragHandleSize / 2,
+										size, size);
 
 				GUI.color = Mouse.IsOver(texRect) ? property.Color.AddNoAlpha(0.1f, 0.1f, 0.1f) : property.Color; 
 				GUI.DrawTexture(texRect, keyFrameTexture);
-				GUI.color = Color.black;
+				GUI.color = selector.IsSelected(property, x) ? Color.white : Color.black;
 				GUI.DrawTexture(texRect.ContractedBy(AnimationGraph.DragHandleSize / 4), keyFrameTexture);
 				GUI.color = Color.white;
 
-				if (DragWindow(texRect, ref dragPos, SetDragItem, IsDragging, StopDragging) && Matches(property, i))
-				{
-					Vector2 mousePos = MouseUIPos(groupPos);
+				//if (DragWindow(texRect, ref dragPos, SetDragItem, IsDragging, 
+				//	dragStarted: StartDragging, dragStopped: StopDragging) && Matches(property, i))
+				//{
+				//	Vector2 diff = keyFrameDragger.MouseDiff;
+				//	float scrollY = frameScrollPos.y;
 
-					//TODO - drag pos is slightly off, needs adjusting for scroll position as well
-					(int frame, float value) = AnimationGraph.ScreenPosToGraphCoord(rect, mousePos, property.curve.RangeX, FrameTickMarkSpacing, CurveAxisSpacing);
+				//	int frame = originalKeyFrame.frame + Mathf.RoundToInt(diff.x / FrameTickMarkSpacing);
+				//	float value = originalKeyFrame.value + diff.y / CurveAxisSpacing;
+				//	//(int frame, float value) = AnimationGraph.ScreenPosToGraphCoord(rect, visibleRect, mousePos, 
+				//	//	property.curve.RangeX, scrollY, CurveAxisSpacing);
 
-					// Equivalent to Mathf.Clamp(0, rect.width / FrameTickMarkSpacing, value)
-					// This lets us avoid casting int -> float -> int unless it's actually past max bounds
-					if (frame < 0) frame = 0;
-					else if (frame >= rect.width / FrameTickMarkSpacing) frame = Mathf.FloorToInt(rect.width / FrameTickMarkSpacing);
+				//	// Equivalent to Mathf.Clamp(0, rect.width / FrameTickMarkSpacing, value)
+				//	// This lets us avoid casting int -> float -> int unless it's actually past max bounds
+				//	if (frame < 0) frame = 0;
+				//	else if (frame >= rect.width / FrameTickMarkSpacing) frame = Mathf.FloorToInt(rect.width / FrameTickMarkSpacing);
 
-					property.curve.points[i] = new KeyFrame(frame, value);
-				}
-				
-				void SetDragItem()
-				{
-					draggingKeyFrame.property = property;
-					draggingKeyFrame.index = i;
-					dragging = DragItem.KeyFrameHandle;
-				}
+				//	property.curve.points[i] = new KeyFrame(frame, value);
+				//}
 
-				bool IsDragging()
-				{
-					return Matches(property, i) && dragging == DragItem.KeyFrameHandle;
-				}
+				//void SetDragItem()
+				//{
+				//}
 
-				void StopDragging()
-				{
-					draggingKeyFrame.property = null;
-					draggingKeyFrame.index = -1;
-					dragging = DragItem.None;
-					resort = true;
-				}
+				//bool IsDragging()
+				//{
+				//	return Matches(property, i) && dragging == DragItem.KeyFrameHandle;
+				//}
+
+				//void StartDragging()
+				//{
+				//	originalKeyFrame = (property.curve.points[i].frame, property.curve.points[i].value);
+				//	keyFrameDragPos = Input.mousePosition;
+
+				//	draggingKeyFrame.Add((property, i));
+				//	dragging = DragItem.KeyFrameHandle;
+				//}
+
+				//void StopDragging()
+				//{
+				//	draggingKeyFrame.Clear();
+				//	dragging = DragItem.None;
+				//	resort = true;
+				//}
 			}
 
 			bool Matches(AnimationProperty property, int index)
 			{
-				return draggingKeyFrame.property == property && draggingKeyFrame.index == index;
+				return keyFrameDragger.Contains(property, index);
 			}
 
 			if (resort) property.curve.points.Sort();
@@ -1706,7 +1802,8 @@ namespace SmashTools.Animations
 
 		private bool DragWindow(Rect rect, DragItem dragItem, int button = 0)
 		{
-			return DragWindow(rect, ref dragPos, SetDragItem, IsDragging, StopDragging, button: button);
+			return DragWindow(rect, ref dragPos, SetDragItem, IsDragging, 
+				dragStarted: StartDragging, dragStopped: StopDragging, button: button);
 
 			void SetDragItem()
 			{
@@ -1716,6 +1813,11 @@ namespace SmashTools.Animations
 			bool IsDragging()
 			{
 				return dragging == dragItem;
+			}
+
+			void StartDragging()
+			{
+				dragging = dragItem;
 			}
 
 			void StopDragging()
@@ -1752,8 +1854,8 @@ namespace SmashTools.Animations
 		{
 			foreach (AnimationProperty property in propertyParent)
 			{
-				float curValue = property.curve[frame];
-				property.curve.Add(frame, curValue);
+				float curValue = property.curve[Frame];
+				property.curve.Add(Frame, curValue);
 			}
 			ChangeMade();
 		}
@@ -1762,13 +1864,13 @@ namespace SmashTools.Animations
 		{
 			if (propertyParent.Single != null)
 			{
-				propertyParent.Single.curve.Remove(frame);
+				propertyParent.Single.curve.Remove(Frame);
 			}
 			else if (!propertyParent.Children.NullOrEmpty())
 			{
 				foreach (AnimationProperty property in propertyParent.Children)
 				{
-					property.curve.Remove(frame);
+					property.curve.Remove(Frame);
 				}
 			}
 			ChangeMade();
@@ -1812,7 +1914,7 @@ namespace SmashTools.Animations
 
 		private class Selector
 		{
-			public List<(AnimationProperty property, int frame)> selPropKeyFrames = new List<(AnimationProperty property, int frame)>();
+			public List<(AnimationProperty property, int index)> selPropKeyFrames = new List<(AnimationProperty property, int index)>();
 
 			public HashSet<AnimationPropertyParent> selectedParents = new HashSet<AnimationPropertyParent>();
 			public HashSet<AnimationProperty> selectedProperties = new HashSet<AnimationProperty>();
@@ -1824,12 +1926,12 @@ namespace SmashTools.Animations
 
 			public bool AnyEventSelected => selectedEvents.Count > 0;
 
-			public bool IsSelected(int frame)
+			public bool IsSelected(int index)
 			{
-				return selPropKeyFrames.Any(selection => selection.frame == frame);
+				return selPropKeyFrames.Any(selection => selection.index == index);
 			}
 
-			public bool IsSelected(AnimationPropertyParent propertyParent, int frame)
+			public bool IsSelected(AnimationPropertyParent propertyParent, int index)
 			{
 				if (propertyParent == null || !propertyParent.IsValid)
 				{
@@ -1837,13 +1939,13 @@ namespace SmashTools.Animations
 				}
 				if (propertyParent.Single != null)
 				{
-					return IsSelected(propertyParent.Single, frame);
+					return IsSelected(propertyParent.Single, index);
 				}
 				else if (!propertyParent.Children.NullOrEmpty())
 				{
 					foreach (AnimationProperty property in propertyParent.Children)
 					{
-						if (IsSelected(property, frame))
+						if (IsSelected(property, index))
 						{
 							return true;
 						}
@@ -1852,13 +1954,13 @@ namespace SmashTools.Animations
 				return false;
 			}
 
-			public bool IsSelected(AnimationProperty property, int frame)
+			public bool IsSelected(AnimationProperty property, int index)
 			{
 				if (property == null || !property.IsValid)
 				{
 					return false;
 				}
-				return selPropKeyFrames.Contains((property, frame));
+				return selPropKeyFrames.Contains((property, index));
 			}
 
 			public bool IsSelected(AnimationPropertyParent propertyParent)
@@ -1901,7 +2003,7 @@ namespace SmashTools.Animations
 				}
 			}
 
-			public void SelectFrame(AnimationPropertyParent propertyParent, int frame, bool clear = true)
+			public void SelectFrame(AnimationPropertyParent propertyParent, int index, bool clear = true)
 			{
 				ClearSelectedEvents();
 				if (clear && !Input.GetKey(KeyCode.LeftControl))
@@ -1910,35 +2012,31 @@ namespace SmashTools.Animations
 				}
 				if (propertyParent.Single != null)
 				{
-					SelectFrame(propertyParent.Single, frame);
+					SelectFrame(propertyParent.Single, index);
 				}
 				else if (!propertyParent.Children.NullOrEmpty())
 				{
 					foreach (AnimationProperty property in propertyParent.Children)
 					{
-						SelectFrame(property, frame, clear: false, sort: false);
+						SelectFrame(property, index, clear: false, sort: false);
 					}
-					selPropKeyFrames.SortBy(selProp => selProp.frame);
+					selPropKeyFrames.SortBy(selProp => selProp.index);
 				}
 			}
 
-			public void SelectFrame(AnimationProperty property, int frame, bool clear = true, bool sort = true)
+			public void SelectFrame(AnimationProperty property, int index, bool clear = true, bool sort = true)
 			{
 				ClearSelectedEvents();
 				if (clear && !Input.GetKey(KeyCode.LeftControl))
 				{
 					ClearSelectedKeyFrames();
 				}
-				if (selPropKeyFrames.Contains((property, frame)))
+				if (selPropKeyFrames.Contains((property, index)))
 				{
 					return;
 				}
-
-				selPropKeyFrames.Add((property, frame));
-				if (sort)
-				{
-					selPropKeyFrames.SortBy(selProp => selProp.frame);
-				}
+				Assert(false);
+				selPropKeyFrames.Add((property, index));
 			}
 
 			public void Select(AnimationPropertyParent propertyParent, bool clear = true)
@@ -1986,6 +2084,82 @@ namespace SmashTools.Animations
 			public void ClearSelectedEvents()
 			{
 				selectedEvents.Clear();
+			}
+		}
+
+		private class KeyFrameDragHandler
+		{
+			// (property, index), originalValue
+			private readonly Dictionary<(AnimationProperty property, int index), (int frame, float value)> innerContainer = 
+				new Dictionary<(AnimationProperty property, int index), (int frame, float value)>();
+			private Vector2 clickPos;
+
+			private float dragThreshold = 0;
+
+			public Vector2 ClickPos => clickPos;
+
+			public Vector2 MouseDiff => new Vector2(Input.mousePosition.x, Input.mousePosition.y) - ClickPos;
+
+			public bool ReachedThreshold { get; private set; }
+
+			private bool Dragging { get; set; }
+
+			public void Update()
+			{
+				if (!Dragging)
+				{
+					ReachedThreshold = false;
+					if (Input.GetMouseButtonDown(0))
+					{
+						clickPos = Input.mousePosition;
+					}
+					if (Input.GetMouseButton(0) && Mathf.Abs(clickPos.magnitude - Input.mousePosition.magnitude) >= dragThreshold)
+					{
+						// Once started, only canceling the drag will reset
+						ReachedThreshold = true;
+					}
+				}
+			}
+
+			public void Configure(float dragThreshold)
+			{
+				this.dragThreshold = dragThreshold;
+			}
+
+			public void Start()
+			{
+				Dragging = true;
+			}
+
+			public void Clear()
+			{
+				clickPos = Vector2.zero;
+				innerContainer.Clear();
+				ReachedThreshold = false;
+				Dragging = false;
+			}
+
+			public void Record(AnimationProperty property, int index, int frame, float originalValue)
+			{
+				innerContainer[(property, index)] = (frame, originalValue);
+			}
+
+			public bool Contains(AnimationProperty property, int index)
+			{
+				return innerContainer.ContainsKey((property, index));
+			}
+
+			public bool TryGetOriginalValue(AnimationProperty property, int index, out int frame, out float originalValue)
+			{
+				frame = -1;
+				originalValue = float.MinValue;
+				if (innerContainer.TryGetValue((property, index), out var cache))
+				{
+					frame = cache.frame;
+					originalValue = cache.value;
+					return true;
+				}
+				return false;
 			}
 		}
 	}

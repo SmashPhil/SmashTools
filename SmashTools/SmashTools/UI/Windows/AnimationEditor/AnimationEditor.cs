@@ -30,11 +30,11 @@ namespace SmashTools.Animations
 		protected readonly Color backgroundCurvesColor = new ColorInt(40, 40, 40).ToColor;
 		protected readonly Color separatorColor = new ColorInt(35, 35, 35).ToColor;
 
-		private readonly Color buttonColor = new ColorInt(88, 88, 88).ToColor;
-		private readonly Color buttonPressedColor = new ColorInt(70, 96, 124).ToColor;
+		protected readonly Color buttonColor = new ColorInt(88, 88, 88).ToColor;
+		protected readonly Color buttonPressedColor = new ColorInt(70, 96, 124).ToColor;
 
-		private readonly Color selectBoxFillColor = new ColorInt(85, 145, 245, 15).ToColor;
-		private readonly Color selectBoxBorderColor = new ColorInt(125, 175, 245, 75).ToColor;
+		protected readonly Color selectBoxFillColor = new ColorInt(85, 145, 245, 15).ToColor;
+		protected readonly Color selectBoxBorderColor = new ColorInt(125, 175, 245, 75).ToColor;
 
 		protected bool draggingSelectionBox = false;
 		private bool hardDisabled = false;
@@ -355,7 +355,8 @@ namespace SmashTools.Animations
 			}
 		}
 
-		protected bool DragWindow(Rect rect, ref Vector2 dragPos, Action dragAction, Func<bool> isDragging, Action dragStopped, int button = 0)
+		protected bool DragWindow(Rect rect, ref Vector2 dragPos, Action dragAction, Func<bool> isDragging, 
+			Action dragStarted = null, Action dragStopped = null, int button = 0)
 		{
 			if (!GUI.enabled)
 			{
@@ -363,9 +364,8 @@ namespace SmashTools.Animations
 			}
 			if (Input.GetMouseButtonDown(button) && Mouse.IsOver(rect))
 			{
-				dragAction();
+				dragStarted?.Invoke();
 				dragPos = Input.mousePosition;
-				return true;
 			}
 			if (isDragging())
 			{
@@ -379,7 +379,7 @@ namespace SmashTools.Animations
 				}
 				else
 				{
-					dragStopped();
+					dragStopped?.Invoke();
 					if (Input.GetMouseButtonUp(button))
 					{
 						Event.current.Use();

@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Verse;
 using Verse.Sound;
+using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -78,10 +79,15 @@ namespace SmashTools.Animations
 			{
 				return file;
 			}
+			if (!File.Exists(filePath))
+			{
+				Log.Error($"Unable to load file at \"{filePath}\". File not found.");
+				return default;
+			}
 			file = DirectXmlLoader.ItemFromXmlFile<T>(filePath);
 			if (file == null)
 			{
-				Log.Error($"Could not load animation at \"{filePath}\". Path not found.");
+				Log.Error($"Unable to load animation file at \"{filePath}\".");
 				return default;
 			}
 			file.FilePath = filePath;

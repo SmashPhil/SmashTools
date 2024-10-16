@@ -43,7 +43,7 @@ namespace SmashTools.Animations
 				}
 				Vector2 coordRight = GraphCoordToScreenPos(rect, new Vector2(x, y), xRange, spacing);
 				// Todo - Cull lines outside of visibleRect
-				Widgets.DrawLine(coordLeft, coordRight, color, 1);
+				Widgets.DrawLine(coordLeft, coordRight, color, 2);
 				coordLeft = coordRight;
 			}
 		}
@@ -52,14 +52,19 @@ namespace SmashTools.Animations
 		{
 			float xStep = (coord.x - xRange.min) / (xRange.max - xRange.min);
 			float yOffset = coord.y * spacing;
-			return new Vector2(rect.x + rect.width * xStep, rect.y + rect.height / 2 - yOffset); //y inverted, UI is rendered top to bottom
+			// yOffset inverted, UI rendered top to bottom
+			return new Vector2(rect.x + rect.width * xStep, rect.y + rect.height / 2 - yOffset);
 		}
 
-		public static (int frame, float value) ScreenPosToGraphCoord(Rect rect, Vector2 mousePos, FloatRange xRange, float frameTickSpacing, float valueTickSpacing)
+		public static (int frame, float value) ScreenPosToGraphCoord(Rect rect, Rect visibleRect, Vector2 mousePos, 
+			FloatRange xRange, float scrollY, float spacing)
 		{
-			float x = mousePos.x - rect.x;
-			float y = rect.height / 2 - mousePos.y;
-			return (Mathf.RoundToInt(x / frameTickSpacing), (y / valueTickSpacing).RoundTo(0.001f));
+			float mouseX = mousePos.x + visibleRect.x;
+			float mouseY = mousePos.y + visibleRect.y - 16 + scrollY;
+			float xStep = (mouseX - rect.x) / rect.width;
+			// mouseY inverted, UI rendered top to bottom
+			float yOffset = rect.y + rect.height / 2 - mouseY;
+			return (Mathf.RoundToInt(xStep * (xRange.max - xRange.min) + xRange.min), (yOffset / spacing).RoundTo(0.001f));
 		}
 	}
 }

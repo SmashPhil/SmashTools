@@ -39,6 +39,8 @@ namespace SmashTools.Animations
 
 		public void EvaluateFrame(IAnimator animator, int frame)
 		{
+			if (!clip || clip.properties == null) return;
+
 			for (int i = 0; i < clip.properties.Count; i++)
 			{
 				clip.properties[i].EvaluateFrame(animator, frame);

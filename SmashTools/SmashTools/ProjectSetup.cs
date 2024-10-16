@@ -148,10 +148,6 @@ namespace SmashTools
 			{
 				StartupTest.OpenMenu();
 			}
-			if (___widgetRow.ButtonIcon(TexButton.OpenStatsReport, "Start Profiling.\n\nNOTE: Requires JetBrains DotTrace license to run."))
-			{
-				
-			}
 			___widgetRowFinalX = ___widgetRow.FinalX;
 		}
 

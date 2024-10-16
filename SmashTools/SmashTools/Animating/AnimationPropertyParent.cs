@@ -120,6 +120,7 @@ namespace SmashTools.Animations
 
 		void IXmlExport.Export()
 		{
+			XmlExporter.WriteElement(nameof(identifier), identifier);
 			XmlExporter.WriteElement(nameof(label), label);
 			XmlExporter.WriteElement(nameof(name), name);
 			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
@@ -156,11 +157,6 @@ namespace SmashTools.Animations
 		public static AnimationPropertyParent Create(string identifier, string label, FieldInfo fieldInfo)
 		{
 			return new AnimationPropertyParent(identifier, label, fieldInfo.Name, fieldInfo.DeclaringType);
-		}
-
-		public static AnimationPropertyParent Create(string identifier, string label, PropertyInfo propertyInfo)
-		{
-			return new AnimationPropertyParent(identifier, label, propertyInfo.Name, propertyInfo.DeclaringType);
 		}
 	}
 }

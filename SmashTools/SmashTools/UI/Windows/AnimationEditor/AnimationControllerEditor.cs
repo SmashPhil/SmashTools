@@ -853,7 +853,7 @@ namespace SmashTools.Animations
 
 		private bool DragWindow(Rect rect, DragItem dragItem, int button = 0)
 		{
-			return DragWindow(rect, ref dragPos, SetDragItem, IsDragging, StopDragging, button: button);
+			return DragWindow(rect, ref dragPos, SetDragItem, IsDragging, dragStopped: StopDragging, button: button);
 
 			void SetDragItem()
 			{

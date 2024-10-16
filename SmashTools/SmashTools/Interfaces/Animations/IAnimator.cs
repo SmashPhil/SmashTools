@@ -9,7 +9,7 @@ namespace SmashTools.Animations
 {
 	public interface IAnimator : IAnimationObject
 	{
-		AnimationController Controller { get; }
+		AnimationManager Manager { get; }
 
 		ModContentPack ModContentPack { get; }
 

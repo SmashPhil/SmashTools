@@ -42,9 +42,6 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="JetBrains.Profiler.Api">
-      <Version>1.4.8</Version>
-    </PackageReference>
     <PackageReference Include="Lib.Harmony">
       <Version>2.3.3</Version>
     </PackageReference>
@@ -101,6 +98,7 @@
     <Compile Include="Animating\AnimationPropertyRegistry.cs" />
     <Compile Include="Animating\AnimationState.cs" />
     <Compile Include="Animating\AnimationTransition.cs" />
+    <Compile Include="Animating\KeyFrame.cs" />
     <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
     <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
     <Compile Include="Animating\Obsolete\AnimatorObject.cs" />
@@ -175,7 +173,7 @@
     <Compile Include="Performance\Multithreading\AsyncPool.cs" />
     <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
-    <Compile Include="Performance\Profiling\DotTrace.cs" />
+    <Compile Include="Performance\Profiling\JBProfiler.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
     <Compile Include="Performance\Multithreading\TaskManager.cs" />
     <Compile Include="Performance\Multithreading\ThreadManager.cs" />
@@ -189,6 +187,7 @@
     <Compile Include="UI\HighPriorityInputs.cs" />
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
+    <Compile Include="UI\UndoManager.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationClipEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationControllerEditor.cs" />
