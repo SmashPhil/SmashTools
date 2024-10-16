@@ -84,6 +84,14 @@ namespace SmashTools.Animations
 			return (null, 0);
 		}
 
+		internal void SetFrame(int frame)
+		{
+			foreach (LayerData layerData in layerDatas)
+			{
+				layerData.state.EvaluateFrame(animator, frame);
+			}
+		}
+
 		public void SetFloat(string name, float value)
 		{
 			SetFloat(name.GetHashCode(), value);

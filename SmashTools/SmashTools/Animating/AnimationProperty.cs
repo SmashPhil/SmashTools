@@ -14,7 +14,7 @@ namespace SmashTools.Animations
 	public class AnimationProperty : IXmlExport
 	{
 		// Treated as an array, but RimWorld is incapable of parsing in arrays so a fixed-capacity list is required.
-		private List<ObjectPath> objectPath;
+		private List<ObjectPath> objectPath = new List<ObjectPath>();
 		private string label;
 		private string name;
 		private PropertyType propertyType;

@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Emit;
-using System.Globalization;
-using System.IO;
-using System.Xml;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Xml;
+using SmashTools.Animations;
 using UnityEngine;
-using HarmonyLib;
 using Verse;
-using KeyFrame = SmashTools.Animations.AnimationCurve.KeyFrame;
 
 namespace SmashTools.Xml
 {

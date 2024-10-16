@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using UnityEngine;
 using Verse;
+using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -12,9 +13,9 @@ namespace SmashTools.Animations
 	{
 		public List<KeyFrame> points = new List<KeyFrame>();
 
-		public KeyFrame LeftBound => points.FirstOrDefault();
+		public KeyFrame LeftBound => points.Count > 0 ? points[0] : KeyFrame.Invalid;
 
-		public KeyFrame RightBound => points.LastOrDefault();
+		public KeyFrame RightBound => points.Count > 0 ? points[points.Count - 1] : KeyFrame.Invalid;
 
 		public FloatRange RangeX => new FloatRange(LeftBound.frame, RightBound.frame);
 
@@ -42,11 +43,7 @@ namespace SmashTools.Animations
 					return false;
 				}
 			}
-			points.Add(new KeyFrame()
-			{
-				frame = frame,
-				value = value,
-			});
+			points.Add(new KeyFrame(frame, value));
 			points.Sort();
 			return true;
 		}
@@ -58,20 +55,12 @@ namespace SmashTools.Animations
 				KeyFrame point = points[i];
 				if (point.frame == frame)
 				{
-					points[i] = new KeyFrame()
-					{
-						frame = point.frame,
-						value = value,
-					};
+					points[i] = new KeyFrame(point.frame, value);
 					return;
 				}
 				if (point.frame > frame) 
 				{
-					points.Insert(i, new KeyFrame()
-					{
-						frame = frame,
-						value = value,
-					});
+					points.Insert(i, new KeyFrame(frame, value));
 					return;
 				}
 			}
@@ -125,44 +114,45 @@ namespace SmashTools.Animations
 			{
 				return RightBound.value;
 			}
-			return Lerp(points, frame);
+			return Lerp(frame);
 		}
 
 		/// <summary>
-		/// Interpolation using Lagrange polynomial
+		/// Catmull-Rom spline interpolation
 		/// </summary>
-		/// <remarks>See https://paulbourke.net/miscellaneous/interpolation and https://en.wikipedia.org/wiki/Lagrange_polynomial for reference</remarks>
-		/// <param name="coordinates"></param>
-		/// <param name="x"></param>
-		private float Lagrange(List<KeyFrame> coordinates, float frame)
+		/// <remarks>See https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_007_Animations.html#cubic-spline-interpolation for reference</remarks>
+		private float CubicSpline(float frame)
 		{
-			float y = 0;
-			float t = (float)frame / RightBound.frame;
-			/// Σ{n-1:i=0} y * ∏{n-1:j=0,j≠i} (x - xj) / (xi - xj)
-			/// <summary>Summation from 0 to n-1, and multiplicative of 0 to n-1, given an arbitrary set of points</summary>
-			for (int i = 0; i < coordinates.Count; i++)
+			int prev = -1;
+			int next = -1;
+			for (int i = 0; i < points.Count; i++)
 			{
-				KeyFrame pointLeft = coordinates[i];
-				float pointLeftT = (float)pointLeft.frame / RightBound.frame;
-				float numerator = pointLeft.value;
-				float denominator = 1;
-				for (int j = 0; j < coordinates.Count; j++)
+				if (points[i].frame <= frame)
 				{
-					if (i != j)
-					{
-						KeyFrame pointRight = coordinates[j];
-						float pointRightT = (float)pointRight.frame / RightBound.frame;
-						numerator *= t - pointRightT;
-						denominator *= pointLeftT - pointRightT;
-					}
+					prev = i;
+					next = i + 1;
 				}
-				y += numerator / denominator;
 			}
-			return y;
+			Assert(!points.OutOfBounds(next));
+			float deltaFrame = points[next].frame - points[prev].frame;
+			// (f - kt(i))
+			float t = frame - points[prev].frame;
+			// t^2
+			float t2 = t * t;
+			// t^3
+			float t3 = t * t * t;
+			// k(0) * (2t^3 - 3t^2 + 1) +
+			// k(1) * (3t^2 - 2t^3) +
+			// k'(0) * (t^3 - 2t^2 + t +
+			// k'(1) * (t^3 - t^2)
+			return points[prev].value * (2 * t3 - 3 * t2 + 1) +
+				   points[next].value * (3 * t2 - 2 * t3) +
+				   deltaFrame * points[prev].outTangent * (t3 - 2 * t2 + t) +
+				   deltaFrame * points[next].inTangent * (t3 - t2);
 		}
 
 		// Linear function for testing rendering in the animation editor
-		private float Lerp(List<KeyFrame> points, float frame)
+		private float Lerp(float frame)
 		{
 			KeyFrame leftPoint = points[0];
 			KeyFrame rightPoint = points[points.Count - 1];
@@ -185,53 +175,6 @@ namespace SmashTools.Animations
 		void IXmlExport.Export()
 		{
 			XmlExporter.WriteCollection(nameof(points), points);
-		}
-
-		public struct KeyFrame : IExposable, IXmlExport, IComparable<KeyFrame>
-		{
-			public int frame;
-			public float value;
-
-			public KeyFrame(int frame, float value)
-			{
-				this.frame = frame;
-				this.value = value;
-			}
-
-			void IExposable.ExposeData()
-			{
-				Scribe_Values.Look(ref frame, nameof(frame));
-				Scribe_Values.Look(ref value, nameof(value));
-			}
-
-			readonly void IXmlExport.Export()
-			{
-				XmlExporter.WriteString($"({frame},{Ext_Math.RoundTo(value, 0.0001f)})");
-			}
-
-			readonly int IComparable<KeyFrame>.CompareTo(KeyFrame other)
-			{
-				return frame.CompareTo(other.frame);
-			}
-
-			public static KeyFrame FromString(string entry)
-			{
-				entry = entry.Replace("(", "");
-				entry = entry.Replace(")", "");
-				string[] array = entry.Split(',');
-
-				if (array.Length == 2)
-				{
-					CultureInfo invariantCulture = CultureInfo.InvariantCulture;
-					KeyFrame keyFrame = new KeyFrame
-					{
-						frame = Convert.ToInt32(array[0], invariantCulture),
-						value = Convert.ToSingle(array[1], invariantCulture)
-					};
-					return keyFrame;
-				}
-				throw new InvalidOperationException();
-			}
 		}
 	}
 }

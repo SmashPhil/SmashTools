@@ -111,7 +111,8 @@ namespace SmashTools.Animations
 		public static AnimationClip CreateEmpty()
 		{
 			AnimationClip animationClip = new AnimationClip();
-			animationClip.FileName = DefaultAnimName;
+			animationClip.FileName = AnimationLoader.GetAvailableName(AnimationLoader.Cache<AnimationClip>.GetAll()
+				.Select(clip => clip.FileName), DefaultAnimName);
 			return animationClip;
 		}
 

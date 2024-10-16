@@ -9,6 +9,7 @@ using Verse.Sound;
 using System.Runtime;
 using Verse.Noise;
 using HarmonyLib;
+using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -100,14 +101,20 @@ namespace SmashTools.Animations
 				CameraView.Close();
 			}
 			this.animator = animator;
-			controller = animator.Controller;
+			if (animator.Manager == null)
+			{
+				Log.Error($"Unable to open editor for entity with null AnimationManager. It must first be added before editing can take place.");
+				Close();
+				return;
+			}
+			controller = animator.Manager.controller;
 			if (!controller || controller.layers.NullOrEmpty())
 			{
 				controller = AnimationController.EmptyController();
 			}
 			animLayer = controller.layers.FirstOrDefault();
-			Debug.Assert(controller != null);
-			Debug.Assert(animLayer != null);
+			Assert(controller != null);
+			Assert(animLayer != null);
 
 			controllerEditor.AnimatorLoaded(animator);
 			clipEditor.AnimatorLoaded(animator);

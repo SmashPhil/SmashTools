@@ -140,7 +140,7 @@ namespace SmashTools.Debugging
 			// None of these should be getting called, these are strictly for allowing this object to pass
 			// as an IAnimator object to SetValue and GetValue delegates.
 
-			AnimationController IAnimator.Controller => throw new NotImplementedException();
+			AnimationManager IAnimator.Manager => throw new NotImplementedException();
 
 			ModContentPack IAnimator.ModContentPack => throw new NotImplementedException();
 

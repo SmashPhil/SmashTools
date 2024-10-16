@@ -1,19 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//#define PROFILER
+
+#if PROFILER
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using JetBrains;
 using JetBrains.Profiler.Api;
-using Verse;
+using JetBrains.Profiler.SelfApi;
 using static SmashTools.Debug;
 
 namespace SmashTools.Performance.JetBrains
 {
-	internal static class DotTrace
+	internal static class JBProfiler
 	{
-		static DotTrace()
+		static JBProfiler()
 		{
 #if RELEASE
 			Log.Error($"Calling DotTrace on release build!");
@@ -45,3 +43,4 @@ namespace SmashTools.Performance.JetBrains
 		}
 	}
 }
+#endif
