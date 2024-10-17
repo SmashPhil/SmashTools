@@ -195,6 +195,7 @@
     <Compile Include="UI\Windows\AnimationEditor\Dialog_DefDropdown.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_MethodSelector.cs" />
     <Compile Include="UI\Windows\Dialog_CameraView.cs" />
+    <Compile Include="UI\Windows\Dialog_Popup.cs" />
     <Compile Include="UI\Windows\Performance\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_ItemDropdown.cs" />

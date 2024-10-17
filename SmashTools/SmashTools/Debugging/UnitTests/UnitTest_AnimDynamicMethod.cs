@@ -8,6 +8,7 @@ using HarmonyLib;
 using SmashTools.Animations;
 using UnityEngine;
 using Verse;
+using static SmashTools.Debug;
 
 namespace SmashTools.Debugging
 {
@@ -19,38 +20,38 @@ namespace SmashTools.Debugging
 
 		public override TestType ExecuteOn => TestType.MainMenu;
 
-		public override IEnumerable<Func<UTResult>> Execute()
+		public override IEnumerable<UTResult> Execute()
 		{
 			TestObject testObject = new TestObject();
 
-			yield return () => TestField(testObject, typeof(TestObject), nameof(TestObject.tInt));
-			yield return () => TestField(testObject, typeof(TestObject), nameof(TestObject.tFloat));
-			yield return () => TestField(testObject, typeof(TestObject), nameof(TestObject.tBool));
+			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tInt));
+			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tFloat));
+			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tBool));
 
 			FieldInfo vector3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.vector));
-			Debug.Assert(vector3 != null);
-			yield return () => TestField(testObject, typeof(Vector3), nameof(Vector3.x), vector3);
-			yield return () => TestField(testObject, typeof(Vector3), nameof(Vector3.y), vector3);
-			yield return () => TestField(testObject, typeof(Vector3), nameof(Vector3.z), vector3);
+			Assert(vector3 != null);
+			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.x), vector3);
+			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.y), vector3);
+			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.z), vector3);
 
 			FieldInfo color = AccessTools.Field(typeof(TestObject), nameof(TestObject.color));
-			Debug.Assert(color != null);
-			yield return () => TestField(testObject, typeof(Color), nameof(Color.r), color);
-			yield return () => TestField(testObject, typeof(Color), nameof(Color.g), color);
-			yield return () => TestField(testObject, typeof(Color), nameof(Color.b), color);
-			yield return () => TestField(testObject, typeof(Color), nameof(Color.a), color);
+			Assert(color != null);
+			yield return TestField(testObject, typeof(Color), nameof(Color.r), color);
+			yield return TestField(testObject, typeof(Color), nameof(Color.g), color);
+			yield return TestField(testObject, typeof(Color), nameof(Color.b), color);
+			yield return TestField(testObject, typeof(Color), nameof(Color.a), color);
 
 			FieldInfo intVec3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.intVec3));
-			Debug.Assert(intVec3 != null);
-			yield return () => TestField(testObject, typeof(IntVec3), nameof(IntVec3.x), intVec3);
-			yield return () => TestField(testObject, typeof(IntVec3), nameof(IntVec3.y), intVec3);
-			yield return () => TestField(testObject, typeof(IntVec3), nameof(IntVec3.z), intVec3);
+			Assert(intVec3 != null);
+			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.x), intVec3);
+			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.y), intVec3);
+			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.z), intVec3);
 		}
 
 		private UTResult TestField<T>(T obj, Type type, string name, params FieldInfo[] objectPath) where T : IAnimator
 		{
 			FieldInfo fieldInfo = AccessTools.Field(type, name);
-			Debug.Assert(fieldInfo != null);
+			Assert(fieldInfo != null);
 			AnimationProperty property = AnimationProperty.Create(typeof(T), name, fieldInfo, objectPath);
 			(int frame, float value)[] results = new (int frame, float value)[TestCount];
 			for (int i = 0; i < results.Length; i++)

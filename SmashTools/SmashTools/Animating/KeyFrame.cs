@@ -2,6 +2,7 @@
 using System.Globalization;
 using SmashTools.Xml;
 using UnityEngine;
+using Verse;
 using static SmashTools.Debug;
 
 namespace SmashTools.Animations
@@ -85,7 +86,7 @@ namespace SmashTools.Animations
 				float outWeight = Convert.ToSingle(array[5], invariantCulture);
 				return new KeyFrame(frame, value, inTangent, outTangent, inWeight, outWeight);
 			}
-			Trace(false, $"Unable to parse AnimationCurve.KeyFrame. Invalid format: {entry}.");
+			Log.Error($"Unable to parse AnimationCurve.KeyFrame. Invalid format: {entry}.");
 			return Invalid;
 		}
 	}
