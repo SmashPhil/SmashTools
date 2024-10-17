@@ -1,10 +1,13 @@
 ﻿using System.Diagnostics;
+using UnityEngine;
 using Verse;
 
 namespace SmashTools
 {
 	public static class Debug
 	{
+		private static readonly Vector2 popupSize = new Vector2(500, 650);
+
 		[Conditional("DEBUG")]
 		public static void Assert(bool condition)
 		{
@@ -12,6 +15,7 @@ namespace SmashTools
 
 			Log.Error("Assertion Failed");
 			if (Debugger.IsAttached) Debugger.Break();
+			Find.WindowStack.Add(new Dialog_Popup(popupSize, "Assertion Failed", StackTraceUtility.ExtractStackTrace()));
 		}
 
 		[Conditional("DEBUG")]
@@ -21,16 +25,28 @@ namespace SmashTools
 
 			Log.Error($"Assertion Failed: {message}");
 			if (Debugger.IsAttached) Debugger.Break();
+			Find.WindowStack.Add(new Dialog_Popup(popupSize, message, StackTraceUtility.ExtractStackTrace()));
 		}
 
+		// Reimplementation of Trace.Assert with IMGUI popup
+		[Conditional("TRACE")]
+		public static void Trace(bool condition)
+		{
+			if (condition) return;
+
+			Log.Error($"Assertion Failed");
+			if (Debugger.IsAttached) Debugger.Break();
+			Find.WindowStack.Add(new Dialog_Popup(popupSize, "Assertion Failed", StackTraceUtility.ExtractStackTrace()));
+		}
+
+		[Conditional("TRACE")]
 		public static void Trace(bool condition, string message)
 		{
 			if (condition) return;
 
 			Log.Error(message);
-#if DEBUG
 			if (Debugger.IsAttached) Debugger.Break();
-#endif
+			Find.WindowStack.Add(new Dialog_Popup(popupSize, message, StackTraceUtility.ExtractStackTrace()));
 		}
 
 		/// <summary>

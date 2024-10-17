@@ -10,14 +10,16 @@ namespace SmashTools.Performance
 	public class AsyncLongOperationAction : AsyncAction
 	{
 		private Action action;
+		private Func<bool> isValid;
 
 		public override bool LongOperation => true;
 
-		public override bool IsValid => action != null;
+		public override bool IsValid => isValid();
 
-		public void Set(Action action)
+		public void Set(Action action, Func<bool> isValid)
 		{
 			this.action = action;
+			this.isValid = isValid;
 		}
 
 		public override void Invoke()

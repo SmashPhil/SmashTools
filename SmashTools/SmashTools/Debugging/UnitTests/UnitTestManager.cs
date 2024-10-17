@@ -39,6 +39,12 @@ namespace SmashTools.Debugging
 
 		public static UnitTest.TestType TestType { get; private set; }
 
+		private static UnitTest IsolatedTest { get; set; }
+
+		public static List<UnitTest> UnitTests => unitTests;
+
+		private static bool StopTest { get; set; }
+
 		public static bool RunningUnitTests
 		{
 			get
@@ -55,6 +61,13 @@ namespace SmashTools.Debugging
 		}
 
 #if DEBUG
+		public static void Run(UnitTest unitTest)
+		{
+			IsolatedTest = unitTest;
+			TestType = unitTest.ExecuteOn;
+			StartUnitTests();
+		}
+
 		[StartupAction(Category = "UnitTesting", Name = "Run All", GameState = GameState.OnStartup)]
 		public static void RunAll()
 		{
@@ -98,6 +111,7 @@ namespace SmashTools.Debugging
 			if (TestType == UnitTest.TestType.None) yield break;
 
 			RunningUnitTests = true;
+			using var cleanup = new TestCleanup();
 
 			results.Clear();
 			results.Add($"---------- Unit Tests ----------");
@@ -112,8 +126,8 @@ namespace SmashTools.Debugging
 					if (!RunningUnitTests) goto EndTest;
 					yield return new WaitForSecondsRealtime(1);
 				}
-				bool result = ExecuteTests(UnitTest.TestType.MainMenu, results);
-				if (!result) goto EndTest;
+				yield return ExecuteTests(UnitTest.TestType.MainMenu, results);
+				if (StopTest) goto EndTest;
 			}
 			
 			if (TestType.HasFlag(UnitTest.TestType.GameLoaded))
@@ -133,67 +147,57 @@ namespace SmashTools.Debugging
 					if (!RunningUnitTests) goto EndTest;
 					yield return new WaitForSecondsRealtime(1);
 				}
-				ExecuteTests(UnitTest.TestType.GameLoaded, results);
+				yield return ExecuteTests(UnitTest.TestType.GameLoaded, results);
+				if (StopTest) goto EndTest;
 			}
 
 			EndTest:;
 			results.Add($"-------- End Unit Tests --------");
 			DumpResults(results);
-
-			RunningUnitTests = false;
-			TestType = UnitTest.TestType.None;
+			Log.TryOpenLogWindow();
 		}
 
 		/// <returns>Should continue running Unit Tests</returns>
-		private static bool ExecuteTests(UnitTest.TestType type, List<string> results)
+		private static IEnumerator ExecuteTests(UnitTest.TestType type, List<string> output)
 		{
-			bool success = true;
 			List<string> subResults = new List<string>();
 			foreach (UnitTest unitTest in unitTests)
 			{
+				if (StopTest) yield break;
 				if (unitTest.ExecuteOn != type) continue;
+				if (IsolatedTest != null && IsolatedTest != unitTest) continue;
 
 				try
 				{
-					foreach (Func<UTResult> test in unitTest.Execute())
+					bool success = true;
+					foreach (UTResult result in unitTest.Execute())
 					{
-						string output;
-						try
+						foreach ((string name, bool passed) in result.Results)
 						{
-							UTResult result = test();
-							foreach ((string name, bool passed) in result.Results)
-							{
-								output = passed ? $"    {name} <success>Passed</success>" : $"    {name} <error>Failed</error>";
-								// Dump all results for this unit test if any sub-test fails
-								success &= passed;
-								subResults.Add(output);
-							}
-						}
-						catch (Exception ex)
-						{
-							output = $"<error>Exception thrown!</error>\n{ex}";
-							success = false;
-							subResults.Add(output);
+							string message = passed ? $"    {name} <success>Passed</success>" : $"    {name} <error>Failed</error>";
+							// Dump all results for this unit test if any sub-test fails
+							success &= passed;
+							subResults.Add(message);
 						}
 					}
 					if (success)
 					{
-						results.Add($"[{unitTest.Name}] <success>{subResults.Count} Succeeded</success>");
+						output.Add($"[{unitTest.Name}] <success>{subResults.Count} Succeeded</success>");
 					}
 					else
 					{
-						results.Add($"<error>{unitTest.Name} Failed</error>");
-						results.AddRange(subResults);
+						output.Add($"<error>{unitTest.Name} Failed</error>");
+						output.AddRange(subResults);
 					}
 				}
 				catch (Exception ex)
 				{
 					SmashLog.Message($"<error>[{unitTest.Name} Exception thrown!]</error>\n{ex}");
-					continue;
+					output.Add($"<error>Exception thrown!</error>\n{ex}");
 				}
 				subResults.Clear();
+				yield return null;
 			}
-			return success;
 		}
 
 		private static void DumpResults(List<string> results)
@@ -201,6 +205,21 @@ namespace SmashTools.Debugging
 			foreach (string result in results)
 			{
 				SmashLog.Message(result);
+			}
+		}
+
+		private static void Terminate()
+		{
+			RunningUnitTests = false;
+			TestType = UnitTest.TestType.None;
+			IsolatedTest = null;
+		}
+
+		private readonly struct TestCleanup : IDisposable
+		{
+			readonly void IDisposable.Dispose()
+			{
+				UnitTestManager.Terminate();
 			}
 		}
 	}

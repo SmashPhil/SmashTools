@@ -115,7 +115,7 @@ namespace SmashTools.Animations
 				Parameter = Transition.FromState.Layer.Controller.parameters.FirstOrDefault(param => param.Name == parameter);
 				if (Parameter == null)
 				{
-					Trace(false, $"Unable to resolve parameter \"{parameter}\" in condition. Removing...");
+					Log.Error($"Unable to resolve parameter \"{parameter}\" in condition. Removing...");
 					Transition.conditions.Remove(this);
 				}
 			}

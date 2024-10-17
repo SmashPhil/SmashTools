@@ -134,12 +134,15 @@ namespace SmashTools.Animations
 			{
 				Assert(propertyType > PropertyType.Invalid, "AnimationProperty has not been properly initialized");
 				FieldInfo = AccessTools.Field(Type, name);
-				Trace(FieldInfo != null, $"Unable to load {Type.Name}.{name} for animation.");
 				if (FieldInfo != null)
 				{
 					GenerateEvaluateCurveMethod();
 					GenerateSetValueMethod();
 					GenerateGetValueMethod();
+				}
+				else
+				{
+					Log.Error($"Unable to load {Type.Name}.{name} for animation.");
 				}
 			}
 			catch (Exception ex)

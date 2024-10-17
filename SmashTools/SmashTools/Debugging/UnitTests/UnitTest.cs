@@ -13,7 +13,7 @@ namespace SmashTools.Debugging
 
 		public abstract string Name { get; }
 
-		public abstract IEnumerable<Func<UTResult>> Execute();
+		public abstract IEnumerable<UTResult> Execute();
 
 		protected UTResult True => new UTResult(string.Empty, true);
 
