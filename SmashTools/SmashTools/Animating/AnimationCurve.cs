@@ -64,7 +64,7 @@ namespace SmashTools.Animations
 					return;
 				}
 			}
-			Add(frame, value); //Only adds if insert attempt failed
+			Add(frame, value); // Only add if insert attempt failed
 		}
 
 		public void Remove(int frame)
@@ -114,7 +114,7 @@ namespace SmashTools.Animations
 			{
 				return RightBound.value;
 			}
-			return Lerp(frame);
+			return CubicSpline(frame);
 		}
 
 		/// <summary>
@@ -123,20 +123,30 @@ namespace SmashTools.Animations
 		/// <remarks>See https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_007_Animations.html#cubic-spline-interpolation for reference</remarks>
 		private float CubicSpline(float frame)
 		{
-			int prev = -1;
-			int next = -1;
+			KeyFrame prev = KeyFrame.Invalid;
+			KeyFrame next = KeyFrame.Invalid;
 			for (int i = 0; i < points.Count; i++)
 			{
-				if (points[i].frame <= frame)
+				if (points[i].frame == frame)
 				{
-					prev = i;
-					next = i + 1;
+					return points[i].value;
 				}
+				if (points[i].frame > frame)
+				{
+					break;
+				}
+				Assert(!points.OutOfBounds(i + 1));
+				prev = points[i];
+				next = points[i + 1];
 			}
-			Assert(!points.OutOfBounds(next));
-			float deltaFrame = points[next].frame - points[prev].frame;
+			if (prev.outTangent == float.PositiveInfinity) return prev.value;
+			if (prev.outTangent == float.NegativeInfinity) return next.value;
+			if (next.inTangent == float.PositiveInfinity) return prev.value;
+			if (next.inTangent == float.NegativeInfinity) return next.value;
+
+			float deltaFrame = next.frame - prev.frame;
 			// (f - kt(i))
-			float t = frame - points[prev].frame;
+			float t = (frame - prev.frame) / deltaFrame;
 			// t^2
 			float t2 = t * t;
 			// t^3
@@ -145,10 +155,10 @@ namespace SmashTools.Animations
 			// k(1) * (3t^2 - 2t^3) +
 			// k'(0) * (t^3 - 2t^2 + t +
 			// k'(1) * (t^3 - t^2)
-			return points[prev].value * (2 * t3 - 3 * t2 + 1) +
-				   points[next].value * (3 * t2 - 2 * t3) +
-				   deltaFrame * points[prev].outTangent * (t3 - 2 * t2 + t) +
-				   deltaFrame * points[next].inTangent * (t3 - t2);
+			return prev.value * (2 * t3 - 3 * t2 + 1) +
+				   next.value * (3 * t2 - 2 * t3) +
+				   deltaFrame * prev.outTangent * (t3 - 2 * t2 + t) +
+				   deltaFrame * next.inTangent * (t3 - t2);
 		}
 
 		// Linear function for testing rendering in the animation editor

@@ -9,6 +9,8 @@ namespace SmashTools.Animations
 {
 	public readonly struct KeyFrame : IXmlExport, IComparable<KeyFrame>
 	{
+		private const float DefaultWeight = 0.25f;
+
 		public readonly int frame;
 		public readonly float value;
 		public readonly float inTangent;
@@ -17,29 +19,24 @@ namespace SmashTools.Animations
 		public readonly float outWeight;
 		public readonly WeightedMode weightedMode;
 
-		public KeyFrame(int frame, float value)
+		public KeyFrame(int frame, float value) 
+			: this(frame, value, 0, 0)
 		{
 			this.frame = frame;
 			this.value = value;
-			inTangent = 0;
-			outTangent = 0;
-			inWeight = 0.333f;
-			outWeight = 0.333f;
-			weightedMode = WeightedMode.None;
 		}
 
-		public KeyFrame(int frame, float value, float inTangent, float outTangent)
+		public KeyFrame(int frame, float value, float inTangent, float outTangent) 
+			: this(frame, value, inTangent, outTangent, DefaultWeight, DefaultWeight)
 		{
 			this.frame = frame;
 			this.value = value;
 			this.inTangent = inTangent;
 			this.outTangent = outTangent;
-			inWeight = 0.333f;
-			outWeight = 0.333f;
-			weightedMode = WeightedMode.None;
 		}
 
-		public KeyFrame(int frame, float value, float inTangent, float outTangent, float inWeight, float outWeight)
+		public KeyFrame(int frame, float value, float inTangent, float outTangent, float inWeight, float outWeight) 
+			: this(frame, value, inTangent, outTangent, inWeight, outWeight, WeightedMode.None)
 		{
 			this.frame = frame;
 			this.value = value;
@@ -47,7 +44,17 @@ namespace SmashTools.Animations
 			this.outTangent = outTangent;
 			this.inWeight = inWeight;
 			this.outWeight = outWeight;
-			weightedMode = WeightedMode.Both;
+		}
+
+		public KeyFrame(int frame, float value, float inTangent, float outTangent, float inWeight, float outWeight, WeightedMode weightedMode)
+		{
+			this.frame = frame;
+			this.value = value;
+			this.inTangent = inTangent;
+			this.outTangent = outTangent;
+			this.inWeight = inWeight;
+			this.outWeight = outWeight;
+			this.weightedMode = weightedMode;
 		}
 
 		public static KeyFrame Invalid => new KeyFrame(-1, 0);
@@ -60,7 +67,7 @@ namespace SmashTools.Animations
 		public override readonly string ToString()
 		{
 			return $"({frame},{Ext_Math.RoundTo(value, 0.0001f)}," +
-				$"{Ext_Math.RoundTo(inTangent, 0.0001f)},{Ext_Math.RoundTo(outTangent, 0.0001f)}" +
+				$"{Ext_Math.RoundTo(inTangent, 0.0001f)},{Ext_Math.RoundTo(outTangent, 0.0001f)}," +
 				$"{Ext_Math.RoundTo(inWeight, 0.0001f)},{Ext_Math.RoundTo(outWeight, 0.0001f)})";
 		}
 
