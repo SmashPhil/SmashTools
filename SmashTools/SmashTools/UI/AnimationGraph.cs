@@ -43,7 +43,7 @@ namespace SmashTools.Animations
 				}
 				Vector2 coordRight = GraphCoordToScreenPos(rect, new Vector2(x, y), xRange, spacing);
 				// Todo - Cull lines outside of visibleRect
-				Widgets.DrawLine(coordLeft, coordRight, color, 2);
+				Widgets.DrawLine(coordLeft, coordRight, color, 1);
 				coordLeft = coordRight;
 			}
 		}

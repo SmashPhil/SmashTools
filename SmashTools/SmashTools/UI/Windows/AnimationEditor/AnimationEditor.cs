@@ -355,20 +355,23 @@ namespace SmashTools.Animations
 			}
 		}
 
-		protected bool DragWindow(Rect rect, ref Vector2 dragPos, Action dragAction, Func<bool> isDragging, 
+		protected bool DragWindow(Rect rect, Action dragAction, Func<bool> isDragging, 
 			Action dragStarted = null, Action dragStopped = null, int button = 0)
 		{
 			if (!GUI.enabled)
 			{
 				return false;
 			}
-			if (Input.GetMouseButtonDown(button) && Mouse.IsOver(rect))
+			bool mouseDownEvent = Event.current != null && Event.current.type == EventType.MouseDown && Event.current.button == button;
+			if (mouseDownEvent && Mouse.IsOver(rect))
 			{
 				dragStarted?.Invoke();
-				dragPos = Input.mousePosition;
+				Event.current.Use();
 			}
 			if (isDragging())
 			{
+				bool mouseUpEvent = Event.current != null && Event.current.type == EventType.MouseUp && Event.current.button == button;
+
 				dragAction();
 				if (Input.GetMouseButton(button))
 				{
@@ -380,7 +383,7 @@ namespace SmashTools.Animations
 				else
 				{
 					dragStopped?.Invoke();
-					if (Input.GetMouseButtonUp(button))
+					if (mouseUpEvent)
 					{
 						Event.current.Use();
 					}
@@ -405,6 +408,13 @@ namespace SmashTools.Animations
 				dragRect = DragRect(groupPos - visibleRect.position, snapX: snapX, snapY: snapY, snapPaddingX: snapPaddingX, snapPaddingY: snapPaddingY);
 				Widgets.DrawBoxSolidWithOutline(dragRect, selectBoxFillColor, selectBoxBorderColor);
 
+				using (new TextBlock(GameFont.Small, TextAnchor.MiddleCenter))
+				{
+					Vector2 size = Text.CalcSize(dragRect.ToString());
+					Rect debugLabelRect = new Rect(dragRect.xMax - size.x, dragRect.yMax + size.y, size.x, size.y);
+					Widgets.DrawBoxSolid(debugLabelRect, new Color(0, 0, 0, 0.25f));
+					Widgets.Label(debugLabelRect, dragRect.ToString());
+				}
 				if (Input.GetMouseButton(0))
 				{
 					if (UnityGUIBugsFixer.MouseDrag(0))
