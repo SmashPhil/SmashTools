@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
-using UnityEngine;
 using HarmonyLib;
-using Verse;
 using RimWorld;
+using UnityEngine;
+using Verse;
 using static SmashTools.Dialog_GraphEditor;
-using Verse.Noise;
-using Verse.Sound;
 
 namespace SmashTools
 {
@@ -186,10 +180,10 @@ namespace SmashTools
 				ResetSize();
 				PatchOcclusionCulling();
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 

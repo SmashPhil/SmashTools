@@ -57,14 +57,14 @@ namespace SmashTools.Animations
 			conditions.Add(condition);
 		}
 
-		public void PostLoad()
+		internal void ResolveReferences()
 		{
 			if (!conditions.NullOrEmpty())
 			{
 				foreach (AnimationCondition condition in conditions)
 				{
 					condition.Transition = this;
-					condition.PostLoad();
+					condition.ResolveReferences();
 				}
 			}
 		}

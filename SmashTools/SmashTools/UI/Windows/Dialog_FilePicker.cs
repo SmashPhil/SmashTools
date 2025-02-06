@@ -80,7 +80,7 @@ namespace SmashTools
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			GUIState.Push();
+			using var textBlock = new TextBlock(Color.white);
 
 			Widgets.DrawMenuSection(inRect);
 
@@ -118,7 +118,6 @@ namespace SmashTools
 					Close();
 				}
 			}
-			GUIState.Pop();
 		}
 
 		private float DoRow(ref Rect rect, DirectoryEntry entry)

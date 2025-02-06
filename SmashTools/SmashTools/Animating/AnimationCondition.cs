@@ -4,11 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using RimWorld;
+using SmashTools;
 using SmashTools.Xml;
 using UnityEngine;
 using Verse;
 using Verse.Sound;
-using static SmashTools.Debug;
+using ParamType = SmashTools.Animations.AnimationParameter.ParamType;
 
 namespace SmashTools.Animations
 {
@@ -45,17 +46,48 @@ namespace SmashTools.Animations
 			}
 		}
 
+		public bool ConditionMet(float value)
+		{
+			switch (Parameter.Type)
+			{
+				case ParamType.Float:
+					{
+						return comparison switch
+						{
+							ComparisonType.GreaterThan => value > this.value,
+							_ => value < this.value,
+						};
+					}
+				case ParamType.Int:
+					{
+						return comparison switch
+						{
+							ComparisonType.GreaterThan => value > this.value,
+							ComparisonType.LessThan => value < this.value,
+							ComparisonType.Equal => value == this.value,
+							ComparisonType.NotEqual => value != this.value,
+							_ => throw new NotSupportedException($"Integer comparision type: {comparison}"),
+						};
+					}
+				case ParamType.Bool:
+				case ParamType.Trigger:
+					return value == this.value;
+			}
+			throw new NotImplementedException(Parameter.Type.ToString());
+		}
+
 		public void DrawConditionInput(Rect rect)
 		{
-			Rect dragHandleRect = new Rect(rect.x, rect.y, rect.height, rect.height);
+			Rect dragHandleRect = new Rect(rect.x, rect.y, 24, 24);
+
+
 			rect.xMin += dragHandleRect.width;
 
 			List<AnimationParameter> parameters = Transition.FromState.Layer.Controller.parameters;
 
-			Type paramType = Parameter.GetType();
-			if (paramType == typeof(FloatParam))
+			if (Parameter.Type == ParamType.Float)
 			{
-				Rect[] rects = rect.SplitVertically(3, new float[] { 0.4f, 0.3f, 0.3f }, 5);
+				Rect[] rects = rect.SplitVertically(3, new float[] { 0.4f, 0.3f, 0.3f }, UIDropdownPadding);
 				Rect parameterRect = rects[0];
 				Rect comparisonRect = rects[1];
 				Rect inputRect = rects[2];
@@ -90,21 +122,48 @@ namespace SmashTools.Animations
 				}
 				Widgets.TextFieldNumeric(parameterRect, ref value, ref inputBuffer, min: float.MinValue, float.MaxValue);
 			}
-			else if (paramType == typeof(IntParam))
+			else if (Parameter.Type == ParamType.Int)
 			{
 
 			}
-			else if (paramType == typeof(BoolParam))
+			else if (Parameter.Type == ParamType.Bool)
 			{
-
+				Rect checkboxRect = new Rect(rect.xMax - 24, rect.y, 24, 24);
+				Rect parameterRect = new Rect(rect)
+				{
+					width = rect.width - checkboxRect.width - UIDropdownPadding
+				};
+				
+				if (AnimationEditor.Dropdown(parameterRect, Parameter?.Name ?? string.Empty, null))
+				{
+					if (!parameters.NullOrEmpty())
+					{
+						List<FloatMenuOption> options = new List<FloatMenuOption>();
+						foreach (AnimationParameter parameter in parameters)
+						{
+							options.Add(new FloatMenuOption(parameter.Name, delegate ()
+							{
+								Parameter = parameter;
+							}));
+						}
+						Find.WindowStack.Add(new FloatMenu(options));
+					}
+					else
+					{
+						SoundDefOf.ClickReject.PlayOneShotOnCamera();
+					}
+				}
+				bool checkOn = value != 0;
+				UIElements.CheckboxButton(checkboxRect, ref checkOn);
+				value = checkOn ? 1 : 0;
 			}
-			else if (paramType == typeof(TriggerParam))
+			else if (Parameter.Type == ParamType.Trigger)
 			{
 
 			}
 			else
 			{
-				throw new ArgumentException(paramType?.FullName);
+				throw new ArgumentException(Parameter.Type.ToString());
 			}
 		}
 
@@ -121,7 +180,7 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void PostLoad()
+		internal void ResolveReferences()
 		{
 			ResolveParameter();
 		}
@@ -130,6 +189,7 @@ namespace SmashTools.Animations
 		{
 			XmlExporter.WriteObject(nameof(parameter), parameter);
 			XmlExporter.WriteObject(nameof(comparison), comparison);
+			XmlExporter.WriteObject(nameof(value), value);
 		}
 	}
 }

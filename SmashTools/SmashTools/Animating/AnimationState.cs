@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Verse;
 
 namespace SmashTools.Animations
@@ -37,7 +38,14 @@ namespace SmashTools.Animations
 
 		public AnimationLayer Layer { get; internal set; }
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void EvaluateFrame(IAnimator animator, int frame)
+		{
+			EvaluateFrame(clip, animator, frame);
+		}
+
+		// Strictly an internal setter for AnimationClipEditor
+		public static void EvaluateFrame(AnimationClip clip, IAnimator animator, int frame)
 		{
 			if (!clip || clip.properties == null) return;
 
@@ -61,14 +69,14 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void PostLoad()
+		internal void ResolveReferences()
 		{
 			if (!transitions.NullOrEmpty())
 			{
 				foreach (AnimationTransition transition in transitions)
 				{
 					transition.FromState = this;
-					transition.PostLoad();
+					transition.ResolveReferences();
 				}
 			}
 		}
@@ -78,7 +86,7 @@ namespace SmashTools.Animations
 			XmlExporter.WriteObject(nameof(name), name);
 			XmlExporter.WriteObject(nameof(guid), guid);
 			XmlExporter.WriteObject(nameof(position), position);
-			XmlExporter.WriteObject(nameof(clip), clip?.FilePath);
+			XmlExporter.WriteObject(nameof(clip), clip?.Guid);
 			XmlExporter.WriteObject(nameof(speed), speed);
 			XmlExporter.WriteObject(nameof(writeDefaults), writeDefaults);
 

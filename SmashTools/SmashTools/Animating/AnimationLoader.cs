@@ -1,17 +1,11 @@
-﻿using HarmonyLib;
-using RimWorld;
-using SmashTools.Xml;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
+using RimWorld;
+using SmashTools;
+using SmashTools.Xml;
 using Verse;
-using Verse.Sound;
-using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -29,8 +23,8 @@ namespace SmashTools.Animations
 
 		static AnimationLoader()
 		{
-			ParseHelper.Parsers<AnimationClip>.Register(ParseAnimationFile<AnimationClip>);
-			ParseHelper.Parsers<AnimationController>.Register(ParseAnimationFile<AnimationController>);
+			ParseHelper.Parsers<AnimationClip>.Register(ParseAnimationFileByGuid<AnimationClip>);
+			ParseHelper.Parsers<AnimationController>.Register(ParseAnimationFileByPath<AnimationController>);
 
 			LoadAll();
 		}
@@ -68,9 +62,19 @@ namespace SmashTools.Animations
 			return fileExtensions.TryGetValue(typeof(T), out string fileExt) && ext == fileExt;
 		}
 
-		private static T ParseAnimationFile<T>(string filePath) where T : IAnimationFile, new()
+		private static T ParseAnimationFileByPath<T>(string filePath) where T : IAnimationFile, new()
 		{
 			return LoadFile<T>(filePath);
+		}
+
+		private static T ParseAnimationFileByGuid<T>(string guidStr) where T : IAnimationFile, new()
+		{
+			if (Guid.TryParse(guidStr, out Guid guid) && Cache<T>.Get(guid, out T file))
+			{
+				return file;
+			}
+			Log.Error($"Unable to load animation file {guidStr}");
+			return default;
 		}
 
 		public static T LoadFile<T>(string filePath) where T : IAnimationFile, new()
@@ -92,7 +96,7 @@ namespace SmashTools.Animations
 			}
 			file.FilePath = filePath;
 			file.FileName = Path.GetFileNameWithoutExtension(filePath);
-			file.PostLoad();
+			file.ResolveReferences();
 			return file;
 		}
 
@@ -176,16 +180,27 @@ namespace SmashTools.Animations
 		internal static class Cache<T> where T : IAnimationFile
 		{
 			private static readonly Dictionary<string, T> files = new Dictionary<string, T>();
+			private static readonly Dictionary<Guid, T> filesByGuid = new Dictionary<Guid, T>();
 
 			public static int Count => files.Count;
 
 			public static List<T> GetAll() => files.Values.ToList();
 
-			public static void Add(string path, T file) => files[path] = file;
+			public static void Add(string path, T file)
+			{
+				files[path] = file;
+				filesByGuid[file.Guid] = file;
+			}
 
-			public static bool Get(string path, out T file) => files.TryGetValue(path, out file);
+			public static bool Get(string path, out T file)
+			{
+				return files.TryGetValue(path, out file);
+			}
 
-			public static bool Remove(string path) => files.Remove(path);
+			public static bool Get(Guid guid, out T file)
+			{
+				return filesByGuid.TryGetValue(guid, out file);
+			}
 		}
 	}
 }

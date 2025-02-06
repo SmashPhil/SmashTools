@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using Verse;
 
 namespace SmashTools.Performance
@@ -17,7 +15,7 @@ namespace SmashTools.Performance
 
 		private readonly ConcurrentQueue<AsyncAction> queue;
 
-		private bool shouldExit;
+		private bool shouldExit = false;
 
 		public delegate void UpdateLoop();
 
@@ -34,7 +32,9 @@ namespace SmashTools.Performance
 			thread.Start();
 		}
 
-		public bool InLongOperation { get; private set; }
+		public bool Terminated { get; private set; } = false;
+
+		public bool InLongOperation { get; private set; } = false;
 
 		public int QueueCount => queue.Count;
 
@@ -79,12 +79,13 @@ namespace SmashTools.Performance
 					asyncAction.ReturnToPool();
 				}
 				//Prioritize running queue over update loop
-				while (queue.Count == 0)
+				while (!shouldExit && queue.Count == 0)
 				{
 					update?.Invoke();
 					Thread.Sleep(10);
 				}
 			}
+			Terminated = true;
 		}
 
 		public enum ThreadType

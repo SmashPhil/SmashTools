@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
-using Verse;
-using UnityEngine;
-using System.Runtime.CompilerServices;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using static SmashTools.Debug;
+using System.Threading;
 
 namespace SmashTools.Performance
 {
@@ -20,8 +13,8 @@ namespace SmashTools.Performance
 #if DEBUG
 		/// <summary>
 		/// Tracks the amount of objects created from AsyncPool retrievals and how many are returned.
-		/// If more are returned than created, this will cause a memory leak.
 		/// </summary>
+		/// <remarks>If more are returned than created, this will cause a memory leak. Return only what has been retrieved via <see cref="Get"/></remarks>
 		private static int counter = 0;
 #endif
 
@@ -33,8 +26,8 @@ namespace SmashTools.Performance
 			{
 				item = new T();
 			}
-			//Decrement even for new object instantiations,
-			//this will allow it to even out to 0 when returned to bag
+			// Decrement even for new object instantiations, this will allow it
+			// to even out to 0 when returned to bag
 			ItemRemoved();
 			return item;
 		}
@@ -58,10 +51,10 @@ namespace SmashTools.Performance
 #if DEBUG
 			Interlocked.Increment(ref counter);
 
-			//More items have been borrowed than returned to bag.
-			//Should this ever increment over 0, it means more objects
-			//are being returned than retrieved. Aka Memory Leak
-			Assert(counter <= 0);
+			// More items have been borrowed than returned to bag.
+			// Should this ever increment over 0, it means more objects
+			// are being returned than retrieved.
+			Assert.IsTrue(counter <= 0);
 #endif
 		}
 

@@ -3,12 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Verse;
-using static SmashTools.Debug;
 
 namespace SmashTools
 {
 	public static class Ext_Rect
 	{
+		public static IEnumerable<IntVec3> Cardinals(this CellRect cellRect)
+		{
+			if (cellRect.IsEmpty) yield break;
+			if (cellRect.Area == 1) yield return new IntVec3(cellRect.minX, 0, cellRect.minZ);
+
+			if (cellRect.Width > 1)
+			{
+				yield return new IntVec3(cellRect.minX, 0, 0);
+				yield return new IntVec3(cellRect.maxX, 0, 0);
+			}
+			if (cellRect.Height > 1)
+			{
+				yield return new IntVec3(0, 0, cellRect.minZ);
+				yield return new IntVec3(0, 0, cellRect.maxZ);
+			}
+		}
+
 		public static IEnumerable<IntVec3> CellsNoOverlap(this CellRect cellRect, CellRect excludeRect)
 		{
 			HashSet<IntVec3> noOverlapCells = excludeRect.Cells.ToHashSet();
@@ -51,8 +67,8 @@ namespace SmashTools
 			{
 				return new Rect[] { rect };
 			}
-			Assert(splits == widthPercents.Length, "number of splits doesn't match widths array.");
-			Assert(Mathf.Approximately(widthPercents.Sum(), 1), "Total width percentage doesn't equal 100%");
+			Assert.IsTrue(splits == widthPercents.Length, "Number of splits doesn't match widths array.");
+			Assert.IsTrue(Mathf.Approximately(widthPercents.Sum(), 1), "Total width percentage doesn't equal 100%");
 
 			float totalBuffer = (splits - 1) * buffer;
 			float availableWidth = rect.width - totalBuffer;

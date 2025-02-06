@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using UnityEngine;
 using Verse;
 
@@ -17,8 +18,15 @@ namespace SmashTools.Animations
 
 		public int frameCount = DefaultFrameCount;
 
+		public bool loop = false;
+		public int cycleOffset;
+
+		private Guid guid;
+
 		public List<AnimationPropertyParent> properties = new List<AnimationPropertyParent>();
 		public List<AnimationEvent> events = new List<AnimationEvent>();
+
+		public Guid Guid => guid;
 
 		public string FilePath { get; set; }
 
@@ -113,16 +121,17 @@ namespace SmashTools.Animations
 			AnimationClip animationClip = new AnimationClip();
 			animationClip.FileName = AnimationLoader.GetAvailableName(AnimationLoader.Cache<AnimationClip>.GetAll()
 				.Select(clip => clip.FileName), DefaultAnimName);
+			animationClip.guid = Guid.NewGuid();
 			return animationClip;
 		}
 
-		void IAnimationFile.PostLoad()
+		void IAnimationFile.ResolveReferences()
 		{
 			if (!properties.NullOrEmpty())
 			{
 				foreach (AnimationPropertyParent propertyParent in properties)
 				{
-					propertyParent.PostLoad();
+					propertyParent.ResolveReferences();
 				}
 			}
 		}
@@ -132,6 +141,10 @@ namespace SmashTools.Animations
 			ValidateEventOrder();
 
 			XmlExporter.WriteObject(nameof(frameCount), frameCount);
+			XmlExporter.WriteObject(nameof(loop), loop);
+			XmlExporter.WriteObject(nameof(cycleOffset), cycleOffset);
+			XmlExporter.WriteObject(nameof(guid), guid);
+
 			XmlExporter.WriteCollection(nameof(properties), properties);
 			XmlExporter.WriteCollection(nameof(events), events);
 		}

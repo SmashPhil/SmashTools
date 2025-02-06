@@ -7,7 +7,6 @@ using RimWorld;
 using UnityEngine;
 using Verse;
 using Verse.Sound;
-using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -23,7 +22,8 @@ namespace SmashTools.Animations
 		private const float PropertyEntryHeight = 24;
 		private const float PropertyBtnWidth = 180;
 		private const float ParamCheckboxSize = 20;
-		private const float CurveNoWeightDist = 100;
+		private const float CurveNoWeightDist = 50;
+		private const float TangentSlopeMargin = 0.25f;
 
 		private const float FrameBarPadding = 40;
 		private const float FrameBarTickRenderingPadding = FrameBarPadding * 2 + 50;
@@ -140,7 +140,6 @@ namespace SmashTools.Animations
 				if (frame == value) return;
 
 				frame = value;
-				parent.animator.Manager.SetFrame(frame);
 			}
 		}
 
@@ -186,7 +185,7 @@ namespace SmashTools.Animations
 		{
 			get
 			{
-				Debug.Assert(tickInterval > 0);
+				Assert.IsTrue(tickInterval > 0);
 				return tickInterval;
 			}
 		}
@@ -195,7 +194,7 @@ namespace SmashTools.Animations
 		{
 			get
 			{
-				Debug.Assert(curveTickInterval > 0);
+				Assert.IsTrue(curveTickInterval > 0);
 				return curveTickInterval;
 			}
 		}
@@ -303,6 +302,11 @@ namespace SmashTools.Animations
 						Frame = 0;
 					}
 				}
+			}
+
+			if (previewWindow.IsOpen)
+			{
+				parent.animator.Manager.SetFrame(animation, frame);
 			}
 		}
 
@@ -716,14 +720,11 @@ namespace SmashTools.Animations
 
 		private void DrawPropertyEntries(Rect rect)
 		{
+			if (animation == null) return;
+
 			//Add KeyframeSize to keep keyframe bars aligned with their properties
 			Rect rowRect = new Rect(rect.x + 5, rect.y + KeyframeSize, rect.width - 10, PropertyEntryHeight);
 			Rect fullPropertyRect = rowRect;
-
-			if (animation == null)
-			{
-				return;
-			}
 
 			float collapseBtnSize = rowRect.height;
 			float propertyBtnSize = rowRect.height;
@@ -881,11 +882,6 @@ namespace SmashTools.Animations
 			}
 			rowRect.y += PropertyEntryHeight / 2; //Extra padding for add property btn
 
-			if (!Mouse.IsOver(fullPropertyRect) && Input.GetMouseButton(0))
-			{
-				selector.ClearSelectedProperties();
-			}
-
 			RemoveFlaggedProperties();
 
 			Rect propertyButtonRect = new Rect(rect.xMax / 2 - PropertyBtnWidth / 2, rowRect.yMax, PropertyBtnWidth, WidgetBarHeight);
@@ -894,6 +890,11 @@ namespace SmashTools.Animations
 				Vector2 propertyDropdownPosition = new Vector2(parent.windowRect.x + parent.EditorMargin + propertyButtonRect.xMax + 2,
 					parent.windowRect.y + parent.EditorMargin + propertyButtonRect.y + 1);
 				Find.WindowStack.Add(new Dialog_PropertySelect(parent.animator, animation, propertyDropdownPosition, propertyAdded: InjectKeyFramesNewProperty));
+			}
+
+			if (Input.GetMouseButton(0) && !Mouse.IsOver(fullPropertyRect) && !Mouse.IsOver(propertyButtonRect) && Mouse.IsOver(rect))
+			{
+				selector.ClearSelectedProperties();
 			}
 		}
 
@@ -1025,7 +1026,7 @@ namespace SmashTools.Animations
 
 						DrawDopesheetFrameTicks(dopeSheetRect);
 
-						Rect dragRect = DragRect(groupPos, snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding);
+						//Rect dragRect = DragRect(groupPos, snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding);
 
 						DrawKeyFrameMarkers(dopeSheetRect, out bool keyFrameSelected);
 
@@ -1034,8 +1035,8 @@ namespace SmashTools.Animations
 							SetDragPos(expandVertical: false);
 						}
 						if (dragging == DragItem.None && !keyFrameSelected &&
-							SelectionBox(groupPos, visibleRect, dopeSheetRect, out dragRect, 
-							snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight, snapPaddingX: FrameBarPadding))
+							SelectionBox(groupPos, visibleRect, dopeSheetRect, out Rect dragRect, 
+							snapX: FrameTickMarkSpacing, snapY: PropertyEntryHeight/*, snapPaddingX: FrameBarPadding*/))
 						{
 
 						}
@@ -1054,17 +1055,17 @@ namespace SmashTools.Animations
 						Rect curveFrameBarRect = new Rect(visibleRect.x, curveBackgroundRect.y, FrameBarPadding, curveBackgroundRect.height);
 						DrawAxis(curveFrameBarRect, yT, visibleRect);
 
-						Rect dragRect = DragRect(groupPos);
+						//Rect dragRect = DragRect(groupPos);
 
 						Rect curvesRect = new Rect(frameBarRect.x, 0, FrameBarWidth, curveBackgroundRect.height);
-						DrawCurves(curvesRect, visibleRect, rect.position - visibleRect.position, out bool keyFrameSelected);
+						DrawCurves(curvesRect, visibleRect, groupPos, out bool keyFrameSelected);
 						
 						if (DragWindow(curveBackgroundRect, DragItem.KeyFrameWindow, button: 2))
 						{
 							SetDragPos();
 						}
 						if (dragging == DragItem.None && !keyFrameSelected &&
-							SelectionBox(groupPos, visibleRect, curveBackgroundRect, out dragRect))
+							SelectionBox(groupPos, visibleRect, curveBackgroundRect, out Rect dragRect))
 						{
 
 						}
@@ -1731,7 +1732,7 @@ namespace SmashTools.Animations
 
 		private void DragHandle(Rect rect, Rect visibleRect, Vector2 groupPos, AnimationProperty property, ref bool keyFrameSelected)
 		{
-			using var textBlock = new TextBlock();
+			using var textBlock = new TextBlock(Color.white);
 			
 			bool resort = false;
 			List<KeyFrame> points = property.curve.points;
@@ -1819,15 +1820,14 @@ namespace SmashTools.Animations
 				//}
 			}
 
-			bool Matches(AnimationProperty property, int index)
-			{
-				return keyFrameDragger.Contains(property, index);
-			}
+			//bool Matches(AnimationProperty property, int index)
+			//{
+			//	return keyFrameDragger.Contains(property, index);
+			//}
 
 			void DrawTangentHandle(Rect texRect, Vector2 dragHandlePos, AnimationProperty property, int i, bool forward)
 			{
-				int index = forward ? i + 1 : i - 1;
-				KeyFrame keyFrame = points[index];
+				KeyFrame keyFrame = points[i];
 				float weight = forward ? keyFrame.outWeight : keyFrame.inWeight;
 				float tangent = forward ? keyFrame.outTangent : keyFrame.inTangent;
 				float value = property.curve[keyFrame.frame];
@@ -1849,7 +1849,7 @@ namespace SmashTools.Animations
 				float s2 = tangent * tangent;
 				// { d / sqrt(1 + s^2), (s * d) / sqrt(1 + s^2) }
 				float dx = distance / Mathf.Sqrt(1 + s2);
-				Vector2 tangentPos = new Vector2(dx + dragHandlePos.x, tangent * dx + dragHandlePos.y);
+				Vector2 tangentPos = new Vector2(dx + dragHandlePos.x, -tangent * dx + dragHandlePos.y);
 
 				Rect tangentRect = new Rect(tangentPos - texRect.size / 2, texRect.size);
 				Widgets.DrawLine(texRect.center, tangentRect.center, Color.white, 0.5f);
@@ -1857,10 +1857,11 @@ namespace SmashTools.Animations
 
 				if (DragWindow(tangentRect.ExpandedBy(2), OnTangentDrag, IsTangentDrag, dragStarted: OnStartTangentDrag, dragStopped: OnStopTangentDrag, button: 0))
 				{
-					float num = UI.MousePositionOnUI.y - texRect.center.y + groupPos.y;
-					float denom = UI.MousePositionOnUI.x - texRect.center.x + groupPos.x;
+					Vector2 mousePos = MouseUIPos(groupPos - visibleRect.position);
+					float num = mousePos.y - texRect.center.y;
+					float denom = mousePos.x - texRect.center.x;
 					float s;
-					if (denom == 0)
+					if (Mathf.Abs(denom) < TangentSlopeMargin)
 					{
 						s = num > 0 ? float.PositiveInfinity : float.NegativeInfinity;
 					}
@@ -1869,7 +1870,7 @@ namespace SmashTools.Animations
 						s = num / denom;
 					}
 					// Defaulted to non-broken free-smooth, will add presets later
-					points[index] = new KeyFrame(keyFrame.frame, keyFrame.value, s, s);
+					points[i] = new KeyFrame(keyFrame.frame, keyFrame.value, -s, -s);
 				}
 
 				void OnTangentDrag()

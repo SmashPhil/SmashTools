@@ -9,6 +9,7 @@ using UnityEngine;
 using Verse;
 using Verse.Noise;
 using Verse.Sound;
+using ParamType = SmashTools.Animations.AnimationParameter.ParamType;
 using StateType = SmashTools.Animations.AnimationState.StateType;
 
 namespace SmashTools.Animations
@@ -80,6 +81,7 @@ namespace SmashTools.Animations
 
 		// Input
 		private string motionSpeedBuffer;
+		private string cycleOffsetBuffer;
 
 		public AnimationControllerEditor(Dialog_AnimationEditor parent) : base(parent)
 		{
@@ -164,7 +166,7 @@ namespace SmashTools.Animations
 			if (parent.animLayer == null)
 			{
 				parent.animLayer = parent.controller.layers.FirstOrDefault();
-				Debug.Assert(parent.animLayer != null, "No layers found");
+				Assert.IsNotNull(parent.animLayer);
 			}
 
 			if (hideLeftWindow)
@@ -264,16 +266,38 @@ namespace SmashTools.Animations
 					onFilePicked: delegate (AnimationClip clip)
 					{
 						state.clip = clip;
-					}));
+					}, createItem: new Dialog_ItemDropdown<AnimationClip>.CreateItemButton("None", () => null)));
 			}
 			GUI.enabled = true;
 
+			// Speed
 			nameRect.y += WidgetBarHeight;
 			nameRect.SplitVertically(nameRect.width * 0.65f, out Rect speedLabelRect, out Rect speedInputRect);
-
-			// Speed
 			Widgets.Label(speedLabelRect, "ST_MotionSpeed".Translate());
 			Widgets.TextFieldNumeric(speedInputRect, ref state.speed, ref motionSpeedBuffer);
+
+			// Looping
+			nameRect.y += WidgetBarHeight;
+			
+			if (state.clip != null)
+			{
+				DoSeparatorHorizontal(nameRect.x, nameRect.y, nameRect.width);
+				nameRect.y += 2;
+
+				UIElements.CheckboxLabeled(nameRect, "ST_Loop".Translate(), ref state.clip.loop);
+				nameRect.y += WidgetBarHeight;
+
+				GUI.enabled = state.clip.loop;
+				using (new TextBlock(GUI.enabled ? Color.white : Widgets.InactiveColor))
+				{
+					Widgets.TextFieldNumericLabeled(nameRect, "ST_CycleOffset".Translate(), ref state.clip.cycleOffset, ref cycleOffsetBuffer);
+					nameRect.y += WidgetBarHeight;
+				}
+				GUI.enabled = true;
+
+				DoSeparatorHorizontal(nameRect.x, nameRect.y, nameRect.width);
+				nameRect.y += 2;
+			}
 
 			// Multiplier
 
@@ -290,32 +314,40 @@ namespace SmashTools.Animations
 
 			rect = rect.ContractedBy(4);
 
+			Rect fieldRect = new Rect(rect.x, rect.y + WidgetBarHeight, rect.width, WidgetBarHeight);
+
 			AnimationTransition transition = selector.SelectedTransitions.LastOrDefault();
 			if (transition.FromState.Type == StateType.Entry || transition.ToState.Type == StateType.Exit)
 			{
+				Widgets.Label(fieldRect, "ST_NoControllerParameters".Translate());
 				return;
 			}
 
-			Rect fieldRect = new Rect(rect.x, rect.y + WidgetBarHeight, rect.width, WidgetBarHeight);
-
-			// Speed
+			// Conditions
 			Widgets.Label(fieldRect, "ST_Conditions".Translate());
 			DoSeparatorHorizontal(fieldRect.x, fieldRect.yMax, fieldRect.width);
+
+			fieldRect.y += 5;
 
 			foreach (AnimationCondition condition in transition.conditions)
 			{
 				fieldRect.y += fieldRect.height;
-
 				condition.DrawConditionInput(fieldRect);
 			}
 
 			fieldRect.y += fieldRect.height;
 
-			Rect addConditionBtnRect = new Rect(fieldRect.xMax - WidgetBarHeight - 5, fieldRect.y, WidgetBarHeight, WidgetBarHeight);
-			if (Widgets.ButtonImage(addConditionBtnRect.ContractedBy(2), TexButton.Plus))
+			GUI.enabled = !parent.controller.parameters.NullOrEmpty();
 			{
-				transition.AddCondition();
+				Color baseColor = GUI.enabled ? Color.white : Widgets.InactiveColor;
+				Color mouseOverColor = GUI.enabled ? GenUI.MouseoverColor : Widgets.InactiveColor;
+				Rect addConditionBtnRect = new Rect(fieldRect.xMax - WidgetBarHeight - 5, fieldRect.y, WidgetBarHeight, WidgetBarHeight);
+				if (Widgets.ButtonImage(addConditionBtnRect.ContractedBy(2), TexButton.Plus, baseColor, mouseOverColor, GUI.enabled))
+				{
+					transition.AddCondition();
+				}
 			}
+			GUI.enabled = true;
 		}
 
 		private void DrawLayersTab(Rect rect)
@@ -405,28 +437,32 @@ namespace SmashTools.Animations
 			{
 				List<FloatMenuOption> options = new List<FloatMenuOption>
 				{
-					new FloatMenuOption(FloatParam.ParamName, delegate ()
+					new FloatMenuOption(ParamType.Float.ToString(), delegate ()
 					{
-						FloatParam param = new FloatParam();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {FloatParam.ParamName}");
+						AnimationParameter param = new AnimationParameter();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Float");
+						param.type = ParamType.Float;
 						parent.controller.parameters.Add(param);
 					}),
-					new FloatMenuOption(IntParam.ParamName, delegate ()
+					new FloatMenuOption(ParamType.Int.ToString(), delegate ()
 					{
-						IntParam param = new IntParam();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {IntParam.ParamName}");
+						AnimationParameter param = new AnimationParameter();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Int");
+						param.type = ParamType.Int;
 						parent.controller.parameters.Add(param);
 					}),
-					new FloatMenuOption(BoolParam.ParamName, delegate ()
+					new FloatMenuOption(ParamType.Bool.ToString(), delegate ()
 					{
-						BoolParam param = new BoolParam();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {BoolParam.ParamName}");
+						AnimationParameter param = new AnimationParameter();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Bool");
+						param.type = ParamType.Bool;
 						parent.controller.parameters.Add(param);
 					}),
-					new FloatMenuOption(TriggerParam.ParamName, delegate ()
+					new FloatMenuOption(ParamType.Trigger.ToString(), delegate ()
 					{
-						TriggerParam param = new TriggerParam();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), $"New {TriggerParam.ParamName}");
+						AnimationParameter param = new AnimationParameter();
+						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Trigger");
+						param.type = ParamType.Trigger;
 						parent.controller.parameters.Add(param);
 					}),
 				};
@@ -501,6 +537,9 @@ namespace SmashTools.Animations
 			}
 
 			Rect visibleRect = GetVisibleRect(editorRect, scrollPos, viewRect);
+			// +8 x direction as temporary measure to keep mouse + selection box aligned
+			// The selection box is actually being rendered 8 pixels to the left
+			Vector2 groupPos = rect.position + new Vector2(8, 0); 
 			UIElements.BeginScrollView(editorRect, ref scrollPos, viewRect, showHorizontalScrollbar: false, showVerticalScrollbar: false);
 			{
 				DrawBackgroundDark(viewRect);
@@ -533,7 +572,7 @@ namespace SmashTools.Animations
 					
 				if (!draggingState)
 				{
-					SelectionBox(rect.position, visibleRect, viewRect, out _);
+					SelectionBox(groupPos, visibleRect, viewRect, out _);
 				}
 			}
 			UIElements.EndScrollView(false);
@@ -791,18 +830,20 @@ namespace SmashTools.Animations
 				float rotation = Ext_Math.AngleToPoint(from.x, -from.y, to.x, -to.y) - 90;
 				bool clicked = false;
 
+				Rect buttonRect = new Rect(point.x - size / 2f, point.y - size / 2f, size, size);
 				Matrix4x4 matrix = GUI.matrix;
 				{
-					Rect buttonRect = new Rect(point.x - size / 2f, point.y - size / 2f, size, size);
 					UI.RotateAroundPivot(rotation, buttonRect.center);
 					GUI.color = color;
-					if (Widgets.ButtonImage(buttonRect, TexButton.Play))
-					{
-						clicked = true;
-					}
+					GUI.DrawTexture(buttonRect, TexButton.Play);
 					GUI.color = Color.white;
 				}
 				GUI.matrix = matrix;
+
+				if (Input.GetMouseButtonDown(0) && Mouse.IsOver(buttonRect))
+				{
+					clicked = true;
+				}
 
 				return clicked;
 			}
@@ -868,6 +909,7 @@ namespace SmashTools.Animations
 			void StartDragging()
 			{
 				dragPos = Input.mousePosition;
+				dragging = dragItem;
 			}
 
 			void StopDragging()

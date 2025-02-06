@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
-using SmashTools.Debugging;
 using SmashTools.Xml;
 using UnityEngine;
 using Verse;
-using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -102,7 +100,7 @@ namespace SmashTools.Animations
 			{
 				if (color == Color.clear)
 				{
-					color = UnityEngine.Random.ColorHSV(0, 1, 1, 1, 0.5f, 1);
+					color = UnityEngine.Random.ColorHSV(0f, 1, 1, 1, 0.75f, 1);
 				}
 				return color;
 			}
@@ -114,11 +112,11 @@ namespace SmashTools.Animations
 		{
 			AnimationProperty animationProperty = new AnimationProperty(animatorType, label, fieldInfo.Name, fieldInfo.DeclaringType, objectPath);
 			animationProperty.propertyType = PropertyTypeFrom(fieldInfo.FieldType);
-			animationProperty.PostLoad();
+			animationProperty.ResolveReferences();
 			return animationProperty;
 		}
 
-		internal void PostLoad()
+		internal void ResolveReferences()
 		{
 			// Unity types are not parsed by RimWorld so must first check cached string -> type map.
 			if (loadedType == null && !AnimationPropertyRegistry.CachedTypeByName(type, out loadedType))
@@ -132,7 +130,7 @@ namespace SmashTools.Animations
 			
 			try
 			{
-				Assert(propertyType > PropertyType.Invalid, "AnimationProperty has not been properly initialized");
+				Assert.IsTrue(propertyType > PropertyType.Invalid, "AnimationProperty has not been properly initialized");
 				FieldInfo = AccessTools.Field(Type, name);
 				if (FieldInfo != null)
 				{
@@ -154,9 +152,9 @@ namespace SmashTools.Animations
 		private void GenerateEvaluateCurveMethod()
 		{
 			FieldInfo curveField = AccessTools.Field(typeof(AnimationProperty), nameof(curve));
-			Assert(curveField != null, "AnimationProperty.curve is null");
+			Assert.IsNotNull(curveField);
 			MethodInfo curveFunction = AccessTools.Method(typeof(AnimationCurve), nameof(AnimationCurve.Function));
-			Assert(curveFunction != null, "AnimationCurve.Function is null");
+			Assert.IsNotNull(curveFunction);
 
 			DynamicMethod method = new DynamicMethod("EvaluateCurveForProperty", 
 				typeof(void), // Return type
@@ -196,19 +194,19 @@ namespace SmashTools.Animations
 			{
 				// (int)value
 				case PropertyType.Int:
-					Assert(FieldInfo.FieldType == typeof(int));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(int));
 					ilg.Emit(OpCodes.Conv_I4);
 					break;
 				// value != 0
 				case PropertyType.Bool:
-					Assert(FieldInfo.FieldType == typeof(bool));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(bool));
 					ilg.Emit(OpCodes.Ldc_R4, 0f);
 					ilg.Emit(OpCodes.Ceq);
 					ilg.Emit(OpCodes.Ldc_I4_0);
 					ilg.Emit(OpCodes.Ceq);
 					break;
 				default:
-					Assert(FieldInfo.FieldType == typeof(float));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(float));
 					break;
 			}
 			// parent.field = value
@@ -254,12 +252,12 @@ namespace SmashTools.Animations
 			{
 				// (int)value
 				case PropertyType.Int:
-					Assert(FieldInfo.FieldType == typeof(int));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(int));
 					ilg.Emit(OpCodes.Conv_R4);
 					break;
 				// value = bool ? 1f : 0f
 				case PropertyType.Bool:
-					Assert(FieldInfo.FieldType == typeof(bool));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(bool));
 					Label brTrueLabel = ilg.DefineLabel();
 					Label brLabel = ilg.DefineLabel();
 					ilg.Emit(OpCodes.Brtrue_S, brTrueLabel);
@@ -271,7 +269,7 @@ namespace SmashTools.Animations
 					ilg.Emit(OpCodes.Conv_R4);
 					break;
 				default:
-					Assert(FieldInfo.FieldType == typeof(float));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(float));
 					break;
 			}
 
@@ -316,19 +314,19 @@ namespace SmashTools.Animations
 			{
 				// (int)value
 				case PropertyType.Int:
-					Assert(FieldInfo.FieldType == typeof(int));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(int));
 					ilg.Emit(OpCodes.Conv_I4);
 					break;
 				// value != 0
 				case PropertyType.Bool:
-					Assert(FieldInfo.FieldType == typeof(bool));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(bool));
 					ilg.Emit(OpCodes.Ldc_R4, 0f);
 					ilg.Emit(OpCodes.Ceq);
 					ilg.Emit(OpCodes.Ldc_I4_0);
 					ilg.Emit(OpCodes.Ceq);
 					break;
 				default:
-					Assert(FieldInfo.FieldType == typeof(float));
+					Assert.IsTrue(FieldInfo.FieldType == typeof(float));
 					break;
 			}
 			// parent.field = value

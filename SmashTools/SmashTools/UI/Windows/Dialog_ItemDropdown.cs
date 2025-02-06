@@ -117,12 +117,10 @@ namespace SmashTools
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			GUIState.Push();
-
 			Widgets.DrawMenuSection(inRect);
 
 			inRect = inRect.ContractedBy(Padding);
-			Text.Font = GameFont.Small;
+			using var textFont = new TextBlock(GameFont.Small);
 
 			Rect rowRect = new Rect(inRect.x, inRect.y, inRect.width, EntryHeight);
 			if (ShowSearchBox)
@@ -196,10 +194,7 @@ namespace SmashTools
 					Widgets.DrawBoxSolid(createItemBtnRect, highlightColor);
 				}
 			}
-
 			Widgets.EndScrollView();
-
-			GUIState.Pop();
 		}
 
 		public class CreateItemButton

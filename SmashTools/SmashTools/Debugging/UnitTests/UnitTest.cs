@@ -13,18 +13,28 @@ namespace SmashTools.Debugging
 
 		public abstract string Name { get; }
 
+		public virtual ExecutionPriority Priority => ExecutionPriority.Normal;
+
 		public abstract IEnumerable<UTResult> Execute();
 
 		protected UTResult True => new UTResult(string.Empty, true);
 
 		protected UTResult False => new UTResult(string.Empty, false);
 
-		[Flags]
 		public enum TestType
 		{
-			None = 0,
-			MainMenu = 1 << 0,
-			GameLoaded = 1 << 1,
+			Disabled = 0,
+			MainMenu,
+			GameLoaded,
+		}
+
+		public enum ExecutionPriority : int
+		{
+			Last = -2,
+			Low = -1,
+			Normal = 0,
+			High = 1,
+			First = 2
 		}
 	}
 

@@ -29,11 +29,8 @@ namespace SmashTools
 		{
 			get
 			{
-				lock (this)
-				{
-					int realIndex = GenMath.PositiveMod(tail + index, Length);
-					return array[realIndex];
-				}
+				int realIndex = GenMath.PositiveMod(tail + index, Length);
+				return array[realIndex];
 			}
 		}
 
@@ -43,38 +40,29 @@ namespace SmashTools
 		/// <returns>Dropped item</returns>
 		public T Push(T item)
 		{
-			lock (this)
+			T dropped = array[head];
+			array[head] = item;
+
+			head = GenMath.PositiveMod(++head, Length);
+			if (head == tail)
 			{
-				T dropped = array[head];
-				array[head] = item;
-
-				head = GenMath.PositiveMod(++head, Length);
-				if (head == tail)
-				{
-					tail = GenMath.PositiveMod(++tail, Length);
-				}
-
-				return dropped;
+				tail = GenMath.PositiveMod(++tail, Length);
 			}
+
+			return dropped;
 		}
 
 		public void RemoveAt(int index)
 		{
-			lock (this)
-			{
-				int realIndex = GenMath.PositiveMod(tail + index, Length);
-				array[realIndex] = default;
-			}
+			int realIndex = GenMath.PositiveMod(tail + index, Length);
+			array[realIndex] = default;
 		}
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			lock (this)
+			for (int i = head; i != tail; i = GenMath.PositiveMod(++i, Length))
 			{
-				for (int i = head; i != tail; i = GenMath.PositiveMod(++i, Length))
-				{
-					yield return array[i];
-				}
+				yield return array[i];
 			}
 		}
 

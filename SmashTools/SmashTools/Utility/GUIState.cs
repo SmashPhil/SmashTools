@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using Verse;
 
@@ -41,28 +42,18 @@ namespace SmashTools
 			stack.Pop();
 		}
 
-		[Obsolete("Use TextBlock instead.")]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void Disable()
 		{
-			if (Empty)
-			{
-				SmashLog.Error($"Attempting to disable GUI without pushing values.");
-				return;
-			}
 			GUI.enabled = false;
 			GUI.color = UIElements.InactiveColor;
 		}
 
-		[Obsolete("Use TextBlock instead.")]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void Enable()
 		{
-			if (Empty)
-			{
-				SmashLog.Error($"Attempting to enable GUI without pushing values.");
-				return;
-			}
 			GUI.enabled = true;
-			GUI.color = stack.Peek().color;
+			GUI.color = Color.white;
 		}
 
 		private struct StateValues

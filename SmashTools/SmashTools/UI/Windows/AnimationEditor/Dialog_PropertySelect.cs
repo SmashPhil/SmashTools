@@ -100,54 +100,44 @@ namespace SmashTools.Animations
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			GUIState.Push();
-			try
+			Widgets.DrawBoxSolidWithOutline(inRect, backgroundColor, backgroundOutlineColor, outlineThickness: 2);
+
+			using var textBlock = new TextBlock(GameFont.Small, TextAnchor.MiddleLeft, false);
+
+			Rect rowRect = new Rect(inRect.x, inRect.y, inRect.width, EntryHeight).ContractedBy(3);
+			for (int i = 0; i < properties.Count; i++)
 			{
-				Widgets.DrawBoxSolidWithOutline(inRect, backgroundColor, backgroundOutlineColor, outlineThickness: 2);
+				Type parentType = propertyListOrder[i];
+				bool expanded = expandedContainers[i];
+				rowRect.SplitVertically(EntryHeight, out Rect checkboxRect, out Rect fileLabelRect);
 
-				Text.Font = GameFont.Small;
-				Text.WordWrap = false;
-				Text.Anchor = TextAnchor.MiddleLeft;
-
-				Rect rowRect = new Rect(inRect.x, inRect.y, inRect.width, EntryHeight).ContractedBy(3);
-				for (int i = 0; i < properties.Count; i++)
+				if (UIElements.CollapseButton(checkboxRect.ContractedBy(2), ref expanded))
 				{
-					Type parentType = propertyListOrder[i];
-					bool expanded = expandedContainers[i];
-					rowRect.SplitVertically(EntryHeight, out Rect checkboxRect, out Rect fileLabelRect);
+					expandedContainers[i] = expanded;
+					SoundDefOf.Click.PlayOneShotOnCamera(null);
+				}
 
-					if (UIElements.CollapseButton(checkboxRect.ContractedBy(2), ref expanded))
+				Widgets.Label(fileLabelRect, parentType.Name);
+
+				if (expanded)
+				{
+					List<AnimationPropertyParent> containers = properties[parentType];
+					foreach (AnimationPropertyParent container in containers)
 					{
-						expandedContainers[i] = expanded;
-						SoundDefOf.Click.PlayOneShotOnCamera(null);
-					}
-
-					Widgets.Label(fileLabelRect, parentType.Name);
-
-					if (expanded)
-					{
-						List<AnimationPropertyParent> containers = properties[parentType];
-						foreach (AnimationPropertyParent container in containers)
+						rowRect.y += rowRect.height;
+						Rect propertyParentRect = new Rect(fileLabelRect.x + SubPropertyPadding, rowRect.y, fileLabelRect.width - SubPropertyPadding, fileLabelRect.height);
+						Widgets.Label(propertyParentRect, container.Label);
+						if (AddPropertyButton(propertyParentRect))
 						{
-							rowRect.y += rowRect.height;
-							Rect propertyParentRect = new Rect(fileLabelRect.x + SubPropertyPadding, rowRect.y, fileLabelRect.width - SubPropertyPadding, fileLabelRect.height);
-							Widgets.Label(propertyParentRect, container.Label);
-							if (AddPropertyButton(propertyParentRect))
-							{
-								animation.properties.Add(container);
-								propertyAdded?.Invoke(container);
-								Close();
-								break;
-							}
+							animation.properties.Add(container);
+							propertyAdded?.Invoke(container);
+							Close();
+							break;
 						}
 					}
-
-					rowRect.y += rowRect.height;
 				}
-			}
-			finally
-			{
-				GUIState.Pop();
+
+				rowRect.y += rowRect.height;
 			}
 		}
 

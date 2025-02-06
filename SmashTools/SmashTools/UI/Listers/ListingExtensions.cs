@@ -114,7 +114,7 @@ namespace SmashTools
 
 		public static void EnumSliderLabeled<T>(this Listing lister, string label, ref T value, string tooltip, string disabledTooltip, Func<T, string> valueNameGetter = null) where T : Enum
 		{
-			using var textBlock = new TextBlock();
+			using var textBlock = new TextBlock(Color.white);
 			try
 			{
 				int[] enumValues = Enum.GetValues(typeof(T)).Cast<int>().ToArray();
@@ -290,7 +290,7 @@ namespace SmashTools
 
 		public static bool ListItemSelectable(this Listing lister, string header, Color hoverColor, bool selected = false, bool active = true, string disabledTooltip = null)
 		{
-			using var textBlock = new TextBlock();
+			using var textBlock = new TextBlock(Color.white);
 			Rect rect = lister.GetRect(20f);
 
 			if (selected)
@@ -325,7 +325,7 @@ namespace SmashTools
 
 		public static bool ListItemButton(this Listing lister, string header, string buttonLabel, Color highlightColor, float buttonWidth = 30f, bool background = true, bool active = true)
 		{
-			using var textBlock = new TextBlock(Text.Anchor = TextAnchor.MiddleLeft);
+			using var textBlock = new TextBlock(TextAnchor.MiddleLeft);
 			Rect rect = lister.GetRect(20f);
 			Rect buttonRect = new Rect(rect.width - buttonWidth, rect.y, buttonWidth, rect.height);
 

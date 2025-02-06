@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using SmashTools;
 using SmashTools.Xml;
-using static SmashTools.Debug;
+using Verse;
 
 namespace SmashTools.Animations
 {
@@ -10,8 +12,12 @@ namespace SmashTools.Animations
 		public const string DefaultControllerName = "New-Controller";
 		public const string FileExtension = ".ctlr";
 
+		private Guid guid;
+
 		public List<AnimationParameter> parameters = new List<AnimationParameter>();
 		public List<AnimationLayer> layers = new List<AnimationLayer>();
+
+		public Guid Guid => guid;
 
 		public string FilePath { get; set; }
 
@@ -24,22 +30,27 @@ namespace SmashTools.Animations
 			name = AnimationLoader.GetAvailableName(layers.Select(layer => layer.name), name);
 			AnimationLayer layer = AnimationLayer.CreateLayer(name);
 			layer.Controller = this;
-			Assert(layer != null, "Layer null");
+			Assert.IsNotNull(layer);
 			layers.Add(layer);
 		}
 
 		void IXmlExport.Export()
 		{
-			XmlExporter.WriteCollection(nameof(parameters), parameters);
+			XmlExporter.WriteObject(nameof(guid), guid);
+			XmlExporter.WriteCollection(nameof(parameters), parameters, attributeGetter: (parameter) =>
+			{
+				string typeName = GenTypes.GetTypeNameWithoutIgnoredNamespaces(parameter.GetType());
+				return ("Class", typeName);
+			});
 			XmlExporter.WriteCollection(nameof(layers), layers);
 		}
 
-		void IAnimationFile.PostLoad()
+		void IAnimationFile.ResolveReferences()
 		{
 			foreach (AnimationLayer layer in layers)
 			{
 				layer.Controller = this;
-				layer.PostLoad();
+				layer.ResolveReferences();
 			}
 		}
 
@@ -53,6 +64,7 @@ namespace SmashTools.Animations
 			AnimationController controller = new AnimationController();
 			controller.FileName = DefaultControllerName;
 			controller.AddLayer("Base Layer");
+			controller.guid = Guid.NewGuid();
 			return controller;
 		}
 	}

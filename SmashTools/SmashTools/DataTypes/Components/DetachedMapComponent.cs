@@ -13,14 +13,14 @@ namespace SmashTools
 	{
 		protected readonly Map map;
 
-		internal static Dictionary<Map, SelfOrderingList<DetachedMapComponent>> mapMapping = new Dictionary<Map, SelfOrderingList<DetachedMapComponent>>();
+		internal static Dictionary<Map, SelfOrderingList<DetachedMapComponent>> mapComps = new Dictionary<Map, SelfOrderingList<DetachedMapComponent>>();
 
 		private static HashSet<Type> usedComponentTypes = new HashSet<Type>();
 
 		public DetachedMapComponent(Map map)
 		{
 			this.map = map;
-			mapMapping[map].Add(this);
+			mapComps[map].Add(this);
 		}
 
 		protected virtual void PreMapRemoval()
@@ -29,7 +29,7 @@ namespace SmashTools
 
 		internal static void InstantiateAllMapComponents(Map __instance)
 		{
-			mapMapping[__instance] = new SelfOrderingList<DetachedMapComponent>();
+			mapComps[__instance] = new SelfOrderingList<DetachedMapComponent>();
 			usedComponentTypes.Clear();
 			foreach (Type type in typeof(DetachedMapComponent).AllSubclassesNonAbstract())
 			{
@@ -38,7 +38,7 @@ namespace SmashTools
 					try
 					{
 						DetachedMapComponent mapComponent = (DetachedMapComponent)Activator.CreateInstance(type, new object[] { __instance });
-						mapMapping[__instance].Add(mapComponent);
+						mapComps[__instance].Add(mapComponent);
 						usedComponentTypes.Add(type);
 					}
 					catch (Exception ex)
@@ -52,11 +52,11 @@ namespace SmashTools
 
 		internal static void ClearComponentsFromCache(Map map)
 		{
-			foreach (DetachedMapComponent mapComponent in mapMapping[map])
+			foreach (DetachedMapComponent mapComponent in mapComps[map])
 			{
 				mapComponent.PreMapRemoval();
 			}
-			mapMapping.Remove(map);
+			mapComps.Remove(map);
 		}
 	}
 }

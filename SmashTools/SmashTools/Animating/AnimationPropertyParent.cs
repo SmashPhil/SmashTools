@@ -103,17 +103,17 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		internal void PostLoad()
+		internal void ResolveReferences()
 		{
 			if (Single != null)
 			{
-				Single.PostLoad();
+				Single.ResolveReferences();
 			}
 			else if (!Children.NullOrEmpty())
 			{
 				foreach (AnimationProperty property in Children)
 				{
-					property.PostLoad();
+					property.ResolveReferences();
 				}
 			}
 		}

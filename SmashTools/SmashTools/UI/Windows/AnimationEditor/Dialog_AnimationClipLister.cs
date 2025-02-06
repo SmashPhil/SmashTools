@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
-using Verse;
-using RimWorld;
 using UnityEngine;
-using static SmashTools.Dialog_ItemDropdown<SmashTools.Animations.AnimationClip>.CreateItemButton;
 
 namespace SmashTools.Animations
 {

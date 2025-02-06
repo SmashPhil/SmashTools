@@ -11,15 +11,27 @@ using Verse.Sound;
 
 namespace SmashTools.Animations
 {
-	public abstract class AnimationParameter : IXmlExport
+	public class AnimationParameter : IXmlExport
 	{
+		private const float ContractedBy = 2;
+
+		internal int id; // cached HashCode of name
 		private string name;
+
+		private float value;
+		internal ParamType type;
+
+		private string inputBuffer;
 
 		/// <summary>
 		/// name edit event
 		/// </summary>
 		/// <remarks>params: (string)oldName, (string)newName</remarks>
 		public event Action<string, string> OnNameChanged;
+
+		public float Value => value;
+
+		public ParamType Type => type;
 
 		public string Name
 		{
@@ -33,64 +45,52 @@ namespace SmashTools.Animations
 
 				OnNameChanged?.Invoke(name, value);
 				name = value;
+				id = name.GetHashCodeSafe();
 			}
 		}
-		public abstract void DrawInput(Rect rect);
 
-		void IXmlExport.Export()
+		public void DrawInput(Rect rect)
 		{
-			XmlExporter.WriteElement(nameof(name), name);
+			switch (type)
+			{
+				case ParamType.Float:
+					DrawFloatInput(rect);
+					break;
+				case ParamType.Int:
+					DrawIntInput(rect);
+					break;
+				case ParamType.Bool:
+					DrawBoolInput(rect);
+					break;
+				case ParamType.Trigger:
+					DrawTriggerInput(rect);
+					break;
+				default:
+					throw new NotImplementedException(nameof(ParamType));
+			}
 		}
-	}
 
-	public class FloatParam : AnimationParameter
-	{
-		public const string ParamName = "Float";
-
-		public float value;
-
-		private string inputBuffer;
-
-		public override void DrawInput(Rect rect)
+		private void DrawFloatInput(Rect rect)
 		{
 			Widgets.TextFieldNumeric(rect, ref value, ref inputBuffer, min: float.MinValue, max: float.MaxValue);
 		}
-	}
 
-	public class IntParam : AnimationParameter
-	{
-		public const string ParamName = "Int";
-
-		public int value;
-
-		private string inputBuffer;
-
-		public override void DrawInput(Rect rect)
+		private void DrawIntInput(Rect rect)
 		{
 			Widgets.TextFieldNumeric(rect, ref value, ref inputBuffer, min: int.MinValue, max: int.MaxValue);
 		}
-	}
 
-	public class BoolParam : AnimationParameter
-	{
-		public const string ParamName = "Bool";
-		public const float ContractedBy = 2;
-
-		public bool value;
-
-		public override void DrawInput(Rect rect)
+		private void DrawBoolInput(Rect rect)
 		{
-			Widgets.Checkbox(rect.position, ref value, size: rect.height - ContractedBy * 2);
+			bool checkOn = value != 0;
+			Widgets.Checkbox(rect.position, ref checkOn, size: rect.height - ContractedBy * 2);
+			value = checkOn ? 1 : 0;
 		}
-	}
 
-	public class TriggerParam : BoolParam
-	{
-		public new const string ParamName = "Trigger";
-
-		public override void DrawInput(Rect rect)
+		private void DrawTriggerInput(Rect rect)
 		{
-			Texture2D buttonTex = value ? Widgets.RadioButOnTex : UIData.RadioButOffTex;
+			bool checkOn = value != 0;
+			Texture2D buttonTex = checkOn ? Widgets.RadioButOnTex : UIData.RadioButOffTex;
 			Rect buttonRect = new Rect(rect.x, rect.y, rect.height, rect.height).ContractedBy(ContractedBy);
 
 			Color color = GUI.color;
@@ -101,10 +101,31 @@ namespace SmashTools.Animations
 			GUI.DrawTexture(buttonRect, buttonTex);
 			if (Widgets.ButtonInvisible(buttonRect))
 			{
-				value = !value;
+				checkOn = !checkOn;
+				value = checkOn ? 1 : 0;
 				SoundDefOf.Tick_Tiny.PlayOneShotOnCamera(null);
 			}
 			GUI.color = color;
+		}
+
+		void IXmlExport.Export()
+		{
+			XmlExporter.WriteElement(nameof(name), name);
+			XmlExporter.WriteObject(nameof(type), type);
+			XmlExporter.WriteObject(nameof(value), value);
+		}
+
+		public void PostLoad()
+		{
+			id = name.GetHashCodeSafe();
+		}
+
+		public enum ParamType
+		{
+			Float,
+			Int,
+			Bool,
+			Trigger,
 		}
 	}
 }

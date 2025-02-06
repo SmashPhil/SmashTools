@@ -24,20 +24,16 @@ namespace SmashTools
 
 		public static string ToHex(this Color c) => $"#{ColorUtility.ToHtmlStringRGB(c)}";
 
-		public static void Header(Rect rect, string header, Color highlight, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
+		public static void Header(Rect rect, string header, Color highlightColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
 		{
-			GUIState.Push();
+			using (new TextBlock(fontSize, anchor))
 			{
-				GUI.color = highlight;
-				GUI.DrawTexture(rect, BaseContent.WhiteTex);
-
-				GUIState.Reset();
-
-				Text.Font = fontSize;
-				Text.Anchor = anchor;
+				using (new TextBlock(highlightColor))
+				{
+					GUI.DrawTexture(rect, BaseContent.WhiteTex);
+				}
 				Widgets.Label(rect, header);
 			}
-			GUIState.Pop();
 		}
 
 		public static void CheckboxDraw(float x, float y, bool active, bool disabled, float size = 24f, Texture2D texChecked = null, Texture2D texUnchecked = null)
@@ -72,31 +68,32 @@ namespace SmashTools
 
 		public static bool CheckboxLabeled(Rect rect, string label, ref bool checkOn, bool disabled = false, Texture2D texChecked = null, Texture2D texUnchecked = null, TextAnchor labelAnchor = TextAnchor.MiddleLeft)
 		{
-			bool clicked = false;
-			GUIState.Push();
+			Rect labelRect = new Rect(rect)
 			{
-				Text.Anchor = labelAnchor;
-				Rect labelRect = new Rect(rect)
+				width = rect.width - 24
+			};
+			Widgets.Label(labelRect, label);
+			return CheckboxButton(rect, ref checkOn, disabled: disabled);
+		}
+
+		/// <returns>Checkbox was clicked</returns>
+		public static bool CheckboxButton(Rect rect, ref bool value, bool disabled = false)
+		{
+			bool clicked = false;
+			if (!disabled && Widgets.ButtonInvisible(rect, true))
+			{
+				value = !value;
+				clicked = true;
+				if (value)
 				{
-					width = rect.width - 24
-				};
-				Widgets.Label(labelRect, label);
-				if (!disabled && Widgets.ButtonInvisible(rect, true))
-				{
-					checkOn = !checkOn;
-					clicked = true;
-					if (checkOn)
-					{
-						SoundDefOf.Checkbox_TurnedOn.PlayOneShotOnCamera(null);
-					}
-					else
-					{
-						SoundDefOf.Checkbox_TurnedOff.PlayOneShotOnCamera(null);
-					}
+					SoundDefOf.Checkbox_TurnedOn.PlayOneShotOnCamera(null);
 				}
-				CheckboxDraw(rect.x + rect.width - 24f, rect.y, checkOn, disabled, 20, null, null);
+				else
+				{
+					SoundDefOf.Checkbox_TurnedOff.PlayOneShotOnCamera(null);
+				}
 			}
-			GUIState.Pop();
+			CheckboxDraw(rect.x + rect.width - 24f, rect.y, value, disabled, 20, null, null);
 			return clicked;
 		}
 
@@ -124,7 +121,7 @@ namespace SmashTools
 		public static bool ReverseRadioButton(Rect rect, string label, bool enabled)
 		{
 			bool flag;
-			GUIState.Push();
+			using (new TextBlock(Color.white))
 			{
 				Text.Anchor = TextAnchor.MiddleLeft;
 				flag = Widgets.ButtonInvisible(rect, true);
@@ -136,15 +133,13 @@ namespace SmashTools
 				Widgets.Label(labelRect, label);
 				RadioButtonDraw(rect.x, rect.y + rect.height / 2f - 12f, enabled);
 			}
-			GUIState.Pop();
 			return flag;
 		}
 
 		public static void RadioButtonDraw(float x, float y, bool chosen)
 		{
-			GUIState.Push();
+			using (new TextBlock(Color.white))
 			{
-				GUI.color = Color.white;
 				Texture2D image;
 				if (chosen)
 				{
@@ -156,7 +151,6 @@ namespace SmashTools
 				}
 				GUI.DrawTexture(new Rect(x, y, 24f, 24f), image);
 			}
-			GUIState.Pop();
 		}
 
 		public static void Vector2Box(Rect rect, string label, ref Vector2 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
@@ -186,7 +180,7 @@ namespace SmashTools
 			float x = leftBox.value;
 			float y = rightBox.value;
 
-			GUIState.Push();
+			using (new TextBlock(Color.white))
 			{
 				if (!tooltip.NullOrEmpty())
 				{
@@ -205,7 +199,6 @@ namespace SmashTools
 				NumericBox(rects[0], ref x, leftBox.label, string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
 				NumericBox(rects[1], ref y, rightBox.label, string.Empty, string.Empty, float.MinValue, float.MaxValue, subLabelProportions);
 			}
-			GUIState.Pop();
 			return (x, y);
 		}
 
@@ -216,7 +209,7 @@ namespace SmashTools
 
 		public static Vector3 Vector3Box(Rect rect, string label, Vector3 value, string tooltip = null, float labelProportion = 0.45f, float subLabelProportions = 0.15f, float buffer = 0)
 		{
-			GUIState.Push();
+			using (new TextBlock(Color.white))
 			{
 				float x = value.x;
 				float y = value.y;
@@ -239,7 +232,6 @@ namespace SmashTools
 				value.y = y;
 				value.z = z;
 			}
-			GUIState.Pop();
 			return value;
 		}
 
@@ -259,7 +251,7 @@ namespace SmashTools
 		public static T NumericBox<T>(Rect rect, T value, ref string buffer, string label, string tooltip, string disabledTooltip, 
 			float min = int.MinValue, float max = int.MaxValue, float labelProportion = 0.45f) where T : struct
 		{
-			GUIState.Push();
+			using (new TextBlock(Color.white))
 			{
 				float proportion = Mathf.Clamp01(labelProportion);
 				bool disabled = !disabledTooltip.NullOrEmpty();
@@ -272,7 +264,8 @@ namespace SmashTools
 				bool mouseOver = Mouse.IsOver(rect);
 				if (disabled)
 				{
-					GUIState.Disable();
+					GUI.enabled = false;
+					GUI.color = InactiveColor;
 					TooltipHandler.TipRegion(rect, disabledTooltip);
 				}
 				else if (!tooltip.NullOrEmpty())
@@ -287,9 +280,8 @@ namespace SmashTools
 
 				Text.Anchor = TextAnchor.MiddleRight;
 				Widgets.TextFieldNumeric(rectRight, ref value, ref buffer, min, max);
+				GUI.enabled = true;
 			}
-			GUIState.Pop();
-
 			return value;
 		}
 
@@ -302,25 +294,20 @@ namespace SmashTools
 
 		public static void DrawLabel(Rect rect, string label, Color highlight, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft)
 		{
-			GUIState.Push();
+			using (new TextBlock(fontSize, highlight))
 			{
-				Text.Font = fontSize;
-				GUI.color = highlight;
 				GUI.DrawTexture(rect, BaseContent.WhiteTex);
-				GUI.color = textColor;
-
-				Text.Anchor = anchor;
+			}
+			using (new TextBlock(anchor, textColor))
+			{
 				Widgets.Label(rect, label);
 			}
-			GUIState.Pop();
 		}
 
 		public static bool ClickableLabel(Rect rect, string label, Color mouseOver, Color textColor, GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft, Color? clickColor = null)
 		{
-			GUIState.Push();
+			using (new TextBlock(fontSize, anchor))
 			{
-				Text.Font = fontSize;
-				Text.Anchor = anchor;
 				if (Mouse.IsOver(rect))
 				{
 					GUI.color = mouseOver;
@@ -336,7 +323,6 @@ namespace SmashTools
 				}
 				Widgets.Label(rect, label);
 			}
-			GUIState.Pop();
 
 			if (Widgets.ButtonInvisible(rect))
 			{
@@ -379,22 +365,18 @@ namespace SmashTools
 
 		public static void DrawLineHorizontal(float x, float y, float length, Color color)
 		{
-			Color guiColor = GUI.color;
-
-			GUI.color = color;
-			GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.WhiteTex);
-
-			GUI.color = guiColor;
+			using (new TextBlock(color))
+			{
+				GUI.DrawTexture(new Rect(x, y, length, 1f), BaseContent.WhiteTex);
+			}
 		}
 
 		public static void DrawLineVertical(float x, float y, float length, Color color)
 		{
-			Color guiColor = GUI.color;
-
-			GUI.color = color;
-			GUI.DrawTexture(new Rect(x, y, 1f, length), BaseContent.WhiteTex);
-
-			GUI.color = guiColor;
+			using (new TextBlock(color))
+			{
+				GUI.DrawTexture(new Rect(x, y, 1f, length), BaseContent.WhiteTex);
+			}
 		}
 
 		public static void DrawLineHorizontalGrey(float x, float y, float length)
@@ -414,7 +396,7 @@ namespace SmashTools
 
 			float valueChange = value;
 
-			GUIState.Push();
+			using (new TextBlock(Color.white))
 			{
 				Rect sliderRect = new Rect(rect);
 				sliderRect.xMin += 6f;
@@ -455,7 +437,6 @@ namespace SmashTools
 					CheckPlayDragSliderSound();
 				}
 			}
-			GUIState.Pop();
 
 			return valueChange;
 		}

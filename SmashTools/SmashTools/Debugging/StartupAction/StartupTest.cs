@@ -11,10 +11,10 @@ namespace SmashTools
 	public static class StartupTest
 	{
 		internal static Dictionary<GameState, List<Action>> postLoadActions = new Dictionary<GameState, List<Action>>();
-		internal static Dictionary<string, UnitTestAction> unitTests = new Dictionary<string, UnitTestAction>();
-		internal static List<Toggle> unitTestRadioButtons = new List<Toggle>();
+		internal static Dictionary<string, StartupAction> actions = new Dictionary<string, StartupAction>();
+		internal static List<Toggle> actionRadioButtons = new List<Toggle>();
 
-		internal static bool NoUnitTest { get; private set; }
+		internal static bool NoStartupAction { get; private set; }
 
 		internal static bool Enabled { get; private set; }
 
@@ -24,19 +24,19 @@ namespace SmashTools
 			Enabled = false;
 			try
 			{
-				InitializeUnitTesting();
+				InitializeStartupActions();
 			}
 			catch (Exception ex1)
 			{
-				Log.Warning($"UnitTest startup threw exception. Clearing config for startup actions and trying again. Exception={ex1.Message}");
+				Log.Warning($"StartupAction threw an exception. Clearing config and trying again.\nException={ex1}");
 				Utilities.DeleteSettings();
 				try
 				{
-					InitializeUnitTesting();
+					InitializeStartupActions();
 				}
 				catch (Exception ex2)
 				{
-					SmashLog.ErrorLabel("[SmashLog]", $"UnitTest startup was unable to initialize. Disabling unit tests. Exception={ex2.Message}");
+					SmashLog.ErrorLabel("[SmashLog]", $"StartupAction was unable to initialize. Disabling...\nException={ex2}");
 					return;
 				}
 			}
@@ -48,10 +48,10 @@ namespace SmashTools
 		[Conditional("DEBUG")]
 		public static void OpenMenu()
 		{
-			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Startup Actions", unitTestRadioButtons, postClose: SmashMod.Serialize));
+			Find.WindowStack.Add(new Dialog_RadioButtonMenu("Startup Actions", actionRadioButtons, postClose: SmashMod.Serialize));
 		}
 
-		private static void InitializeUnitTesting()
+		private static void InitializeStartupActions()
 		{
 			SmashMod.LoadFromSettings();
 			postLoadActions.Clear();
@@ -59,17 +59,17 @@ namespace SmashTools
 			{
 				postLoadActions.Add(enumValue, new List<Action>());
 			}
-			unitTests.Clear();
-			unitTestRadioButtons.Clear();
-			unitTestRadioButtons.Add(new Toggle("NoUnitTest", "None", string.Empty, () => NoUnitTest || SmashSettings.startupAction.NullOrEmpty(), delegate (bool value)
+			actions.Clear();
+			actionRadioButtons.Clear();
+			actionRadioButtons.Add(new Toggle("NoStartupAction", "None", string.Empty, () => NoStartupAction || SmashSettings.startupAction.NullOrEmpty(), delegate (bool value)
 			{
-				NoUnitTest = value;
-				if (NoUnitTest)
+				NoStartupAction = value;
+				if (NoStartupAction)
 				{
 					SmashSettings.startupAction = string.Empty;
 				}
 			}));
-			NoUnitTest = true;
+			NoStartupAction = true;
 			List<MethodInfo> methods = new List<MethodInfo>();
 			foreach (Type type in GenTypes.AllTypes)
 			{
@@ -88,45 +88,45 @@ namespace SmashTools
 							category = "General";
 						}
 
-						string unitTestFullName = $"{category}.{name}".Replace(" ", "");
-						UnitTestAction unitTest = new UnitTestAction()
+						string actionFullName = $"{category}.{name}".Replace(" ", "");
+						StartupAction startupAction = new StartupAction()
 						{
-							FullName = unitTestFullName,
+							FullName = actionFullName,
 							DisplayName = name,
 							Category = category,
 							GameState = unitTestAttr.GameState,
 							Action = () => method.Invoke(null, new object[] { })
 						};
 
-						if (unitTestFullName == SmashSettings.startupAction)
+						if (actionFullName == SmashSettings.startupAction)
 						{
-							NoUnitTest = false;
+							NoStartupAction = false;
 						}
 
-						unitTests.Add(unitTest.FullName, unitTest);
-						unitTestRadioButtons.Add(new Toggle(unitTest.FullName, unitTest.DisplayName, unitTest.Category,
+						actions.Add(startupAction.FullName, startupAction);
+						actionRadioButtons.Add(new Toggle(startupAction.FullName, startupAction.DisplayName,startupAction.Category,
 							stateGetter: delegate ()
 							{
-								return SmashSettings.startupAction == unitTest.FullName;
+								return SmashSettings.startupAction == startupAction.FullName;
 							},
 							stateSetter: delegate (bool value)
 							{
 								if (value)
 								{
-									SmashSettings.startupAction = unitTest.FullName;
+									SmashSettings.startupAction = startupAction.FullName;
 								}
 							}));
 					}
 				}
 			}
-			unitTestRadioButtons = unitTestRadioButtons.OrderBy(toggle => toggle.DisplayName).ToList();
+			actionRadioButtons.SortBy(toggle => toggle.DisplayName);
 		}
 
 		private static void PostLoadSetup()
 		{
-			if (!SmashSettings.startupAction.NullOrEmpty() && unitTests.TryGetValue(SmashSettings.startupAction, out UnitTestAction unitTest))
+			if (!SmashSettings.startupAction.NullOrEmpty() && actions.TryGetValue(SmashSettings.startupAction, out StartupAction action))
 			{
-				postLoadActions[unitTest.GameState].Add(unitTest.Action);
+				postLoadActions[action.GameState].Add(action.Action);
 			}
 		}
 
@@ -167,7 +167,7 @@ namespace SmashTools
 			}
 		}
 
-		internal struct UnitTestAction
+		internal struct StartupAction
 		{
 			public string FullName { get; set; }
 			public string DisplayName { get; set; }

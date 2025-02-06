@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.IO;
-using Verse;
+using HarmonyLib;
 using RimWorld;
 using UnityEngine;
-using Verse.Sound;
-using System.Runtime;
-using Verse.Noise;
-using HarmonyLib;
-using static SmashTools.Debug;
+using Verse;
 
 namespace SmashTools.Animations
 {
@@ -112,9 +107,10 @@ namespace SmashTools.Animations
 			{
 				controller = AnimationController.EmptyController();
 			}
+			Assert.IsNotNull(controller);
+
 			animLayer = controller.layers.FirstOrDefault();
-			Assert(controller != null);
-			Assert(animLayer != null);
+			Assert.IsNotNull(animLayer);
 
 			controllerEditor.AnimatorLoaded(animator);
 			clipEditor.AnimatorLoaded(animator);
@@ -178,20 +174,18 @@ namespace SmashTools.Animations
 		{
 			ResetControlFocus();
 
-			GUIState.Push();
-			
-			Text.Font = GameFont.Small;
-			Rect tabRect = new Rect(inRect.x, inRect.y + 32, inRect.width, 32);
-			TabDrawer.DrawTabs(tabRect, tabs);
-			inRect.yMin += tabRect.height;
-
-			GUI.enabled = animator != null;
+			using (new TextBlock(GameFont.Small))
 			{
-				ActiveTab.Draw(inRect);
-			}
-			GUI.enabled = true;
+				Rect tabRect = new Rect(inRect.x, inRect.y + 32, inRect.width, 32);
+				TabDrawer.DrawTabs(tabRect, tabs);
+				inRect.yMin += tabRect.height;
 
-			GUIState.Pop();
+				GUI.enabled = animator != null;
+				{
+					ActiveTab.Draw(inRect);
+				}
+				GUI.enabled = true;
+			}
 		}
 
 		private void ResetControlFocus()

@@ -5,7 +5,6 @@ using System.Diagnostics;
 using JetBrains;
 using JetBrains.Profiler.Api;
 using JetBrains.Profiler.SelfApi;
-using static SmashTools.Debug;
 
 namespace SmashTools.Performance.JetBrains
 {

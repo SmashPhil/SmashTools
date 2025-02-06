@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using static SmashTools.Debug;
 
 namespace SmashTools
 {
@@ -19,7 +18,7 @@ namespace SmashTools
 
 		public void UndoOperation()
 		{
-			Assert(undoStack.Count > 0);
+			Assert.IsTrue(undoStack.Count > 0);
 			UndoItem item = undoStack.Pop();
 			item.undo.Invoke();
 		}

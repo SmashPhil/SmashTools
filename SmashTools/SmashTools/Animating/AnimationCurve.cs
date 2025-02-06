@@ -1,11 +1,8 @@
-﻿using SmashTools.Xml;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
+using SmashTools.Xml;
 using UnityEngine;
 using Verse;
-using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
@@ -96,7 +93,7 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		public float Function(float frame)
+		public float Function(float time)
 		{
 			if (points.NullOrEmpty() || RightBound.frame <= 0)
 			{
@@ -106,36 +103,39 @@ namespace SmashTools.Animations
 			{
 				return LeftBound.value;
 			}
-			if (frame <= LeftBound.frame)
+			if (time <= LeftBound.frame)
 			{
 				return LeftBound.value;
 			}
-			else if (frame >= RightBound.frame)
+			else if (time >= RightBound.frame)
 			{
 				return RightBound.value;
 			}
-			return CubicSpline(frame);
+			return CubicSpline(time);
 		}
 
 		/// <summary>
-		/// Catmull-Rom spline interpolation
+		/// Hermite cubic spline interpolation.
 		/// </summary>
-		/// <remarks>See https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_007_Animations.html#cubic-spline-interpolation for reference</remarks>
-		private float CubicSpline(float frame)
+		/// <remarks>
+		/// <para>Documentation for curve formulas <see href="https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_007_Animations.html#cubic-spline-interpolation">here.</see></para>
+		/// <para>Desmos example graph <see href="https://www.desmos.com/calculator/mcgp64duuy">here.</see></para>
+		/// </remarks>
+		private float CubicSpline(float time)
 		{
 			KeyFrame prev = KeyFrame.Invalid;
 			KeyFrame next = KeyFrame.Invalid;
 			for (int i = 0; i < points.Count; i++)
 			{
-				if (points[i].frame == frame)
+				if (points[i].frame == time)
 				{
 					return points[i].value;
 				}
-				if (points[i].frame > frame)
+				if (points[i].frame > time)
 				{
 					break;
 				}
-				Assert(!points.OutOfBounds(i + 1));
+				Assert.IsTrue(!points.OutOfBounds(i + 1));
 				prev = points[i];
 				next = points[i + 1];
 			}
@@ -144,21 +144,36 @@ namespace SmashTools.Animations
 			if (next.inTangent == float.PositiveInfinity) return prev.value;
 			if (next.inTangent == float.NegativeInfinity) return next.value;
 
-			float deltaFrame = next.frame - prev.frame;
+			float dt = next.frame - prev.frame;
 			// (f - kt(i))
-			float t = (frame - prev.frame) / deltaFrame;
+			float t = (time - prev.frame) / dt;
 			// t^2
 			float t2 = t * t;
 			// t^3
 			float t3 = t * t * t;
-			// k(0) * (2t^3 - 3t^2 + 1) +
-			// k(1) * (3t^2 - 2t^3) +
-			// k'(0) * (t^3 - 2t^2 + t +
-			// k'(1) * (t^3 - t^2)
-			return prev.value * (2 * t3 - 3 * t2 + 1) +
-				   next.value * (3 * t2 - 2 * t3) +
-				   deltaFrame * prev.outTangent * (t3 - 2 * t2 + t) +
-				   deltaFrame * next.inTangent * (t3 - t2);
+
+			// tangents scaled to { 0 ≤ t ≤ 1 }
+			float m0 = prev.outTangent * dt;
+			float m1 = next.inTangent * dt;
+
+			// k(0) = 2t^3 - 3t^2 + 1
+			float k0 = (2 * t3 - 3 * t2 + 1) * prev.value;
+			// k(1) = t^3 - 2t^2 + t
+			float k1 = (t3 - 2 * t2 + t) * m0;
+			// k'(0) = t^3 - t^2
+			float k2 = (t3 - t2) * m1;
+			// k'(1) = -2t^3 + 3t^2
+			float k3 = (-2 * t3 + 3 * t2) * next.value;
+			
+			if (prev.weightedMode == WeightedMode.Out || prev.weightedMode == WeightedMode.Both)
+			{
+				k1 *= prev.outWeight;
+			}
+			if (next.weightedMode == WeightedMode.In || next.weightedMode == WeightedMode.Both)
+			{
+				k2 *= next.inWeight;
+			}
+			return k0 + k1 + k2 + k3;
 		}
 
 		// Linear function for testing rendering in the animation editor
