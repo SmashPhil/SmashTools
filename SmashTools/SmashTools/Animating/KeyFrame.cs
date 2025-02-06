@@ -3,13 +3,12 @@ using System.Globalization;
 using SmashTools.Xml;
 using UnityEngine;
 using Verse;
-using static SmashTools.Debug;
 
 namespace SmashTools.Animations
 {
 	public readonly struct KeyFrame : IXmlExport, IComparable<KeyFrame>
 	{
-		private const float DefaultWeight = 0.25f;
+		private const float DefaultWeight = 0.333f;
 
 		public readonly int frame;
 		public readonly float value;

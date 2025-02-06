@@ -4,7 +4,6 @@ using RimWorld;
 using UnityEngine;
 using Verse;
 using Verse.Sound;
-using static SmashTools.Debug;
 
 namespace SmashTools.Performance
 {
@@ -18,7 +17,7 @@ namespace SmashTools.Performance
 		private const float IndentSpace = 12;
 
 		private const float DefaultProfilerColumnWidth = 100;
-		private const float SortTime = 1;
+		private const float SortTime = (ProfilerWatch.FramesPerCapture / 60f) * 2; // Sort every other capture
 		private const float FrameBarSize = 6;
 
 		private readonly Color separatorColor = new Color32(25, 25, 25, 255);
@@ -35,7 +34,7 @@ namespace SmashTools.Performance
 		private float panelHeight;
 		private Vector2 scrollPos;
 
-		private ColumnSort sortBy = ColumnSort.TotalMS;
+		private static ColumnSort sortBy = ColumnSort.TotalMS;
 
 		private bool dragging = false;
 		private Vector2 dragPos;
@@ -43,6 +42,7 @@ namespace SmashTools.Performance
 		private Stack<(int indent, ProfilerWatch.Block block)> stack = new Stack<(int indent, ProfilerWatch.Block block)>();
 
 		private static Dictionary<ProfilerWatch.Block, bool> expandedBlocks = new Dictionary<ProfilerWatch.Block, bool>();
+
 		private static List<ProfilerColumn> columns = new List<ProfilerColumn>()
 		{
 			new CallCountColumn(),
@@ -103,7 +103,7 @@ namespace SmashTools.Performance
 		/// </summary>
 		private int BlockSort(ProfilerWatch.Block block, ProfilerWatch.Block other)
 		{
-			Assert(sortBy > ColumnSort.None);
+			Assert.IsTrue(sortBy > ColumnSort.None);
 			switch (sortBy)
 			{
 				case ColumnSort.TotalMS:
@@ -138,7 +138,7 @@ namespace SmashTools.Performance
 
 		private void ResortResults()
 		{
-			lock (ProfilerWatch.Cache)
+			lock (ProfilerWatch.cacheLock)
 			{
 				ProfilerWatch.BlockContainer block = ProfilerWatch.Cache[PausedAtFrame];
 				if (block != null && !block.InnerList.NullOrEmpty())
@@ -181,7 +181,7 @@ namespace SmashTools.Performance
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			GUIState.Push();
+			using var textBlock = new TextBlock(Color.white);
 			
 			Widgets.DrawMenuSection(inRect);
 			Rect rect = inRect.ContractedBy(1);
@@ -193,7 +193,7 @@ namespace SmashTools.Performance
 			stack.Clear();
 			if (PausedAtFrame >= 0)
 			{
-				lock (ProfilerWatch.Cache)
+				lock (ProfilerWatch.cacheLock)
 				{
 					List<ProfilerWatch.Block> blocksAtFrame = ProfilerWatch.Cache[PausedAtFrame]?.InnerList;
 					if (!blocksAtFrame.NullOrEmpty())
@@ -211,8 +211,6 @@ namespace SmashTools.Performance
 			DrawHeaders(headerRect);
 			bottomRect.yMin = headerRect.yMax;
 			DrawBlocks(bottomRect);
-
-			GUIState.Pop();
 		}
 
 		private void DrawGraph(Rect rect)
@@ -225,37 +223,54 @@ namespace SmashTools.Performance
 				ProfilerWatch.Suspend = true;
 			}
 
-			Widgets.BeginGroup(rect); //Start Graph Group
+			Widgets.BeginGroup(rect); // Start Graph Group
 
 			Rect graphRect = rect.AtZero();
 			graphRect.yMax -= 3;
 
-			double maxElapsed = 60;
-			lock (ProfilerWatch.Cache)
+			if (ProfilerWatch.Patching != ProfilerWatch.ProfilePatching.Enabled)
 			{
-				Vector2 p1 = Vector2.zero;
-				int length = ProfilerWatch.Cache.Length;
-				for (int i = length - 1; i >= 0; i--)
+				string label = ProfilerWatch.Patching switch
 				{
-					ProfilerWatch.BlockContainer container = ProfilerWatch.Cache[i];
-					if (container == null || container.InnerList.NullOrEmpty()) continue;
-
-					double result = container.TotalElapsed;
-					float posX = graphRect.x + (float)i / length * graphRect.width;
-					float posY = Mathf.Lerp(graphRect.yMax, graphRect.yMin, (float)(result / graphCeiling));
-					Vector2 p2 = new Vector2(posX, posY);
-					if (p1 != Vector2.zero)
-					{
-						if (result > maxElapsed) maxElapsed = result;
-
-						Widgets.DrawLine(p1, p2, graphColor, 1);
-					}
-					p1 = p2;
+					ProfilerWatch.ProfilePatching.Disabled => "Disabled",
+					ProfilerWatch.ProfilePatching.Applying => "Patching",
+					ProfilerWatch.ProfilePatching.Removing => "Disabling",
+					_ => "Missing Profile State"
+				};
+				using (new TextBlock(GameFont.Medium, TextAnchor.MiddleCenter))
+				{
+					Widgets.Label(graphRect, $"{label}{GenText.MarchingEllipsis()}");
 				}
 			}
-			graphCeiling = maxElapsed;
+			else
+			{
+				double maxElapsed = 60;
+				lock (ProfilerWatch.cacheLock)
+				{
+					Vector2 p1 = Vector2.zero;
+					int length = ProfilerWatch.Cache.Length;
+					for (int i = 0; i < length; i++)
+					{
+						ProfilerWatch.BlockContainer container = ProfilerWatch.Cache[i];
+						if (container == null || container.InnerList.NullOrEmpty()) continue;
 
-			Widgets.EndGroup(); //End Graph Group
+						double result = container.TotalElapsed;
+						float posX = graphRect.x + (float)i / length * graphRect.width;
+						float posY = Mathf.Lerp(graphRect.yMax, graphRect.yMin, (float)(result / graphCeiling));
+						Vector2 p2 = new Vector2(posX, posY);
+						if (p1 != Vector2.zero)
+						{
+							if (result > maxElapsed) maxElapsed = result;
+
+							Widgets.DrawLine(p1, p2, graphColor, 1);
+						}
+						p1 = p2;
+					}
+				}
+				graphCeiling = maxElapsed;
+			}
+
+			Widgets.EndGroup(); // End Graph Group
 			
 			if (PausedAtFrame >= 0)
 			{
@@ -307,22 +322,22 @@ namespace SmashTools.Performance
 
 			rect = rect.ContractedBy(1);
 
+			using var fontSize = new TextBlock(GameFont.Small);
 			Text.Font = GameFont.Small;
 			Text.Anchor = TextAnchor.MiddleRight;
 			for (int i = columns.Count - 1; i >= 0; i--)
 			{
 				ProfilerColumn column = columns[i];
 				rect.xMax -= column.ColumnWidth;
-				column.DrawHeader(rect);
-				UIElements.DrawLineVertical(rect.x, rect.y, -rect.height, separatorColor);
-				if (column.Sort > ColumnSort.None && Widgets.ButtonInvisible(rect))
+				
+				if (column.HeaderLabelBtn(rect))
 				{
-					sortBy = column.Sort;
 					ResortResults();
 					SoundDefOf.TabOpen.PlayOneShotOnCamera();
 				}
+				UIElements.DrawLineVertical(rect.x, rect.y, -rect.height, separatorColor);
 			}
-			Text.Anchor = TextAnchor.MiddleLeft;
+			using var alignment = new TextBlock(TextAnchor.MiddleLeft);
 			Widgets.Label(rect, " <b>Overview</b>");
 		}
 
@@ -408,19 +423,36 @@ namespace SmashTools.Performance
 		{
 			public abstract string Label { get; }
 
-			public abstract ColumnSort Sort { get; }
+			public abstract ColumnSort SortBy { get; }
 
 			public float ColumnWidth { get; internal set; } = DefaultProfilerColumnWidth;
 
 			public abstract string ResultFor(ProfilerWatch.Block block);
 
-			public virtual void DrawHeader(Rect rect)
+			/// <param name="rect"></param>
+			/// <returns>true if header rect is clicked.</returns>
+			public virtual bool HeaderLabelBtn(Rect rect)
 			{
 				if (Label != null)
 				{
+					using var alignment = new TextBlock(TextAnchor.MiddleCenter);
+
 					Rect columnRect = new Rect(rect.xMax, rect.y, ColumnWidth, rect.height);
 					Widgets.Label(columnRect, $"<b>{Label}</b>");
+					if (SortBy > ColumnSort.None)
+					{
+						if (SortBy == sortBy)
+						{
+							Widgets.DrawHighlight(columnRect);
+						}
+						else if (Widgets.ButtonInvisible(columnRect))
+						{
+							sortBy = SortBy;
+							return true;
+						}
+					}
 				}
+				return false;
 			}
 
 			public virtual void DrawResult(Rect rect, ProfilerWatch.Block block)
@@ -438,7 +470,7 @@ namespace SmashTools.Performance
 		{
 			public override string Label => "Total ms";
 
-			public override ColumnSort Sort => ColumnSort.TotalMS;
+			public override ColumnSort SortBy => ColumnSort.TotalMS;
 
 			public override string ResultFor(ProfilerWatch.Block block)
 			{
@@ -450,7 +482,7 @@ namespace SmashTools.Performance
 		{
 			public override string Label => "Self ms";
 
-			public override ColumnSort Sort => ColumnSort.SelfMS;
+			public override ColumnSort SortBy => ColumnSort.SelfMS;
 
 			public override string ResultFor(ProfilerWatch.Block block)
 			{
@@ -462,7 +494,7 @@ namespace SmashTools.Performance
 		{
 			public override string Label => "Max ms";
 
-			public override ColumnSort Sort => ColumnSort.MaxMS;
+			public override ColumnSort SortBy => ColumnSort.MaxMS;
 
 			public override string ResultFor(ProfilerWatch.Block block)
 			{
@@ -474,7 +506,7 @@ namespace SmashTools.Performance
 		{
 			public override string Label => "Calls";
 
-			public override ColumnSort Sort => ColumnSort.CallCount;
+			public override ColumnSort SortBy => ColumnSort.CallCount;
 
 			public override string ResultFor(ProfilerWatch.Block block)
 			{
@@ -491,20 +523,21 @@ namespace SmashTools.Performance
 
 			public override string Label => null;
 
-			public override ColumnSort Sort => ColumnSort.None;
+			public override ColumnSort SortBy => ColumnSort.None;
 
 			public override string ResultFor(ProfilerWatch.Block block) => null;
 		}
 
 		private class EndColumn : ColumnSpace
 		{
-			public override void DrawHeader(Rect rect)
+			public override bool HeaderLabelBtn(Rect rect)
 			{
 				Rect columnRect = new Rect(rect.xMax, rect.y, ColumnWidth, ColumnWidth).ContractedBy(5);
 				if (Widgets.ButtonImage(columnRect, TexButton.HotReloadDefs))
 				{
 					ProfilerWatch.ClearCache();
 				}
+				return false; // Handles button input separately from sort logic
 			}
 		}
 	}

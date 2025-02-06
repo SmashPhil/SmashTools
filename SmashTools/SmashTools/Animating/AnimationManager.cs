@@ -2,25 +2,32 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+using Verse;
 using StateType = SmashTools.Animations.AnimationState.StateType;
 
 namespace SmashTools.Animations
 {
-	public class AnimationManager
+	public class AnimationManager : IExposable
 	{
 		public IAnimator animator;
-		public readonly AnimationController controller;
+		public AnimationController controller;
 
-		private readonly LayerData[] layerDatas;
+		private LayerData[] layerDatas;
 
-		private Dictionary<int, AnimationParameter> parameters = new Dictionary<int, AnimationParameter>();
+		private Dictionary<int, float> parameters = new Dictionary<int, float>();
 
 		public AnimationManager(IAnimator animator, AnimationController controller)
 		{
+			Init(animator, controller);
+			
+		}
+
+		public void Init(IAnimator animator, AnimationController controller)
+		{
 			this.animator = animator;
 			this.controller = controller;
+
 			layerDatas = new LayerData[controller.layers.Count];
 
 			for (int i = 0; i < controller.layers.Count; i++)
@@ -31,7 +38,7 @@ namespace SmashTools.Animations
 			{
 				foreach (AnimationParameter parameter in controller.parameters)
 				{
-					parameters[parameter.Name.GetHashCode()] = parameter;
+					parameters[parameter.Name.GetHashCode()] = parameter.Value;
 				}
 			}
 		}
@@ -41,10 +48,16 @@ namespace SmashTools.Animations
 			for (int i = 0; i < controller.layers.Count; i++)
 			{
 				LayerData layerData = layerDatas[i];
-				// Check if transition is needed
-				if (!layerData.state.clip || layerData.frame >= layerData.state.clip.frameCount)
+				if (!layerData.IsValid)
 				{
-					Transition(layerData);
+					StartNextState(layerData);
+					continue;
+				}
+
+				// Check if transition is needed
+				if (layerData.frame >= layerData.state.clip.frameCount)
+				{
+					StartNextState(layerData);
 				}
 				else
 				{
@@ -54,22 +67,51 @@ namespace SmashTools.Animations
 			}
 		}
 
+		void IExposable.ExposeData()
+		{
+			Scribe_Collections.Look(ref parameters, nameof(parameters), keyLookMode: LookMode.Value, valueLookMode: LookMode.Value);
+		}
+
+		// TODO - transitions need exitTime and blending implemented
 		private void Transition(LayerData layerData)
 		{
-			// TODO - transitions need exitTime and blending implemented
-			if (layerData.state.transitions.NullOrEmpty())
-			{
-				layerData.Reset();
-				return;
-			}
 			if (!layerData.Transitioning)
 			{
-				layerData.StartTransition();
+				layerData.EvaluateTransition();
 			}
 			if (layerData.TransitionTick >= layerData.transition.exitTicks)
 			{
-				layerData.StartNextState();
+				StartNextState(layerData);
 			}
+		}
+
+		private void StartNextState(LayerData layerData)
+		{
+			Assert.IsNotNull(layerData.state.transitions);
+
+			foreach (AnimationTransition transition in layerData.state.transitions)
+			{
+				if (transition.conditions.NullOrEmpty())
+				{
+					layerData.SetState(transition.ToState);
+					return;
+				}
+
+				foreach (AnimationCondition condition in transition.conditions)
+				{
+					float value = parameters[condition.Parameter.id];
+					if (condition.ConditionMet(value))
+					{
+						layerData.SetState(transition.ToState);
+						return;
+					}
+				}
+			}
+			if (layerData.IsValid && layerData.state.clip.loop)
+			{
+				layerData.frame = 0;
+			}
+			// End of animation chain, state will wait for transition till one becomes available
 		}
 
 		internal (AnimationState state, int frame) CurrentFrame(AnimationLayer layer)
@@ -84,12 +126,9 @@ namespace SmashTools.Animations
 			return (null, 0);
 		}
 
-		internal void SetFrame(int frame)
+		internal void SetFrame(AnimationClip clip, int frame)
 		{
-			foreach (LayerData layerData in layerDatas)
-			{
-				layerData.state.EvaluateFrame(animator, frame);
-			}
+			AnimationState.EvaluateFrame(clip, animator, frame);
 		}
 
 		public void SetFloat(string name, float value)
@@ -97,13 +136,14 @@ namespace SmashTools.Animations
 			SetFloat(name.GetHashCode(), value);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void SetFloat(int id, float value)
 		{
-			if (parameters.TryGetValue(id, out AnimationParameter parameter))
-			{
-				FloatParam param = (FloatParam)parameter;
-				param.value = value;
-			}
+			// All ids should be precached but this isn't error-causing so this
+			// is strictly just for notifying the operation is useless.
+			Assert.IsTrue(parameters.ContainsKey(id), "Parameter Id not precached");
+
+			parameters[id] = value;
 		}
 
 		public void SetInt(string name, int value)
@@ -111,13 +151,10 @@ namespace SmashTools.Animations
 			SetInt(name.GetHashCode(), value);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void SetInt(int id, int value)
 		{
-			if (parameters.TryGetValue(id, out AnimationParameter parameter))
-			{
-				IntParam param = (IntParam)parameter;
-				param.value = value;
-			}
+			SetFloat(id, value);
 		}
 
 		public void SetBool(string name, bool value)
@@ -125,27 +162,21 @@ namespace SmashTools.Animations
 			SetBool(name.GetHashCode(), value);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void SetBool(int id, bool value)
 		{
-			if (parameters.TryGetValue(id, out AnimationParameter parameter))
-			{
-				BoolParam param = (BoolParam)parameter;
-				param.value = value;
-			}
+			SetFloat(id, value ? 1 : 0);
 		}
 
 		public void SetTrigger(string name, bool value)
 		{
-			SetTrigger(name.GetHashCode(), value);
+			SetBool(name.GetHashCode(), value);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public void SetTrigger(int id, bool value)
 		{
-			if (parameters.TryGetValue(id, out AnimationParameter parameter))
-			{
-				TriggerParam param = (TriggerParam)parameter;
-				param.value = value;
-			}
+			SetBool(id, value);
 		}
 
 		private class LayerData
@@ -165,10 +196,13 @@ namespace SmashTools.Animations
 				this.animator = animator;
 				this.layer = layer;
 				defaultState = layer.states.FirstOrDefault(state => state.Type == StateType.Default);
-				Reset();
+				state = defaultState;
 			}
 
 			public Dictionary<FieldInfo, float> Defaults { get; private set; } = new Dictionary<FieldInfo, float>();
+
+			// Invalid states are treated as empty. Will immediately transition to the next state
+			public bool IsValid => state.clip;
 
 			public int TransitionTick => frame - state.clip.frameCount;
 
@@ -181,36 +215,26 @@ namespace SmashTools.Animations
 				frame++;
 			}
 
-			public void StartTransition()
-			{
-				foreach (AnimationTransition transition in state.transitions)
-				{
-					// TODO - incorporate condition check in transition rather than taking first case
-					this.transition = transition;
-					break;
-				}
-			}
-
 			public void EvaluateTransition()
 			{
+				throw new NotImplementedException();
 			}
 
 			public void SetState(AnimationState state)
 			{
 				RestoreDefaults();
+				frame = 0;
+				if (state.Type == StateType.Exit)
+				{
+					state = defaultState;
+				}
 				this.state = state;
-				Reset();
 				CacheDefaults();
-			}
-
-			public void StartNextState()
-			{
-				SetState(nextState);
 			}
 
 			private void CacheDefaults()
 			{
-				if (!WriteDefaults) return;
+				if (!WriteDefaults || !IsValid) return;
 
 				Defaults.Clear();
 				foreach (AnimationPropertyParent propertyParent in state.clip.properties)
@@ -239,9 +263,7 @@ namespace SmashTools.Animations
 
 			public void Reset()
 			{
-				frame = 0;
-				nextState = null;
-				state = defaultState;
+				SetState(defaultState);
 			}
 		}
 	}

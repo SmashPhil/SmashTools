@@ -67,10 +67,10 @@ namespace SmashTools.Xml
 					}
 				}
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
@@ -87,10 +87,10 @@ namespace SmashTools.Xml
 					writer.WriteEndElement();
 				}
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
@@ -108,10 +108,10 @@ namespace SmashTools.Xml
 					writer.WriteElementString(localName, value.ToString());
 				}
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
@@ -121,10 +121,10 @@ namespace SmashTools.Xml
 			{
 				writer.WriteElementString(localName, value);
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
@@ -135,10 +135,10 @@ namespace SmashTools.Xml
 				OpenNode(localName, ("IsNull", "TRUE"));
 				CloseNode();
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
@@ -152,10 +152,10 @@ namespace SmashTools.Xml
 				}
 				CloseNode();
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
@@ -165,14 +165,15 @@ namespace SmashTools.Xml
 			{
 				writer.WriteString(text);
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
-		public static void WriteCollection<T>(string localName, IEnumerable<T> value) where T : IXmlExport
+		public static void WriteCollection<T>(string localName, IEnumerable<T> value, 
+			Func<T, (string name, string value)> attributeGetter = null) where T : IXmlExport
 		{
 			try
 			{
@@ -185,7 +186,7 @@ namespace SmashTools.Xml
 				{
 					foreach (T item in value)
 					{
-						OpenNode("li");
+						OpenNode("li", attributeGetter != null ? new (string, string)[] { attributeGetter(item) } : null);
 						{
 							item.Export();
 						}
@@ -194,10 +195,10 @@ namespace SmashTools.Xml
 				}
 				CloseNode();
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 
@@ -223,10 +224,10 @@ namespace SmashTools.Xml
 				}
 				CloseNode();
 			}
-			catch (Exception ex)
+			catch
 			{
 				Close();
-				throw ex;
+				throw;
 			}
 		}
 	}

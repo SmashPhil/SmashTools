@@ -8,7 +8,6 @@ using HarmonyLib;
 using SmashTools.Animations;
 using UnityEngine;
 using Verse;
-using static SmashTools.Debug;
 
 namespace SmashTools.Debugging
 {
@@ -16,7 +15,7 @@ namespace SmashTools.Debugging
 	{
 		private const int TestCount = 10;
 
-		public override string Name => "AnimationProperty.DynamicMethod";
+		public override string Name => "AnimationDynamicMethod";
 
 		public override TestType ExecuteOn => TestType.MainMenu;
 
@@ -29,20 +28,20 @@ namespace SmashTools.Debugging
 			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tBool));
 
 			FieldInfo vector3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.vector));
-			Assert(vector3 != null);
+			Assert.IsNotNull(vector3);
 			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.x), vector3);
 			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.y), vector3);
 			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.z), vector3);
 
 			FieldInfo color = AccessTools.Field(typeof(TestObject), nameof(TestObject.color));
-			Assert(color != null);
+			Assert.IsNotNull(color);
 			yield return TestField(testObject, typeof(Color), nameof(Color.r), color);
 			yield return TestField(testObject, typeof(Color), nameof(Color.g), color);
 			yield return TestField(testObject, typeof(Color), nameof(Color.b), color);
 			yield return TestField(testObject, typeof(Color), nameof(Color.a), color);
 
 			FieldInfo intVec3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.intVec3));
-			Assert(intVec3 != null);
+			Assert.IsNotNull(intVec3);
 			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.x), intVec3);
 			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.y), intVec3);
 			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.z), intVec3);
@@ -51,7 +50,7 @@ namespace SmashTools.Debugging
 		private UTResult TestField<T>(T obj, Type type, string name, params FieldInfo[] objectPath) where T : IAnimator
 		{
 			FieldInfo fieldInfo = AccessTools.Field(type, name);
-			Assert(fieldInfo != null);
+			Assert.IsNotNull(fieldInfo);
 			AnimationProperty property = AnimationProperty.Create(typeof(T), name, fieldInfo, objectPath);
 			(int frame, float value)[] results = new (int frame, float value)[TestCount];
 			for (int i = 0; i < results.Length; i++)

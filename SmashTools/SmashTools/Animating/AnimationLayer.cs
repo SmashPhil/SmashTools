@@ -80,13 +80,13 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void PostLoad()
+		internal void ResolveReferences()
 		{
 			ResolveConnections();
 			foreach (AnimationState state in states)
 			{
 				state.Layer = this;
-				state.PostLoad();
+				state.ResolveReferences();
 			}
 		}
 

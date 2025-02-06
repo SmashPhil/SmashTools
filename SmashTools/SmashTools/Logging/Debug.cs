@@ -8,47 +8,6 @@ namespace SmashTools
 	{
 		private static readonly Vector2 popupSize = new Vector2(500, 650);
 
-		[Conditional("DEBUG")]
-		public static void Assert(bool condition)
-		{
-			if (condition) return;
-
-			Log.Error("Assertion Failed");
-			if (Debugger.IsAttached) Debugger.Break();
-			Find.WindowStack.Add(new Dialog_Popup(popupSize, "Assertion Failed", StackTraceUtility.ExtractStackTrace()));
-		}
-
-		[Conditional("DEBUG")]
-		public static void Assert(bool condition, string message)
-		{
-			if (condition) return;
-
-			Log.Error($"Assertion Failed: {message}");
-			if (Debugger.IsAttached) Debugger.Break();
-			Find.WindowStack.Add(new Dialog_Popup(popupSize, message, StackTraceUtility.ExtractStackTrace()));
-		}
-
-		// Reimplementation of Trace.Assert with IMGUI popup
-		[Conditional("TRACE")]
-		public static void Trace(bool condition)
-		{
-			if (condition) return;
-
-			Log.Error($"Assertion Failed");
-			if (Debugger.IsAttached) Debugger.Break();
-			Find.WindowStack.Add(new Dialog_Popup(popupSize, "Assertion Failed", StackTraceUtility.ExtractStackTrace()));
-		}
-
-		[Conditional("TRACE")]
-		public static void Trace(bool condition, string message)
-		{
-			if (condition) return;
-
-			Log.Error(message);
-			if (Debugger.IsAttached) Debugger.Break();
-			Find.WindowStack.Add(new Dialog_Popup(popupSize, message, StackTraceUtility.ExtractStackTrace()));
-		}
-
 		/// <summary>
 		/// Thread Safe message logging, passes to coroutine to invoke on main thread in bulk.
 		/// </summary>
@@ -92,6 +51,11 @@ namespace SmashTools
 			{
 				CoroutineManager.QueueInvoke(() => Log.Error(message));
 			}
+		}
+
+		internal static void ShowStack(string message)
+		{
+			Find.WindowStack.Add(new Dialog_Popup(popupSize, message, StackTraceUtility.ExtractStackTrace()));
 		}
 	}
 }

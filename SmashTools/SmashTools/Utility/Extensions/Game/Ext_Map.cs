@@ -358,7 +358,7 @@ namespace SmashTools
 
 		public static T GetCachedMapComponent<T>(this Map map) where T : DetachedMapComponent
 		{
-			if (DetachedMapComponent.mapMapping.TryGetValue(map, out var components))
+			if (DetachedMapComponent.mapComps.TryGetValue(map, out var components))
 			{
 				foreach (DetachedMapComponent component in components)
 				{

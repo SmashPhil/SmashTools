@@ -1,4 +1,4 @@
-﻿//#define ONLY_RECORD_MAIN_THREAD
+﻿#define ONLY_RECORD_MAIN_THREAD
 //#define JOIN_RESULTS
 #define LAZY_PROFILING
 
@@ -9,13 +9,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using HarmonyLib;
 using RimWorld;
 using UnityEngine;
 using Verse;
-using static SmashTools.Debug;
 
 namespace SmashTools.Performance
 {
@@ -26,16 +27,19 @@ namespace SmashTools.Performance
 	[NoProfiling]
 	public static class ProfilerWatch
 	{
-		private const bool PatchAll = true;
-		private const int MaxEntries = 100000;
-		private const int FramesPerCapture = 20;
-		private const int TotalFramesCaptured = 2000;
+		private const bool PatchAll = false;
+
+		public const int MaxEntries = 100000;
+		public const int FramesPerCapture = 20;
+		public const int TotalFramesCaptured = 2000;
 		internal const int CacheSize = TotalFramesCaptured / FramesPerCapture;
+
+		private static readonly List<CodeInstruction> patchInstructions = new List<CodeInstruction>();
 
 		private static readonly HashSet<Assembly> autoPatchAssemblies = new HashSet<Assembly>();
 
-		private static Dictionary<int, ThreadProfiler> profilers = new Dictionary<int, ThreadProfiler>();
-		private static Dictionary<string, Block> results = new Dictionary<string, Block>();
+		private static ConcurrentDictionary<int, ThreadProfiler> profilers = new ConcurrentDictionary<int, ThreadProfiler>();
+		private static ConcurrentDictionary<string, Block> results = new ConcurrentDictionary<string, Block>();
 		
 		private static ConcurrentSet<MethodInfo> profilingMethods = new ConcurrentSet<MethodInfo>();
 
@@ -43,6 +47,9 @@ namespace SmashTools.Performance
 		private static bool routineRunning;
 
 		private static Harmony harmony;
+
+		private static object rootLock = new object();
+		internal static object cacheLock = new object();
 
 		static ProfilerWatch()
 		{
@@ -65,7 +72,7 @@ namespace SmashTools.Performance
 
 		internal static CircularArray<BlockContainer> Cache { get; private set; }
 
-		private static ProfilePatching Patching { get; set; } = ProfilePatching.Disabled;
+		public static ProfilePatching Patching { get; private set; } = ProfilePatching.Disabled;
 
 		public static bool Suspend
 		{
@@ -93,7 +100,7 @@ namespace SmashTools.Performance
 				}
 				profiling = value;
 				string status = profiling ? "<color=green>ENABLED</color>" : "<color=gray>DISABLED</color>";
-				TSMessage($"<color=orange>[ProfilerWatch]</color> Profiling={status}");
+				Debug.TSMessage($"<color=orange>[ProfilerWatch]</color> Profiling={status}");
 				if (profiling && !routineRunning)
 				{
 					CoroutineManager.StartCoroutine(CaptureFrameRoutine);
@@ -109,16 +116,16 @@ namespace SmashTools.Performance
 				if (!UnityData.IsInMainThread) return null;
 #endif
 
-				lock (profilers)
+				int threadId = Thread.CurrentThread.ManagedThreadId;
+				if (!profilers.TryGetValue(threadId, out ThreadProfiler profile))
 				{
-					int threadId = Thread.CurrentThread.ManagedThreadId;
-					if (!profilers.TryGetValue(threadId, out ThreadProfiler profile))
+					profile = new ThreadProfiler();
+					if (!profilers.TryAdd(threadId, profile))
 					{
-						profile = new ThreadProfiler();
-						profilers[threadId] = profile;
+						Assert.Raise();
 					}
-					return profile;
 				}
+				return profile;
 			}
 		}
 
@@ -138,11 +145,11 @@ namespace SmashTools.Performance
 		public static void ClearCache()
 		{
 			//Reference assignment is atomic, this is thread safe
-			profilers = new Dictionary<int, ThreadProfiler>();
-			results = new Dictionary<string, Block>();
+			profilers = new ConcurrentDictionary<int, ThreadProfiler>();
+			results = new ConcurrentDictionary<string, Block>();
 			Cache = new CircularArray<BlockContainer>(CacheSize);
 
-			lock (Root)
+			lock (rootLock)
 			{
 				if (Root != null)
 				{
@@ -163,21 +170,21 @@ namespace SmashTools.Performance
 			{
 				yield return new WaitForSeconds(FramesPerCapture / 60f);
 
-				lock (Root)
+				lock (rootLock)
 				{
 					Root.Collapse();
-					BlockContainer dropped = Cache.Push(Root);
+					BlockContainer dropped;
+					lock (cacheLock)
+					{
+						dropped = Cache.Push(Root);
+					}
 					if (dropped != null)
 					{
 						dropped.Clear();
 						AsyncPool<BlockContainer>.Return(dropped);
 					}
 					Root = AsyncPool<BlockContainer>.Get();
-
-					lock (results)
-					{
-						results.Clear();
-					}
+					results.Clear();
 				}
 			}
 			routineRunning = false;
@@ -187,21 +194,18 @@ namespace SmashTools.Performance
 		{
 			if (Suspend) return;
 
-			lock (results)
+			if (!results.TryGetValue(head.Label, out Block sharedHead))
 			{
-				if (!results.TryGetValue(head.Label, out Block sharedHead))
+				results.TryAdd(head.Label, head);
+				sharedHead = head;
+				lock (rootLock)
 				{
-					results[head.Label] = head;
-					sharedHead = head;
-					lock (Root)
-					{
-						Root.InnerList.Add(sharedHead);
-					}
+					Root.InnerList.Add(sharedHead);
 				}
-				if (head != sharedHead)
-				{
-					sharedHead.JoinResults(head);
-				}
+			}
+			if (head != sharedHead)
+			{
+				sharedHead.JoinResults(head);
 			}
 		}
 
@@ -272,7 +276,7 @@ namespace SmashTools.Performance
 
 				count += ApplyProfilePatchesForType(type, patchAll);
 			}
-			TSMessage($"<color=orange>[ProfilerWatch]</color> {count} methods being profiled");
+			Log.Message($"<color=orange>[ProfilerWatch]</color> {count} methods being profiled");
 			CoroutineManager.QueueInvoke(delegate ()
 			{
 				Messages.Message($"{count} methods patched for profiling.", MessageTypeDefOf.NeutralEvent);
@@ -347,25 +351,52 @@ namespace SmashTools.Performance
 			if (methodInfo.IsAbstract) return 0;											// Abstract
 			if (!methodInfo.HasMethodBody()) return 0;										// Extern
 			if (methodInfo.ReturnType == typeof(IEnumerable<CodeInstruction>)) return 0;	// Transpilers
-			if (!methodInfo.IsDeclaredMember()) return 0;									// Concrete implementations
-
+			if (!methodInfo.IsDeclaredMember()) return 0;                                   // Concrete implementations
+			if (methodInfo.HasAttribute<CompilerGeneratedAttribute>()) return 0;			// Compiler Generated
+			
 			try
 			{
-				HarmonyMethod prefix = new HarmonyMethod(AccessTools.Method(typeof(ProfilerWatch), nameof(StartPatch)), priority: Priority.First);
-				HarmonyMethod postfix = new HarmonyMethod(AccessTools.Method(typeof(ProfilerWatch), nameof(StopPatch)), priority: Priority.Last);
-				harmony.Patch(methodInfo, prefix: prefix, postfix: postfix);
+				//harmony.Patch(methodInfo, transpiler: new HarmonyMethod(AccessTools.Method(typeof(ProfilerWatch),
+				//	nameof(InjectProfilingTranspiler)), priority: Priority.Last));
+				harmony.Patch(methodInfo, 
+					prefix: new HarmonyMethod(AccessTools.Method(typeof(ProfilerWatch),
+					nameof(StartPatch)), priority: Priority.First), 
+					postfix: new HarmonyMethod(AccessTools.Method(typeof(ProfilerWatch),
+					nameof(StopPatch)), priority: Priority.Last));
+			}
+			catch (InvalidProgramException)
+			{
 			}
 			catch (Exception ex)
 			{
-				TSError($"Failed to apply harmony patch on {methodInfo.DeclaringType}.{methodInfo.Name}. Exception={ex}");
+				Debug.TSError($"Failed to apply harmony patch on {methodInfo.DeclaringType}.{methodInfo.Name}. Exception={ex}");
+			}
+			return 1;
+		}
+
+		private static IEnumerable<CodeInstruction> InjectProfilingTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
+		{
+			patchInstructions.AddRange(instructions);
+
+			// Non-implemented methods
+			if (patchInstructions.LastOrDefault().opcode != OpCodes.Ret) yield break;
+
+			// Start profiling
+			yield return new CodeInstruction(opcode: OpCodes.Ldstr, operand: $"{__originalMethod.DeclaringType.Name}.{__originalMethod.Name}");
+			yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(ProfilerWatch), nameof(Start)));
+
+			// Original Method
+			foreach (CodeInstruction instruction in instructions)
+			{
+				if (instruction.opcode == OpCodes.Ret)
+				{
+					// Stop Profiling
+					yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(ProfilerWatch), nameof(Stop)));
+				}
+				yield return instruction;
 			}
 
-			CoroutineManager.QueueInvoke(delegate ()
-			{
-				Messages.Message($"Profiling {methodInfo.DeclaringType.Name}.{methodInfo.Name}", MessageTypeDefOf.SilentInput);
-			});
-
-			return 1;
+			patchInstructions.Clear();
 		}
 
 		private static int ProfileProperty(PropertyInfo propertyInfo)
@@ -405,35 +436,35 @@ namespace SmashTools.Performance
 		/// <summary>
 		/// Tracker for execution time of code blocks
 		/// </summary>
-		/// <remarks>Only accessible from the thread it was created on, so inherently thread safe.</remarks>
+		/// <remarks>Only accessible from the thread it was created on.</remarks>
 		private class ThreadProfiler
 		{
 			private readonly Stack<Block> blocks = new Stack<Block>();
-
+			
 			public void Start(string label)
 			{
+				if (Patching != ProfilePatching.Enabled) return;
+
 				Block parent = blocks.Count > 0 ? blocks.Peek() : null;
-				Block block;
-				lock (results)
+				if (!results.TryGetValue(label, out Block block))
 				{
-					if (!results.TryGetValue(label, out block))
-					{
-						block = AsyncPool<Block>.Get();
-					}
+					block = AsyncPool<Block>.Get();
 				}
 				block.Set(label, parent);
-
 				blocks.Push(block);
 				block.Stopwatch.Start();
 			}
 
 			public void Stop()
 			{
-				Assert(blocks.Count > 0);
+				if (Patching != ProfilePatching.Enabled) return;
+
 				Block block = blocks.Pop();
 				block.Stopwatch.Stop();
 				block.Record();
-				if (block.Parent == null) //Only stash the results from the head of the profile block. Child results can be fetched from there
+				// Only stash the results from the head of the profile block,
+				// child results can be fetched from there.
+				if (block.Parent == null)
 				{
 					StashResults(block);
 				}

@@ -81,10 +81,8 @@ namespace SmashTools
 				return;
 			}
 
-			GUIState.Push();
+			using (new TextBlock(GameFont.Medium))
 			{
-				Text.Font = GameFont.Medium;
-
 				Rect labelRect = inRect.ContractedBy(5);
 				labelRect.height = 32;
 
@@ -130,7 +128,6 @@ namespace SmashTools
 
 				RecalculateViewRect(outRect, index);
 			}
-			GUIState.Pop();
 		}
 	}
 }

@@ -220,93 +220,88 @@ namespace SmashTools
 		{
 			CachedHeight = 0;
 
-			GUIState.Push();
-			{
-				string currentCategory = string.Empty;
-				string currentSubCategory = string.Empty;
+			string currentCategory = string.Empty;
+			string currentSubCategory = string.Empty;
 
-				int rowCount = 0;
-				foreach (TweakInfo info in tweakValueFields)
+			int rowCount = 0;
+			foreach (TweakInfo info in tweakValueFields)
+			{
+				if (info.category != currentCategory)
 				{
-					if (info.category != currentCategory)
+					currentCategory = info.category;
+					if (!currentCategory.NullOrEmpty())
 					{
-						currentCategory = info.category;
-						if (!currentCategory.NullOrEmpty())
-						{
-							Text.Font = GameFont.Medium;
-							float rowHeight = Text.LineHeight + 2; //+2 for gap
-							CachedHeight += rowHeight;
-							rowCount = 0;
-						}
+						using var textFont = new TextBlock(GameFont.Medium);
+						float rowHeight = Text.LineHeight + 2; // add 2 for gap
+						CachedHeight += rowHeight;
+						rowCount = 0;
 					}
-					if (info.subCategory != currentSubCategory)
+				}
+				if (info.subCategory != currentSubCategory)
+				{
+					currentSubCategory = info.subCategory;
+					if (!currentSubCategory.NullOrEmpty())
 					{
-						currentSubCategory = info.subCategory;
-						if (!currentSubCategory.NullOrEmpty())
-						{
-							Text.Font = GameFont.Small;
-							float rowHeight = Text.LineHeight + 2; //+2 for gap
-							CachedHeight += rowHeight;
-							rowCount = 0;
-						}
+						using var textFont = new TextBlock(GameFont.Small);
+						float rowHeight = Text.LineHeight + 2; // add 2 for gap
+						CachedHeight += rowHeight;
+						rowCount = 0;
 					}
-					if (DrawField(info, out _))
+				}
+				if (DrawField(info, out _))
+				{
+					rowCount++;
+					if (rowCount > ColumnCount) //Mark for new column
 					{
-						rowCount++;
-						if (rowCount > ColumnCount) //Mark for new column
-						{
-							rowCount = 1;
-						}
-						if (rowCount == 1) //Only count for first item in row
-						{
-							CachedHeight += Listing_SplitColumns.GapHeight;
-						}
+						rowCount = 1;
+					}
+					if (rowCount == 1) //Only count for first item in row
+					{
+						CachedHeight += Listing_SplitColumns.GapHeight;
 					}
 				}
 			}
-			GUIState.Pop();
 		}
 
 		public override void DoWindowContents(Rect inRect)
 		{
-			GUIState.Push();
+			using var textFont = new TextBlock(GameFont.Small);
+			Rect rect;
+			Rect outRect = rect = inRect.ContractedBy(4f);
+			rect.xMax -= 33f;
+			Rect viewRect = new Rect(0f, 0f, rect.width, CachedHeight).ContractedBy(4);
+			// Start ScrollView
+			listing.BeginScrollView(outRect, ref scrollPosition, ref viewRect, ColumnCount);
+			string currentCategory = string.Empty;
+			string currentSubCategory = string.Empty;
+			foreach (TweakInfo info in tweakValueFields)
 			{
-				Text.Font = GameFont.Small;
-				Rect rect;
-				Rect outRect = rect = inRect.ContractedBy(4f);
-				rect.xMax -= 33f;
-				Rect viewRect = new Rect(0f, 0f, rect.width, CachedHeight).ContractedBy(4);
-				listing.BeginScrollView(outRect, ref scrollPosition, ref viewRect, ColumnCount);
+				if (info.category != currentCategory)
 				{
-					string currentCategory = string.Empty;
-					string currentSubCategory = string.Empty;
-					foreach (TweakInfo info in tweakValueFields)
+					currentCategory = info.category;
+					if (!currentCategory.NullOrEmpty())
 					{
-						if (info.category != currentCategory)
-						{
-							currentCategory = info.category;
-							if (!currentCategory.NullOrEmpty())
-							{
-								listing.Header(currentCategory, ListingExtension.BannerColor, fontSize: GameFont.Medium, anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
-							}
-						}
-						if (info.subCategory != currentSubCategory)
-						{
-							currentSubCategory = info.subCategory;
-							if (!currentSubCategory.NullOrEmpty())
-							{
-								listing.Header(currentSubCategory, ListingExtension.BannerColor, fontSize: GameFont.Small, anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
-							}
-						}
-						if (DrawField(info, out bool fieldChange) && fieldChange)
-						{
-							FieldChanged();
-						}
+						listing.Header(currentCategory, ListingExtension.BannerColor, fontSize: GameFont.Medium, 
+							anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
 					}
 				}
-				listing.EndScrollView(ref viewRect);
+				if (info.subCategory != currentSubCategory)
+				{
+					currentSubCategory = info.subCategory;
+					if (!currentSubCategory.NullOrEmpty())
+					{
+						listing.Header(currentSubCategory, ListingExtension.BannerColor, fontSize: GameFont.Small, 
+							anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
+					}
+				}
+				if (DrawField(info, out bool fieldChange) && fieldChange)
+				{
+					FieldChanged();
+				}
 			}
-			GUIState.Pop();
+
+			listing.EndScrollView(ref viewRect);
+			// End ScrollView
 		}
 
 		/// <summary>
@@ -342,11 +337,14 @@ namespace SmashTools
 							int newValue = value;
 							if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
 							{
-								listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue), lineHeight: RowHeight);
+								listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, 
+									min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue), 
+									lineHeight: RowHeight);
 							}
 							else
 							{
-								listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: int.MaxValue, lineHeight: RowHeight);
+								listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty, 
+									min: 0, max: int.MaxValue, lineHeight: RowHeight);
 							}
 							if (value != newValue)
 							{
@@ -362,7 +360,8 @@ namespace SmashTools
 						if (info.TryGetValue(out Vector2 vector2))
 						{
 							Vector2 newValue = vector2;
-							listing.Vector2Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, subLabelProportions: VectorSubLabelProportion, buffer: 5);
+							listing.Vector2Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, 
+								subLabelProportions: VectorSubLabelProportion, buffer: 5);
 							if (vector2 != newValue)
 							{
 								info.SetValue(newValue);
@@ -373,7 +372,8 @@ namespace SmashTools
 						else if (info.TryGetValue(out FloatRange floatRange))
 						{
 							FloatRange newValue = floatRange;
-							listing.FloatRangeBox(info.Name, ref newValue, labelProportion: FloatRangeLabelProportion, subLabelProportions: FloatRangeSubLabelProportion, buffer: 5);
+							listing.FloatRangeBox(info.Name, ref newValue, labelProportion: FloatRangeLabelProportion, 
+								subLabelProportions: FloatRangeSubLabelProportion, buffer: 5);
 							if (floatRange != newValue)
 							{
 								info.SetValue(newValue);
@@ -384,7 +384,8 @@ namespace SmashTools
 						else if (info.TryGetValue(out Vector3 vector3))
 						{
 							Vector3 newValue = vector3;
-							listing.Vector3Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, subLabelProportions: VectorSubLabelProportion, buffer: 5);
+							listing.Vector3Box(info.Name, ref newValue, labelProportion: VectorLabelProportion, 
+								subLabelProportions: VectorSubLabelProportion, buffer: 5);
 							if (vector3 != newValue)
 							{
 								info.SetValue(newValue);
@@ -397,11 +398,13 @@ namespace SmashTools
 							float newValue = @float;
 							if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
 							{
-								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: inputBox.MinValue, max: inputBox.MaxValue, lineHeight: RowHeight);
+								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: inputBox.MinValue, 
+									max: inputBox.MaxValue, lineHeight: RowHeight);
 							}
 							else
 							{
-								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: float.MaxValue, lineHeight: RowHeight);
+								listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0, max: float.MaxValue, 
+									lineHeight: RowHeight);
 							}
 							if (@float != newValue)
 							{
@@ -420,7 +423,8 @@ namespace SmashTools
 
 					if (info.TryGetValue(out Rot4 rot4))
 					{
-						if (listing.ClickableLabel(info.Name, rot4.ToStringWord(), highlightedColor, color, clickColor: clickColor, lineHeight: RowHeight))
+						if (listing.ClickableLabel(info.Name, rot4.ToStringWord(), highlightedColor, color, 
+							clickColor: clickColor, lineHeight: RowHeight))
 						{
 							rot4.Rotate(RotationDirection.Clockwise);
 							info.SetValue(rot4);
@@ -430,7 +434,8 @@ namespace SmashTools
 					}
 					else if (info.TryGetValue(out Rot8 rot8))
 					{
-						if (listing.ClickableLabel(info.Name, rot8.ToStringNamed(), highlightedColor, color, clickColor: clickColor, lineHeight: RowHeight))
+						if (listing.ClickableLabel(info.Name, rot8.ToStringNamed(), highlightedColor, color, 
+							clickColor: clickColor, lineHeight: RowHeight))
 						{
 							rot8.Rotate(RotationDirection.Clockwise);
 							info.SetValue(rot8);
@@ -444,7 +449,8 @@ namespace SmashTools
 						if (info.TryGetValue(out int value))
 						{
 							int newValue = value;
-							listing.EnumSliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, info.fieldInfo.FieldType);
+							listing.EnumSliderLabeled(info.Name, ref newValue, string.Empty, string.Empty, 
+								info.fieldInfo.FieldType);
 							if (value != newValue)
 							{
 								info.SetValue(newValue);

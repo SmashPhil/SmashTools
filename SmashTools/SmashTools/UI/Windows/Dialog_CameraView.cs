@@ -115,7 +115,7 @@ namespace SmashTools.Animations
 
 					if (!disabled)
 					{
-						GUIState.Push();
+						using (new TextBlock(Color.white))
 						{
 							Rect leftColumnRect = new Rect(rect.x, rect.y, rect.width - camRectSize - 1, camRectSize).ContractedBy(5);
 							lister.columnGap = 0;
@@ -131,7 +131,6 @@ namespace SmashTools.Animations
 								CameraView.HandleZoom();
 							}
 						}
-						GUIState.Pop();
 					}
 				}
 				catch (Exception ex)

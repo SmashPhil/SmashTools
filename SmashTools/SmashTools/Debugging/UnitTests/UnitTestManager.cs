@@ -12,38 +12,51 @@ using RimWorld;
 using UnityEngine;
 using Verse;
 using Verse.Profile;
-using static SmashTools.Debug;
 
 namespace SmashTools.Debugging
 {
 	public static class UnitTestManager
 	{
 		private static bool runningUnitTests;
-		private static List<UnitTest> unitTests = new List<UnitTest>();
+		private static Dictionary<UnitTest.TestType, List<UnitTest>> unitTests = new Dictionary<UnitTest.TestType, List<UnitTest>>();
 		private static List<string> results = new List<string>();
 
 		public static event Action<bool> onUnitTestStateChange;
-		
+
 		static UnitTestManager()
 		{
-			ConcurrentBag<UnitTest> tests = new ConcurrentBag<UnitTest>();
+			var tests = new ConcurrentDictionary<UnitTest.TestType, ConcurrentBag<UnitTest>>();
+			foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
+			{
+				if (!tests.TryAdd(testType, new ConcurrentBag<UnitTest>()))
+				{
+					Assert.Raise();
+				}
+			}
 			Parallel.ForEach(GenTypes.AllTypes, type =>
 			{
 				if (type.IsSubclassOf(typeof(UnitTest)) && !type.IsAbstract)
 				{
-					tests.Add((UnitTest)Activator.CreateInstance(type));
+					UnitTest unitTest = (UnitTest)Activator.CreateInstance(type);
+					tests[unitTest.ExecuteOn].Add(unitTest);
 				}
 			});
-			unitTests.AddRange(tests);
+			foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
+			{
+				unitTests.Add(testType, new List<UnitTest>(tests[testType].OrderByDescending(test => (int)test.Priority)));
+			}
 		}
 
-		public static UnitTest.TestType TestType { get; private set; }
+		public static Dictionary<UnitTest.TestType, bool> TestPlan { get; private set; } = new Dictionary<UnitTest.TestType, bool>();
 
 		private static UnitTest IsolatedTest { get; set; }
 
-		public static List<UnitTest> UnitTests => unitTests;
+		public static List<UnitTest> AllUnitTests => unitTests.Values.SelectMany(t => t).ToList();
 
 		private static bool StopTest { get; set; }
+
+		// Supresses startup action unit tests once it has been executed once to avoid infinite test loops when transitioning scenes.
+		private static bool UnitTestsExecuted { get; set; }
 
 		public static bool RunningUnitTests
 		{
@@ -63,30 +76,31 @@ namespace SmashTools.Debugging
 #if DEBUG
 		public static void Run(UnitTest unitTest)
 		{
+			if (unitTest.ExecuteOn == UnitTest.TestType.Disabled) return;
+
 			IsolatedTest = unitTest;
-			TestType = unitTest.ExecuteOn;
-			StartUnitTests();
+			ExecuteUnitTests(unitTest.ExecuteOn);
 		}
 
 		[StartupAction(Category = "UnitTesting", Name = "Run All", GameState = GameState.OnStartup)]
-		public static void RunAll()
+		private static void RunAll()
 		{
-			TestType = UnitTest.TestType.MainMenu | UnitTest.TestType.GameLoaded;
-			StartUnitTests();
+			if (UnitTestsExecuted) return;
+			ExecuteUnitTests(UnitTest.TestType.MainMenu, UnitTest.TestType.GameLoaded);
 		}
 
 		[StartupAction(Category = "UnitTesting", Name = "Run MainMenu Tests", GameState = GameState.OnStartup)]
-		public static void RunMainMenuTests()
+		private static void RunMainMenuTests()
 		{
-			TestType = UnitTest.TestType.MainMenu;
-			StartUnitTests();
+			if (UnitTestsExecuted) return;
+			ExecuteUnitTests(UnitTest.TestType.MainMenu);
 		}
 
 		[StartupAction(Category = "UnitTesting", Name = "Run Game Tests", GameState = GameState.OnStartup)]
-		public static void RunGameTests()
+		private static void RunGameTests()
 		{
-			TestType = UnitTest.TestType.GameLoaded;
-			StartUnitTests();
+			if (UnitTestsExecuted) return;
+			ExecuteUnitTests(UnitTest.TestType.GameLoaded);
 		}
 
 		private static void StartUnitTests()
@@ -94,9 +108,9 @@ namespace SmashTools.Debugging
 			if (ModsConfig.IsActive("UnlimitedHugs.HugsLib"))
 			{
 				Type type = AccessTools.TypeByName("HugsLib.Quickstart.QuickstartController");
-				Assert(type != null, "Can't find QuickstartController type");
+				Assert.IsNotNull(type);
 				MethodInfo abortMethod = AccessTools.Method(type, "StatusBoxAbortRequestedHandler");
-				Assert(abortMethod != null, "Can't find abort method.");
+				Assert.IsNotNull(abortMethod);
 				abortMethod.Invoke(null, new object[] { false });
 			}
 			LongEventHandler.ExecuteWhenFinished(delegate ()
@@ -104,18 +118,41 @@ namespace SmashTools.Debugging
 				CoroutineManager.QueueInvoke(UnitTestRoutine);
 			});
 		}
+
+		/// <remarks>Not including any test types will default to running all available tests.</remarks>
+		public static void ExecuteUnitTests(params UnitTest.TestType[] testTypes)
+		{
+			if (testTypes.NullOrEmpty())
+			{
+				testTypes = new UnitTest.TestType[2] { UnitTest.TestType.MainMenu, UnitTest.TestType.GameLoaded };
+			}
+			UnitTestsExecuted = true;
+			EnableForTests(testTypes);
+			StartUnitTests();
+		}
 #endif
+
+		private static void EnableForTests(params UnitTest.TestType[] types)
+		{
+			TestPlan.Clear();
+			foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
+			{
+				TestPlan[testType] = types.Contains(testType);
+			}
+		}
 
 		private static IEnumerator UnitTestRoutine()
 		{
-			if (TestType == UnitTest.TestType.None) yield break;
+			Assert.IsTrue(!TestPlan.NullOrEmpty() && TestPlan.Count == Enum.GetValues(typeof(UnitTest.TestType)).Length);
+
+			bool testFromMainMenu = GenScene.InEntryScene;
 
 			RunningUnitTests = true;
 			using var cleanup = new TestCleanup();
 
 			results.Clear();
 			results.Add($"---------- Unit Tests ----------");
-			if (TestType.HasFlag(UnitTest.TestType.MainMenu))
+			if (TestPlan[UnitTest.TestType.MainMenu])
 			{
 				if (Current.ProgramState != ProgramState.Entry)
 				{
@@ -130,7 +167,7 @@ namespace SmashTools.Debugging
 				if (StopTest) goto EndTest;
 			}
 			
-			if (TestType.HasFlag(UnitTest.TestType.GameLoaded))
+			if (TestPlan[UnitTest.TestType.GameLoaded])
 			{
 				LongEventHandler.QueueLongEvent(delegate ()
 				{
@@ -152,6 +189,10 @@ namespace SmashTools.Debugging
 			}
 
 			EndTest:;
+			if (testFromMainMenu)
+			{
+				GenScene.GoToMainMenu();
+			}
 			results.Add($"-------- End Unit Tests --------");
 			DumpResults(results);
 			Log.TryOpenLogWindow();
@@ -161,10 +202,10 @@ namespace SmashTools.Debugging
 		private static IEnumerator ExecuteTests(UnitTest.TestType type, List<string> output)
 		{
 			List<string> subResults = new List<string>();
-			foreach (UnitTest unitTest in unitTests)
+			foreach (UnitTest unitTest in unitTests[type])
 			{
+				Assert.IsTrue(unitTest.ExecuteOn == type);
 				if (StopTest) yield break;
-				if (unitTest.ExecuteOn != type) continue;
 				if (IsolatedTest != null && IsolatedTest != unitTest) continue;
 
 				try
@@ -211,7 +252,7 @@ namespace SmashTools.Debugging
 		private static void Terminate()
 		{
 			RunningUnitTests = false;
-			TestType = UnitTest.TestType.None;
+			TestPlan.Clear();
 			IsolatedTest = null;
 		}
 
