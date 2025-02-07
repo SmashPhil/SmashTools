@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using Verse;
-using UnityEngine;
 
 namespace SmashTools
 {
@@ -13,13 +7,10 @@ namespace SmashTools
 	public static class Trace
 	{
 		[Conditional("TRACE")]
-		public static void IsTrue(bool condition)
+		public static void IsTrue(bool condition, string message = null)
 		{
 			if (condition) return;
-
-			Log.Error($"Assertion Failed");
-			if (Debugger.IsAttached) Debugger.Break();
-			Debug.ShowStack("Assertion Failed");
+			Raise(message);
 		}
 
 		[Conditional("TRACE")]
@@ -39,8 +30,12 @@ namespace SmashTools
 		[Conditional("TRACE")]
 		public static void Raise(string message = null)
 		{
+#if DEBUG
+			Assert.Raise(message);
+#else
 			string readout = message != null ? $"Assertion Failed: {message}" : "Assertion Failed";
 			Log.Error(readout);
+#endif
 		}
 	}
 }
