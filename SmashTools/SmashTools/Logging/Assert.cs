@@ -6,55 +6,32 @@ using Verse;
 
 namespace SmashTools
 {
+	// Reimplementation of System.Diagnostics.Assert with IMGUI popup and RimWorld logger
 	public static class Assert
 	{
 		[Conditional("DEBUG")]
-		public static void IsTrue(bool condition)
-		{
-			IsTrue(condition, null);
-		}
-
-		[Conditional("DEBUG")]
-		public static void IsTrue(bool condition, string message)
+		public static void IsTrue(bool condition, string message = null)
 		{
 			if (condition) return;
 			Raise(message);
 		}
 
 		[Conditional("DEBUG")]
-		public static void IsNull<T>(T obj) where T : class
-		{
-			IsNull(obj, null);
-		}
-
-		[Conditional("DEBUG")]
-		public static void IsNull<T>(T obj, string message) where T : class
+		public static void IsNull<T>(T obj, string message = null) where T : class
 		{
 			if (obj == null) return;
 			Raise(message);
 		}
 
 		[Conditional("DEBUG")]
-		public static void IsNotNull<T>(T obj) where T : class
-		{
-			IsNotNull(obj, null);
-		}
-
-		[Conditional("DEBUG")]
-		public static void IsNotNull<T>(T obj, string message) where T : class
+		public static void IsNotNull<T>(T obj, string message = null) where T : class
 		{
 			if (obj != null) return;
 			Raise(message);
 		}
 
 		[Conditional("DEBUG")]
-		public static void Raise()
-		{
-			Raise(null);
-		}
-
-		[Conditional("DEBUG")]
-		public static void Raise(string message)
+		public static void Raise(string message = null)
 		{
 			string readout = message != null ? $"Assertion Failed: {message}" : "Assertion Failed";
 			Log.Error(readout);

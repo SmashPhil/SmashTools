@@ -15,7 +15,7 @@ namespace SmashTools.Performance
 
 		private readonly ConcurrentQueue<AsyncAction> queue;
 
-		private bool shouldExit = false;
+		private bool shouldExit;
 
 		public delegate void UpdateLoop();
 
@@ -32,24 +32,20 @@ namespace SmashTools.Performance
 			thread.Start();
 		}
 
-		public bool Terminated { get; private set; } = false;
+		public bool Terminated { get; private set; }
 
-		public bool InLongOperation { get; private set; } = false;
+		public bool InLongOperation { get; private set; }
 
 		public int QueueCount => queue.Count;
 
 		/// <summary>
 		/// For Debugging purposes only. Allows reading of action queue with moment-in-time snapshot.
 		/// </summary>
-		internal IEnumerator<AsyncAction> GetEnumerator() 
-		{
-			return queue.GetEnumerator();
-		}
+		internal IEnumerator<AsyncAction> GetEnumerator() => queue.GetEnumerator();
 
-		public bool Queue(AsyncAction action)
+		public void Queue(AsyncAction action)
 		{
 			queue.Enqueue(action);
-			return true;
 		}
 
 		internal void Stop()
@@ -63,7 +59,7 @@ namespace SmashTools.Performance
 			{
 				if (queue.TryDequeue(out AsyncAction asyncAction))
 				{
-					if (asyncAction != null && asyncAction.IsValid)
+					if (asyncAction is { IsValid: true } )
 					{
 						try
 						{

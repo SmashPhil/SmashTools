@@ -139,8 +139,8 @@
     <Compile Include="Debugging\StartupAction\StartupTest.cs" />
     <Compile Include="Debugging\UnitTests\UnitTest.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_AnimationCurve.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_AnimDynamicMethod.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestAnimationCurve.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestAnimDynamicMethod.cs" />
     <Compile Include="Enums\MathOp.cs" />
     <Compile Include="Enums\UISettingsType.cs" />
     <Compile Include="Events\EventManager.cs" />
@@ -176,7 +176,6 @@
     <Compile Include="Performance\Multithreading\AsyncPool.cs" />
     <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
-    <Compile Include="Performance\Profiling\JBProfiler.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
     <Compile Include="Performance\Multithreading\TaskManager.cs" />
     <Compile Include="Performance\Multithreading\ThreadManager.cs" />

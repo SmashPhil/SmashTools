@@ -376,27 +376,28 @@ namespace SmashTools.Performance
 
 		private static IEnumerable<CodeInstruction> InjectProfilingTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase __originalMethod)
 		{
-			patchInstructions.AddRange(instructions);
+			yield break;
+			//patchInstructions.AddRange(instructions);
 
-			// Non-implemented methods
-			if (patchInstructions.LastOrDefault().opcode != OpCodes.Ret) yield break;
+			//// Non-implemented methods
+			//if (patchInstructions.LastOrDefault().opcode != OpCodes.Ret) yield break;
 
-			// Start profiling
-			yield return new CodeInstruction(opcode: OpCodes.Ldstr, operand: $"{__originalMethod.DeclaringType.Name}.{__originalMethod.Name}");
-			yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(ProfilerWatch), nameof(Start)));
+			//// Start profiling
+			//yield return new CodeInstruction(opcode: OpCodes.Ldstr, operand: $"{__originalMethod.DeclaringType.Name}.{__originalMethod.Name}");
+			//yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(ProfilerWatch), nameof(Start)));
 
-			// Original Method
-			foreach (CodeInstruction instruction in instructions)
-			{
-				if (instruction.opcode == OpCodes.Ret)
-				{
-					// Stop Profiling
-					yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(ProfilerWatch), nameof(Stop)));
-				}
-				yield return instruction;
-			}
+			//// Original Method
+			//foreach (CodeInstruction instruction in instructions)
+			//{
+			//	if (instruction.opcode == OpCodes.Ret)
+			//	{
+			//		// Stop Profiling
+			//		yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(ProfilerWatch), nameof(Stop)));
+			//	}
+			//	yield return instruction;
+			//}
 
-			patchInstructions.Clear();
+			//patchInstructions.Clear();
 		}
 
 		private static int ProfileProperty(PropertyInfo propertyInfo)
