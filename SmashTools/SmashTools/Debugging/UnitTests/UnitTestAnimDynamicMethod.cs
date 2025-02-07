@@ -11,7 +11,7 @@ using Verse;
 
 namespace SmashTools.Debugging
 {
-	internal class UnitTest_AnimDynamicMethod : UnitTest
+	internal class UnitTestAnimDynamicMethod : UnitTest
 	{
 		private const int TestCount = 10;
 

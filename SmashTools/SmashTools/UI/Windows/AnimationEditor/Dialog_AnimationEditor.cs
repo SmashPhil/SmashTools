@@ -23,11 +23,11 @@ namespace SmashTools.Animations
 		private AnimationClipEditor clipEditor;
 
 		//IMGUI
-		public static readonly int s_SliderHash;
+		//public static readonly int s_SliderHash;
 
 		static Dialog_AnimationEditor()
 		{
-			s_SliderHash = (int)AccessTools.Field(typeof(GUI), nameof(s_SliderHash)).GetValue(null);
+			//s_SliderHash = (int)AccessTools.Field(typeof(GUI), nameof(s_SliderHash)).GetValue(null);
 		}
 
 		public Dialog_AnimationEditor(IAnimator animator)

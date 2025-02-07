@@ -11,7 +11,7 @@ using Verse;
 
 namespace SmashTools.Debugging
 {
-	internal class UnitTest_AnimationCurve: UnitTest
+	internal class UnitTestAnimationCurve: UnitTest
 	{
 		public override string Name => "AnimationCurve";
 

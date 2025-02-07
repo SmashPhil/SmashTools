@@ -9,9 +9,9 @@ using UnityEngine;
 
 namespace SmashTools
 {
+	// Reimplementation of System.Diagnostics.Trace with IMGUI popup and RimWorld logger
 	public static class Trace
 	{
-		// Reimplementation of Trace.Assert with IMGUI popup
 		[Conditional("TRACE")]
 		public static void IsTrue(bool condition)
 		{
@@ -23,13 +23,24 @@ namespace SmashTools
 		}
 
 		[Conditional("TRACE")]
-		public static void IsTrue(bool condition, string message)
+		public static void IsNull<T>(T obj, string message = null) where T : class
 		{
-			if (condition) return;
+			if (obj == null) return;
+			Raise(message);
+		}
 
-			Log.Error(message);
-			if (Debugger.IsAttached) Debugger.Break();
-			Debug.ShowStack(message);
+		[Conditional("TRACE")]
+		public static void IsNotNull<T>(T obj, string message = null) where T : class
+		{
+			if (obj != null) return;
+			Raise(message);
+		}
+
+		[Conditional("TRACE")]
+		public static void Raise(string message = null)
+		{
+			string readout = message != null ? $"Assertion Failed: {message}" : "Assertion Failed";
+			Log.Error(readout);
 		}
 	}
 }
