@@ -33,10 +33,9 @@ namespace SmashTools
 		[Conditional("DEBUG")]
 		public static void Raise(string message = null)
 		{
-			string readout = message != null ? $"Assertion Failed: {message}" : "Assertion Failed";
-			Log.Error(readout);
+			Log.Error(message ?? "Assertion Failed");
 			if (Debugger.IsAttached) Debugger.Break();
-			Debug.ShowStack(readout);
+			Debug.ShowStack(message ?? "Assertion Failed!");
 		}
 	}
 }
