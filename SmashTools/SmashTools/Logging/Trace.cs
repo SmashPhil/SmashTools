@@ -33,8 +33,7 @@ namespace SmashTools
 #if DEBUG
 			Assert.Raise(message);
 #else
-			string readout = message != null ? $"Assertion Failed: {message}" : "Assertion Failed";
-			Log.Error(readout);
+			Log.Error(message ?? "Assertion Failed");
 #endif
 		}
 	}
