@@ -55,35 +55,22 @@ namespace SmashTools.Animations
 
 		public bool DeleteSelected => Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Delete);
 
-		public bool SingleSelect => Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftControl) && !Input.GetKey(KeyCode.LeftShift);
+		public bool SingleSelect => Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftControl) 
+			&& !Input.GetKey(KeyCode.LeftShift);
 
-		public bool LeftClick
-		{
-			get
-			{
-				return Event.current != null && 
-					   Event.current.type == EventType.MouseDown && 
-					   Event.current.button == 0;
-			}
-		}
+		public bool LeftClickDown => Event.current != null && Event.current.type == EventType.MouseDown &&
+						 Event.current.button == 0;
 
-		public bool RightClick
-		{
-			get
-			{
-				return Event.current != null && 
-					   Event.current.type == EventType.MouseDown && 
-					   Event.current.button == 1;
-			}
-		}
+		public bool RightClickDown => Event.current != null && Event.current.type == EventType.MouseDown &&
+						 Event.current.button == 1;
 
-		public bool ControlClick
-		{
-			get
-			{
-				return Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand);
-			}
-		}
+		public bool LeftClickUp => Event.current != null && Event.current.type == EventType.MouseUp &&
+						 Event.current.button == 0;
+
+		public bool RightClickUp => Event.current != null && Event.current.type == EventType.MouseUp &&
+						 Event.current.button == 1;
+
+		public bool ControlClick => Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand);
 
 		public abstract void Draw(Rect rect);
 
@@ -259,7 +246,7 @@ namespace SmashTools.Animations
 			using var block = new TextBlock(GameFont.Small, TextAnchor.MiddleCenter);
 
 			bool pressed = false;
-			
+
 			Color buttonColor = this.buttonColor;
 			if (GUI.enabled && Mouse.IsOver(rect))
 			{
@@ -284,7 +271,7 @@ namespace SmashTools.Animations
 			using var block = new TextBlock(GameFont.Small, TextAnchor.MiddleCenter);
 
 			bool pressed = false;
-			
+
 			if (GUI.enabled && Mouse.IsOver(rect))
 			{
 				GUI.color = new Color(0.75f, 0.75f, 0.75f);
@@ -355,7 +342,7 @@ namespace SmashTools.Animations
 			}
 		}
 
-		protected bool DragWindow(Rect rect, Action dragAction, Func<bool> isDragging, 
+		protected bool DragWindow(Rect rect, Action dragAction, Func<bool> isDragging,
 			Action dragStarted = null, Action dragStopped = null, int button = 0)
 		{
 			if (!GUI.enabled)
@@ -393,7 +380,7 @@ namespace SmashTools.Animations
 			return false;
 		}
 
-		protected bool SelectionBox(Vector2 groupPos, Rect visibleRect, Rect clickArea, out Rect dragRect, 
+		protected bool SelectionBox(Vector2 groupPos, Rect visibleRect, Rect clickArea, out Rect dragRect,
 			float snapX = 0, float snapY = 0, float snapPaddingX = 0, float snapPaddingY = 0)
 		{
 			dragRect = Rect.zero;
@@ -402,7 +389,7 @@ namespace SmashTools.Animations
 				draggingSelectionBox = true;
 				selectionBoxPos = MouseUIPos(groupPos - visibleRect.position);
 			}
-			
+
 			if (draggingSelectionBox)
 			{
 				dragRect = DragRect(groupPos - visibleRect.position, snapX: snapX, snapY: snapY, snapPaddingX: snapPaddingX, snapPaddingY: snapPaddingY);

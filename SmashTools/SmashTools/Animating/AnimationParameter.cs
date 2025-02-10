@@ -15,43 +15,23 @@ namespace SmashTools.Animations
 	{
 		private const float ContractedBy = 2;
 
-		internal int id; // cached HashCode of name
-		private string name;
+		public AnimationParameterDef def;
 
 		private float value;
-		internal ParamType type;
 
 		private string inputBuffer;
 
-		/// <summary>
-		/// name edit event
-		/// </summary>
-		/// <remarks>params: (string)oldName, (string)newName</remarks>
-		public event Action<string, string> OnNameChanged;
+		public ushort Id => def.shortHash;
 
-		public float Value => value;
+		public ParamType Type => def.type;
 
-		public ParamType Type => type;
+		public string Name => def.LabelCap;
 
-		public string Name
-		{
-			get
-			{
-				return name;
-			}
-			set
-			{
-				if (name == value) return;
-
-				OnNameChanged?.Invoke(name, value);
-				name = value;
-				id = name.GetHashCodeSafe();
-			}
-		}
+		public float Value { get => value; internal set => this.value = value; }
 
 		public void DrawInput(Rect rect)
 		{
-			switch (type)
+			switch (def.type)
 			{
 				case ParamType.Float:
 					DrawFloatInput(rect);
@@ -110,14 +90,8 @@ namespace SmashTools.Animations
 
 		void IXmlExport.Export()
 		{
-			XmlExporter.WriteElement(nameof(name), name);
-			XmlExporter.WriteObject(nameof(type), type);
+			XmlExporter.WriteObject(nameof(def), def);
 			XmlExporter.WriteObject(nameof(value), value);
-		}
-
-		public void PostLoad()
-		{
-			id = name.GetHashCodeSafe();
 		}
 
 		public enum ParamType
