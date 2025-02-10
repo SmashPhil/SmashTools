@@ -17,13 +17,14 @@ namespace SmashTools.Animations
 	{
 		private const float UIDropdownPadding = 5;
 
-		public string parameter;
+		public AnimationParameterDef def;
 		public ComparisonType comparison;
 		public float value;
 
+		[Unsaved]
 		private string inputBuffer;
-
-		private AnimationParameter cachedParameter;
+		[Unsaved]
+		private AnimationParameter parameter;
 
 		public AnimationTransition Transition { get; internal set; }
 
@@ -31,18 +32,16 @@ namespace SmashTools.Animations
 		{
 			get
 			{
-				if (cachedParameter == null)
+				if (parameter == null)
 				{
 					ResolveParameter();
 				}
-				return cachedParameter;
+				return parameter;
 			}
 			internal set
 			{
-				if (cachedParameter == value) return;
-
-				cachedParameter = value;
-				parameter = Parameter?.Name ?? string.Empty;
+				if (parameter == value) return;
+				parameter = value;
 			}
 		}
 
@@ -80,18 +79,31 @@ namespace SmashTools.Animations
 		{
 			Rect dragHandleRect = new Rect(rect.x, rect.y, 24, 24);
 
-
 			rect.xMin += dragHandleRect.width;
 
-			List<AnimationParameter> parameters = Transition.FromState.Layer.Controller.parameters;
+			if (Event.current != null && Event.current.type == EventType.MouseDown && 
+				Event.current.button == 1 && Mouse.IsOver(rect))
+			{
+				Event.current.Use();
+				List<FloatMenuOption> options = new List<FloatMenuOption>()
+				{
+					new FloatMenuOption("Delete".Translate(), delegate ()
+					{
+						Transition.conditions.Remove(this);
+					})
+				};
 
+				Find.WindowStack.Add(new FloatMenu(options));
+			}
+
+			// Draw input of param type
+			List<AnimationParameter> parameters = Transition.FromState.Layer.Controller.parameters;
 			if (Parameter.Type == ParamType.Float)
 			{
 				Rect[] rects = rect.SplitVertically(3, new float[] { 0.4f, 0.3f, 0.3f }, UIDropdownPadding);
 				Rect parameterRect = rects[0];
 				Rect comparisonRect = rects[1];
 				Rect inputRect = rects[2];
-
 				if (AnimationEditor.Dropdown(parameterRect, Parameter?.Name ?? string.Empty, null))
 				{
 					if (!parameters.NullOrEmpty())
@@ -161,22 +173,18 @@ namespace SmashTools.Animations
 			{
 
 			}
-			else
-			{
-				throw new ArgumentException(Parameter.Type.ToString());
-			}
 		}
 
 		public void ResolveParameter()
 		{
-			if (!parameter.NullOrEmpty())
+			Assert.IsNotNull(def);
+			if (def != null)
 			{
-				Parameter = Transition.FromState.Layer.Controller.parameters.FirstOrDefault(param => param.Name == parameter);
-				if (Parameter == null)
+				Parameter = new AnimationParameter()
 				{
-					Log.Error($"Unable to resolve parameter \"{parameter}\" in condition. Removing...");
-					Transition.conditions.Remove(this);
-				}
+					def = def,
+					Value = value,
+				};
 			}
 		}
 
@@ -187,7 +195,7 @@ namespace SmashTools.Animations
 
 		public void Export()
 		{
-			XmlExporter.WriteObject(nameof(parameter), parameter);
+			XmlExporter.WriteObject(nameof(def), def);
 			XmlExporter.WriteObject(nameof(comparison), comparison);
 			XmlExporter.WriteObject(nameof(value), value);
 		}

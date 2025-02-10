@@ -33,8 +33,8 @@ namespace SmashTools.Animations
 
 		public void Dispose()
 		{
-			FromState.transitions.Remove(this);
-			ToState.transitions.Remove(this);
+			Trace.IsTrue(FromState.transitions.Remove(this));
+			Trace.IsTrue(ToState.transitionsIncoming.Remove(this));
 
 			FromState = null;
 			ToState = null;

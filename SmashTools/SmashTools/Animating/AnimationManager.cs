@@ -15,7 +15,7 @@ namespace SmashTools.Animations
 
 		private LayerData[] layerDatas;
 
-		private Dictionary<int, float> parameters = new Dictionary<int, float>();
+		private Dictionary<ushort, float> parameters = new Dictionary<ushort, float>();
 
 		public AnimationManager(IAnimator animator, AnimationController controller)
 		{
@@ -38,7 +38,7 @@ namespace SmashTools.Animations
 			{
 				foreach (AnimationParameter parameter in controller.parameters)
 				{
-					parameters[parameter.Name.GetHashCode()] = parameter.Value;
+					parameters[parameter.Id] = parameter.Value;
 				}
 			}
 		}
@@ -99,7 +99,7 @@ namespace SmashTools.Animations
 
 				foreach (AnimationCondition condition in transition.conditions)
 				{
-					float value = parameters[condition.Parameter.id];
+					float value = parameters[condition.def.shortHash];
 					if (condition.ConditionMet(value))
 					{
 						layerData.SetState(transition.ToState);
@@ -133,50 +133,66 @@ namespace SmashTools.Animations
 
 		public void SetFloat(string name, float value)
 		{
-			SetFloat(name.GetHashCode(), value);
+			SetFloat(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void SetFloat(int id, float value)
+		public void SetFloat(AnimationParameterDef paramDef, float value)
+		{
+			Assert.IsNotNull(paramDef);
+			SetFloat(paramDef.shortHash, value);
+		}
+
+		public void SetFloat(ushort id, float value)
 		{
 			// All ids should be precached but this isn't error-causing so this
 			// is strictly just for notifying the operation is useless.
 			Assert.IsTrue(parameters.ContainsKey(id), "Parameter Id not precached");
-
 			parameters[id] = value;
 		}
 
 		public void SetInt(string name, int value)
 		{
-			SetInt(name.GetHashCode(), value);
+			SetInt(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void SetInt(int id, int value)
+		public void SetInt(AnimationParameterDef paramDef, int value)
+		{
+			SetInt(paramDef.shortHash, value);
+		}
+
+		public void SetInt(ushort id, int value)
 		{
 			SetFloat(id, value);
 		}
 
 		public void SetBool(string name, bool value)
 		{
-			SetBool(name.GetHashCode(), value);
+			SetBool(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void SetBool(int id, bool value)
+		public void SetBool(AnimationParameterDef paramDef, bool value)
+		{
+			SetBool(paramDef.shortHash, value);
+		}
+
+		public void SetBool(ushort id, bool value)
 		{
 			SetFloat(id, value ? 1 : 0);
 		}
 
 		public void SetTrigger(string name, bool value)
 		{
-			SetBool(name.GetHashCode(), value);
+			SetTrigger(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void SetTrigger(int id, bool value)
+		public void SetTrigger(AnimationParameterDef paramDef, bool value)
 		{
-			SetBool(id, value);
+			SetTrigger(paramDef.shortHash, value);
+		}
+
+		public void SetTrigger(ushort id, bool value)
+		{
+			SetFloat(id, value ? 1 : 0);
 		}
 
 		private class LayerData

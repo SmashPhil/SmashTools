@@ -18,8 +18,12 @@ namespace SmashTools.Animations
 
 		private StateType stateType = StateType.None;
 
-		public List<AnimationTransition> transitions = new List<AnimationTransition>();
-		
+		public List<AnimationTransition> transitions = [];
+
+		// Linked post-load, we don't need to save the same transition in 2 places.
+		[Unsaved]
+		public List<AnimationTransition> transitionsIncoming = [];
+
 		/// <summary>
 		/// For XML Deserialization
 		/// </summary>
@@ -35,6 +39,8 @@ namespace SmashTools.Animations
 		}
 
 		public StateType Type => stateType;
+
+		public bool IsPermanent => Type != StateType.Entry && Type != StateType.Exit && Type != StateType.Any;
 
 		public AnimationLayer Layer { get; internal set; }
 
@@ -59,6 +65,7 @@ namespace SmashTools.Animations
 		{
 			AnimationTransition transition = new AnimationTransition(this, to);
 			transitions.Add(transition);
+			to.transitionsIncoming.Add(transition);
 		}
 
 		public void Dispose()
@@ -66,6 +73,10 @@ namespace SmashTools.Animations
 			for (int i = transitions.Count - 1; i >= 0; i--)
 			{
 				transitions[i].Dispose();
+			}
+			for (int i = transitionsIncoming.Count - 1; i >= 0; i--)
+			{
+				transitionsIncoming[i].Dispose();
 			}
 		}
 
@@ -108,6 +119,10 @@ namespace SmashTools.Animations
 			copy.stateType = stateType;
 			copy.transitions = transitions.Select(transition => transition.CreateCopy()).ToList();
 
+			if (stateType == StateType.Default)
+			{
+				copy.stateType = StateType.None;
+			}
 			return copy;
 		}
 
@@ -117,7 +132,7 @@ namespace SmashTools.Animations
 			Entry,
 			Default,
 			Exit,
-			AnyState
+			Any
 		}
 	}
 }

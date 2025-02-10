@@ -96,13 +96,7 @@ namespace SmashTools.Animations
 				CameraView.Close();
 			}
 			this.animator = animator;
-			if (animator.Manager == null)
-			{
-				Log.Error($"Unable to open editor for entity with null AnimationManager. It must first be added before editing can take place.");
-				Close();
-				return;
-			}
-			controller = animator.Manager.controller;
+			controller = animator.Manager?.controller;
 			if (!controller || controller.layers.NullOrEmpty())
 			{
 				controller = AnimationController.EmptyController();
@@ -176,7 +170,7 @@ namespace SmashTools.Animations
 
 			using (new TextBlock(GameFont.Small))
 			{
-				Rect tabRect = new Rect(inRect.x, inRect.y + 32, inRect.width, 32);
+				Rect tabRect = new Rect(inRect.x, inRect.y + TabDrawer.TabHeight, inRect.width, 32);
 				TabDrawer.DrawTabs(tabRect, tabs);
 				inRect.yMin += tabRect.height;
 

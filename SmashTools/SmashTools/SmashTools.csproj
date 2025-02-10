@@ -12,7 +12,7 @@
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -86,6 +86,7 @@
   <ItemGroup>
     <Compile Include="Animating\AnimationClip.cs" />
     <Compile Include="Animating\AnimationCondition.cs" />
+    <Compile Include="Animating\AnimationParameterDef.cs" />
     <Compile Include="Animating\AnimationController.cs" />
     <Compile Include="Animating\AnimationCurve.cs" />
     <Compile Include="Animating\AnimationEvent.cs" />

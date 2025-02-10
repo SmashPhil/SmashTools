@@ -304,15 +304,15 @@ namespace SmashTools.Animations
 				}
 			}
 
-			if (previewWindow.IsOpen)
+			if (previewWindow != null && previewWindow.IsOpen)
 			{
-				parent.animator.Manager.SetFrame(animation, frame);
+				parent.animator.Manager?.SetFrame(animation, frame);
 			}
 		}
 
 		public override void OnClose()
 		{
-			if (previewWindow.IsOpen)
+			if (previewWindow != null && previewWindow.IsOpen)
 			{
 				previewWindow.Close();
 			}
@@ -373,10 +373,14 @@ namespace SmashTools.Animations
 				DisableGUI();
 			}
 
-			bool previewInGame = previewWindow.IsOpen;
+			bool previewInGame = previewWindow != null && previewWindow.IsOpen;
 			string previewLabel = "ST_PreviewAnimation".Translate();
 			float width = Text.CalcSize(previewLabel).x;
 			Rect toggleRect = new Rect(rect.x, rect.y, width + 20, WidgetBarHeight);
+			if (previewWindow == null)
+			{
+				GUIState.Disable();
+			}
 			if (ToggleText(toggleRect, previewLabel, "ST_PreviewAnimationTooltip".Translate(), previewInGame))
 			{
 				if (previewInGame)
@@ -389,6 +393,7 @@ namespace SmashTools.Animations
 					Find.WindowStack.Add(previewWindow);
 				}
 			}
+			GUIState.Enable();
 
 			DoSeparatorHorizontal(rect.x, rect.y + WidgetBarHeight, rect.width);
 
@@ -1756,7 +1761,7 @@ namespace SmashTools.Animations
 
 				// Size = 20x20 with the same centering as texRect
 				Rect handleRect = new Rect(texRect.center.x, texRect.center.y, 0, 0).ExpandedBy(10);
-				if (LeftClick && Mouse.IsOver(handleRect))
+				if (LeftClickDown && Mouse.IsOver(handleRect))
 				{
 					selector.SelectFrame(property, i);
 					keyFrameSelected = true;

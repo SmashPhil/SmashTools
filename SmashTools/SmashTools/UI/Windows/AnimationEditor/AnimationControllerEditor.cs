@@ -91,7 +91,19 @@ namespace SmashTools.Animations
 		private bool UnsavedChanges { get; set; }
 
 		private AnimationLayer EditingLayer { get; set; }
+
 		private AnimationParameter EditingParameter { get; set; }
+
+		private Vector2 MousePosLeftWindowAdjust
+		{
+			get
+			{
+				// TODO - +8 to direction as temporary measure to keep mouse + selection box
+				// aligned. The selection box is actually being rendered 8 pixels to the left
+				Vector2 windowAdjust = new Vector2(hideLeftWindow ? 0 : leftWindowSize - 8, WidgetBarHeight + TabDrawer.TabHeight);
+				return windowAdjust;
+			}
+		}
 
 		private GameFont Font
 		{
@@ -193,10 +205,10 @@ namespace SmashTools.Animations
 				leftSectionTab = LeftSection.Layers;
 			}
 			tabRect.x += tabRect.width;
-			if (ToggleText(tabRect, "ST_Parameters".Translate(), null, leftSectionTab == LeftSection.Parameters))
-			{
-				leftSectionTab = LeftSection.Parameters;
-			}
+			//if (ToggleText(tabRect, "ST_Parameters".Translate(), null, leftSectionTab == LeftSection.Parameters))
+			//{
+			//	leftSectionTab = LeftSection.Parameters;
+			//}
 
 			Rect toggleVisibilityRect = new Rect(rect.xMax - WidgetBarHeight, rect.y, WidgetBarHeight, WidgetBarHeight).ContractedBy(2);
 			if (!hideLeftWindow && Widgets.ButtonImage(toggleVisibilityRect, eyeTex))
@@ -278,7 +290,7 @@ namespace SmashTools.Animations
 
 			// Looping
 			nameRect.y += WidgetBarHeight;
-			
+
 			if (state.clip != null)
 			{
 				DoSeparatorHorizontal(nameRect.x, nameRect.y, nameRect.width);
@@ -371,7 +383,7 @@ namespace SmashTools.Animations
 					Widgets.DrawBoxSolid(layerRect, backgroundDopesheetColor.Add255NoAlpha(10, 10, 10));
 				}
 				Rect dragHandleRect = new Rect(layerRect.x, layerRect.y, layerRect.height, layerRect.height);
-				Rect labelRect = new Rect(dragHandleRect.xMax, layerRect.y + 5, 
+				Rect labelRect = new Rect(dragHandleRect.xMax, layerRect.y + 5,
 					layerRect.width - dragHandleRect.width - LayerInputWidth, WidgetBarHeight);
 
 				Text.Anchor = TextAnchor.MiddleLeft;
@@ -395,7 +407,7 @@ namespace SmashTools.Animations
 					if (Widgets.ButtonInvisible(layerRect))
 					{
 						// Double clicking layer (even late) will begin name edit
-						if (parent.animLayer == layer) 
+						if (parent.animLayer == layer)
 						{
 							EditingLayer = layer;
 						}
@@ -418,8 +430,8 @@ namespace SmashTools.Animations
 
 		private void ConfirmParameterEdit()
 		{
-			EditingParameter.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Where(param => param != EditingParameter)
-																								 .Select(param => param.Name), EditingParameter.Name);
+			//EditingParameter.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Where(param => param != EditingParameter)
+			//																					 .Select(param => param.Name), EditingParameter.Name);
 			EditingParameter = null;
 		}
 
@@ -440,29 +452,29 @@ namespace SmashTools.Animations
 					new FloatMenuOption(ParamType.Float.ToString(), delegate ()
 					{
 						AnimationParameter param = new AnimationParameter();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Float");
-						param.type = ParamType.Float;
+						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Float");
+						//param.Type = ParamType.Float;
 						parent.controller.parameters.Add(param);
 					}),
 					new FloatMenuOption(ParamType.Int.ToString(), delegate ()
 					{
 						AnimationParameter param = new AnimationParameter();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Int");
-						param.type = ParamType.Int;
+						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Int");
+						//param.Type = ParamType.Int;
 						parent.controller.parameters.Add(param);
 					}),
 					new FloatMenuOption(ParamType.Bool.ToString(), delegate ()
 					{
 						AnimationParameter param = new AnimationParameter();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Bool");
-						param.type = ParamType.Bool;
+						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Bool");
+						//param.Type = ParamType.Bool;
 						parent.controller.parameters.Add(param);
 					}),
 					new FloatMenuOption(ParamType.Trigger.ToString(), delegate ()
 					{
 						AnimationParameter param = new AnimationParameter();
-						param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Trigger");
-						param.type = ParamType.Trigger;
+						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Trigger");
+						//param.Type = ParamType.Trigger;
 						parent.controller.parameters.Add(param);
 					}),
 				};
@@ -479,7 +491,7 @@ namespace SmashTools.Animations
 
 				Rect dragHandleRect = new Rect(parameterRect.x, parameterRect.y, parameterRect.height, parameterRect.height);
 
-				Rect entryRect = new Rect(parameterRect.xMax - 5 - ParameterInputWidth, parameterRect.y, 
+				Rect entryRect = new Rect(parameterRect.xMax - 5 - ParameterInputWidth, parameterRect.y,
 					ParameterInputWidth, parameterRect.height).ContractedBy(2);
 				Rect labelRect = new Rect(dragHandleRect.xMax, parameterRect.y,
 					parameterRect.width - dragHandleRect.width - entryRect.width - 5, parameterRect.height).ContractedBy(2);
@@ -487,7 +499,7 @@ namespace SmashTools.Animations
 				Text.Anchor = TextAnchor.MiddleLeft;
 				if (EditingParameter == parameter)
 				{
-					parameter.Name = Widgets.TextField(labelRect, parameter.Name);
+					//parameter.Name = Widgets.TextField(labelRect, parameter.Name);
 					// Clicking anywhere outside of the text field control will confirm edit
 					if (Input.GetMouseButtonDown(0) && !Mouse.IsOver(labelRect))
 					{
@@ -502,11 +514,11 @@ namespace SmashTools.Animations
 				else
 				{
 					Widgets.Label(labelRect, parameter.Name);
-					if (Widgets.ButtonInvisible(labelRect))
-					{
-						// Double clicking parameter will begin name edit
-						EditingParameter = parameter;
-					}
+					//if (Widgets.ButtonInvisible(labelRect))
+					//{
+					//	// Double clicking parameter will begin name edit
+					//	EditingParameter = parameter;
+					//}
 
 					parameter.DrawInput(entryRect);
 				}
@@ -522,37 +534,42 @@ namespace SmashTools.Animations
 
 		private void DrawControllerSectionRight(Rect rect)
 		{
-			Widgets.BeginGroup(rect);
-			Rect editorRect = rect.AtZero();
-			Rect viewRect = new Rect(editorRect.x, editorRect.y, gridSize.x, gridSize.y);
+			Rect gridRect = rect;
+			// Needs padding for TopBar or its UI events will be intercepted by grid UI events.
+			gridRect.yMin += WidgetBarHeight;
 
-			Vector2 mousePos = MouseUIPos(rect.position);
-			mouseGridPos = GridPosition(editorRect, viewRect, mousePos);
+			Widgets.BeginGroup(gridRect);
+			gridRect = gridRect.AtZero(); // Sets position to top left of GUI group
+			Rect viewRect = new Rect(gridRect.x, gridRect.y, gridSize.x, gridSize.y);
+
+			Vector2 mousePos = MouseUIPos(gridRect.position);
+			mousePos -= MousePosLeftWindowAdjust;
+			mouseGridPos = GridPosition(gridRect, viewRect, mousePos);
 
 			if (!initialized)
 			{
 				//Start at center of grid
-				SetScrollPosNormalized(editorRect, ref scrollPos, viewRect, new Vector2(0.5f, 0.5f));
+				SetScrollPosNormalized(gridRect, ref scrollPos, viewRect, new Vector2(0.5f, 0.5f));
 				initialized = true;
 			}
+			Vector2 windowAdjust = new Vector2(hideLeftWindow ? 0 : leftWindowSize, WidgetBarHeight + TabDrawer.TabHeight);
+			Rect visibleRect = GetVisibleRect(gridRect, scrollPos, viewRect);
+			visibleRect.position -= MousePosLeftWindowAdjust;
 
-			Rect visibleRect = GetVisibleRect(editorRect, scrollPos, viewRect);
-			// +8 x direction as temporary measure to keep mouse + selection box aligned
-			// The selection box is actually being rendered 8 pixels to the left
-			Vector2 groupPos = rect.position + new Vector2(8, 0); 
-			UIElements.BeginScrollView(editorRect, ref scrollPos, viewRect, showHorizontalScrollbar: false, showVerticalScrollbar: false);
+			Vector2 groupPos = gridRect.position;
+			UIElements.BeginScrollView(gridRect, ref scrollPos, viewRect, showHorizontalScrollbar: false, showVerticalScrollbar: false);
 			{
 				DrawBackgroundDark(viewRect);
 
-				Rect blendRect = new Rect(rect.x, rect.yMax, rect.width, WidgetBarHeight);
+				Rect blendRect = new Rect(gridRect.x, gridRect.yMax, gridRect.width, WidgetBarHeight);
 				DrawBlend(blendRect, topBarFadeColor, backgroundCurvesColor);
 
 				DrawGrid(viewRect);
 
-				Rect dragRect = DragRect(rect.position - visibleRect.position);
-				DrawAnimationStates(editorRect, viewRect, dragRect);
+				Rect dragRect = DragRect(gridRect.position - visibleRect.position);
+				DrawAnimationStates(gridRect, viewRect, dragRect);
 
-				if (RightClick && Mouse.IsOver(viewRect))
+				if (RightClickUp && Mouse.IsOver(visibleRect))
 				{
 					clickedGridPos = mouseGridPos;
 					FloatMenuOption newStateOption = new FloatMenuOption("ST_CreateState".Translate(), CreateNewState);
@@ -569,7 +586,7 @@ namespace SmashTools.Animations
 					};
 					Find.WindowStack.Add(new FloatMenu(options));
 				}
-					
+
 				if (!draggingState)
 				{
 					SelectionBox(groupPos, visibleRect, viewRect, out _);
@@ -590,14 +607,14 @@ namespace SmashTools.Animations
 			//Widgets.Label(debugTextRect, $"Grid: {mouseGridPos}");
 #endif
 
-			if (Mouse.IsOver(rect) && Event.current.type == EventType.ScrollWheel)
+			if (Mouse.IsOver(gridRect) && Event.current.type == EventType.ScrollWheel)
 			{
 				float value = Event.current.delta.y * ZoomRate;
-				zoom = Mathf.Clamp(zoom + value, 1, MaxZoom(rect));
+				zoom = Mathf.Clamp(zoom + value, 1, MaxZoom(gridRect));
 				Event.current.Use();
 			}
 
-			if (!draggingSelectionBox && DragWindow(rect, DragItem.Grid, button: 2))
+			if (!draggingSelectionBox && DragWindow(visibleRect, DragItem.Grid, button: 2))
 			{
 				SetDragPos();
 			}
@@ -615,7 +632,7 @@ namespace SmashTools.Animations
 		{
 			Rect topBarRect = new Rect(rect.x, rect.y, rect.width, WidgetBarHeight);
 			DrawBackground(topBarRect);
-			
+
 			if (hideLeftWindow)
 			{
 				Rect toggleVisibilityRect = new Rect(rect.x, rect.y, WidgetBarHeight, WidgetBarHeight).ContractedBy(2);
@@ -667,6 +684,7 @@ namespace SmashTools.Animations
 			}
 			bool selected = false;
 			Vector2 mousePos = StatePosition(viewRect, mouseGridPos);
+
 			foreach (AnimationState state in parent.animLayer.states)
 			{
 				Vector2 sizeFrom = SizeFor(state.Type);
@@ -705,7 +723,6 @@ namespace SmashTools.Animations
 				TransitionArrows(stateRect.center, mousePos, Color.white);
 			}
 
-			bool mouseClick = LeftClick || RightClick;
 			foreach (AnimationState state in parent.animLayer.states)
 			{
 				Vector2 size = SizeFor(state.Type);
@@ -729,14 +746,15 @@ namespace SmashTools.Animations
 					Text.Font = Font;
 					Widgets.Label(stateRect, state.name);
 				}
-				if (mouseClick && Mouse.IsOver(stateRect))
+				// Any left / right click event can trigger select, but LeftDown and RightUp also have additional actions
+				if (Mouse.IsOver(stateRect) && (LeftClickDown || RightClickDown || LeftClickUp || RightClickUp))
 				{
 					selector.Select(state, clear: !Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.LeftControl));
 					selected = true;
 
 					clickedGridPos = mouseGridPos;
 
-					if (LeftClick)
+					if (LeftClickDown)
 					{
 						if (makingTransitionFrom != null)
 						{
@@ -745,7 +763,7 @@ namespace SmashTools.Animations
 						draggingState = true;
 						draggingStateOrigPos = state.position;
 					}
-					else if (RightClick)
+					else if (RightClickUp)
 					{
 						draggingState = false;
 						List<FloatMenuOption> options = new List<FloatMenuOption>();
@@ -754,7 +772,7 @@ namespace SmashTools.Animations
 							FloatMenuOption makeTransitionOption = new FloatMenuOption("ST_MakeTransition".Translate(), () => SetTransition(state));
 							options.Add(makeTransitionOption);
 						}
-						if (state.Type != StateType.Entry && state.Type != StateType.Exit)
+						if (!state.IsPermanent)
 						{
 							FloatMenuOption newSubStateOption = new FloatMenuOption("ST_SetStateDefault".Translate(), CreateNewState);
 							newSubStateOption.Disabled = state.Type == StateType.Default;
@@ -766,9 +784,12 @@ namespace SmashTools.Animations
 							FloatMenuOption deleteOption = new FloatMenuOption("ST_Delete".Translate(), () => DeleteState(state));
 							options.Add(deleteOption);
 						}
-						Find.WindowStack.Add(new FloatMenu(options));
+						if (!options.NullOrEmpty())
+						{
+							Find.WindowStack.Add(new FloatMenu(options));
+						}
 					}
-					
+
 					Event.current.Use();
 				}
 				else if (!draggingState && draggingSelectionBox)
@@ -801,7 +822,7 @@ namespace SmashTools.Animations
 			{
 				draggingState = false;
 			}
-			if (mouseClick)
+			if (LeftClickDown || RightClickDown)
 			{
 				StopMakingTransition();
 			}
@@ -814,7 +835,7 @@ namespace SmashTools.Animations
 				}
 			}
 			// Any click that is non-selecting should clear selection
-			if (LeftClick && Mouse.IsOver(viewRect) && !selected)
+			if (LeftClickDown && Mouse.IsOver(viewRect) && !selected)
 			{
 				selector.ClearSelectedStates();
 				selector.ClearSelectedTransitions();
@@ -857,7 +878,7 @@ namespace SmashTools.Animations
 				StateType.Entry => new Vector2(StateWidth * GridSquareSize / zoom, StateHeightSmall * GridSquareSize / zoom),
 				StateType.Default => new Vector2(StateWidth * GridSquareSize / zoom, StateHeight * GridSquareSize / zoom),
 				StateType.Exit => new Vector2(StateWidth * GridSquareSize / zoom, StateHeightSmall * GridSquareSize / zoom),
-				StateType.AnyState => new Vector2(StateWidth * GridSquareSize / zoom, StateHeight * GridSquareSize / zoom),
+				StateType.Any => new Vector2(StateWidth * GridSquareSize / zoom, StateHeight * GridSquareSize / zoom),
 				_ => new Vector2(StateWidth * GridSquareSize / zoom, StateHeight * GridSquareSize / zoom),
 			};
 		}
@@ -873,7 +894,7 @@ namespace SmashTools.Animations
 		{
 			Rect visibleRect = GetVisibleRect(outRect, scrollPos, viewRect);
 			Vector2 finalPos = visibleRect.position + pos;
-			Vector2 posT = finalPos / viewRect.size; 
+			Vector2 posT = finalPos / viewRect.size;
 			int gridX = Mathf.RoundToInt(Mathf.Lerp(-GridSize / 2, GridSize / 2, posT.x) * zoom);
 			int gridY = Mathf.RoundToInt(Mathf.Lerp(-GridSize / 2, GridSize / 2, posT.y) * zoom);
 			return new IntVec2(gridX, -gridY); //Invert Y - UI is top to bottom | Grid is bottom to top
@@ -887,7 +908,7 @@ namespace SmashTools.Animations
 				StateType.Entry => entryStateColor,
 				StateType.Default => defaultStateColor,
 				StateType.Exit => exitStateColor,
-				StateType.AnyState => anyStateColor,
+				StateType.Any => anyStateColor,
 				_ => stateColor
 			};
 		}
@@ -929,7 +950,7 @@ namespace SmashTools.Animations
 
 		private void ConfirmTransition(AnimationState target)
 		{
-			if (target.Type == StateType.Entry || target.Type == StateType.AnyState)
+			if (target.Type == StateType.Entry || target.Type == StateType.Any)
 			{
 				return;
 			}
@@ -950,13 +971,18 @@ namespace SmashTools.Animations
 				{
 					DeleteTransition(transition);
 				}
+				selector.ClearSelectedTransitions();
 			}
 			if (selector.AnyStatesSelected)
 			{
 				foreach (AnimationState state in selector.SelectedStates)
 				{
-					DeleteState(state);
+					if (!state.IsPermanent)
+					{
+						DeleteState(state);
+					}
 				}
+				selector.ClearSelectedStates();
 			}
 		}
 
@@ -983,10 +1009,7 @@ namespace SmashTools.Animations
 
 		private void DeleteTransition(AnimationTransition transition)
 		{
-			foreach (AnimationState state in parent.animLayer.states)
-			{
-				state.transitions.Remove(transition);
-			}
+			transition.Dispose();
 		}
 
 		private void CopySelectedStates()
@@ -1040,7 +1063,7 @@ namespace SmashTools.Animations
 		{
 			private HashSet<AnimationState> selectedStates = new HashSet<AnimationState>();
 			private HashSet<AnimationTransition> selectedTransitions = new HashSet<AnimationTransition>();
-			
+
 			public bool AnySelected => AnyStatesSelected || AnyTransitionsSelected;
 
 			public bool AnyStatesSelected => selectedStates.Any();
