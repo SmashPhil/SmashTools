@@ -21,6 +21,11 @@ namespace SmashTools.Animations
 
 		private string inputBuffer;
 
+		public AnimationParameter(AnimationParameterDef def)
+		{
+			this.def = def;
+		}
+
 		public ushort Id => def.shortHash;
 
 		public ParamType Type => def.type;

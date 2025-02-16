@@ -146,12 +146,17 @@ namespace SmashTools.Xml
 		{
 			try
 			{
-				OpenNode(localName);
+				if (value == null)
 				{
-					value.Export();
+					WriteNullElement(localName);
+					return;
 				}
-				CloseNode();
-			}
+        OpenNode(localName);
+        {
+          value.Export();
+        }
+        CloseNode();
+      }
 			catch
 			{
 				Close();

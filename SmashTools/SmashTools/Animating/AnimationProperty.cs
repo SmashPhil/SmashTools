@@ -9,20 +9,24 @@ using Verse;
 
 namespace SmashTools.Animations
 {
-	public class AnimationProperty : IXmlExport
+	public class AnimationProperty : IXmlExport, ISelectableUI
 	{
-		// Treated as an array, but RimWorld is incapable of parsing in arrays so a fixed-capacity list is required.
-		private List<ObjectPath> objectPath = new List<ObjectPath>();
-		private string label;
-		private string name;
+		/// <summary>
+		/// Path from object parent to field.
+		/// eg. Vector3.x
+		/// </summary>
+		private readonly ObjectPath objectPath;
+
+		private readonly string label;
+		private readonly string name;
 		private PropertyType propertyType;
 
 		// Strictly used for serialization, UnityEngine types are not supported by RimWorld's parser
 		// so the types are resolved post-load w/ these strings.
-		private string type;
-		private string animatorType;
+		private readonly string type;
+		private readonly string animatorType;
 
-		public AnimationCurve curve = new AnimationCurve();
+		public AnimationCurve curve = new();
 
 		[Unsaved]
 		private Type loadedType;
@@ -51,29 +55,20 @@ namespace SmashTools.Animations
 		[Unsaved]
 		private GetValue getValue;
 
-		public delegate float GetValue(IAnimator animator);
-		public delegate void SetValue(IAnimator animator, float value);
+		public delegate float GetValue(IAnimationObject animator);
+		public delegate void SetValue(IAnimationObject animator, float value);
 		
 		public AnimationProperty()
 		{
 		}
 
-		private AnimationProperty(Type animatorType, string label, string name, Type type, FieldInfo[] fieldPath)
+		private AnimationProperty(Type animatorType, string label, string name, Type type, ObjectPath objectPath)
 		{
 			loadedAnimatorType = animatorType;
 			this.label = label;
 			this.name = name;
 			loadedType = type;
-
-			if (!fieldPath.NullOrEmpty())
-			{
-				objectPath = new List<ObjectPath>(fieldPath.Length);
-				for (int i = 0; i < fieldPath.Length; i++)
-				{
-					FieldInfo fieldInfo = fieldPath[i];
-					objectPath.Add(new ObjectPath(fieldInfo));
-				}
-			}
+			this.objectPath = objectPath;
 		}
 
 		public string Label => label;
@@ -106,11 +101,12 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void Evaluate(IAnimator animator, int frame) => evaluateValue.Invoke(animator, frame);
+		public void Evaluate(IAnimationObject obj, int frame) => evaluateValue.Invoke(obj, frame);
 
-		public static AnimationProperty Create(Type animatorType, string label, FieldInfo fieldInfo, params FieldInfo[] objectPath)
+		public static AnimationProperty Create(Type animatorType, string label, FieldInfo fieldInfo, ObjectPath objectPath)
 		{
-			AnimationProperty animationProperty = new AnimationProperty(animatorType, label, fieldInfo.Name, fieldInfo.DeclaringType, objectPath);
+			AnimationProperty animationProperty = new(animatorType, label, fieldInfo.Name, 
+				fieldInfo.DeclaringType, objectPath);
 			animationProperty.propertyType = PropertyTypeFrom(fieldInfo.FieldType);
 			animationProperty.ResolveReferences();
 			return animationProperty;
@@ -158,7 +154,7 @@ namespace SmashTools.Animations
 
 			DynamicMethod method = new DynamicMethod("EvaluateCurveForProperty", 
 				typeof(void), // Return type
-				new Type[] { typeof(AnimationProperty), typeof(IAnimator), typeof(float) }, // this*, parent, frame
+				[typeof(AnimationProperty), typeof(IAnimationObject), typeof(float)], // this*, parent, frame
 				typeof(AnimationProperty).Module, // SmashTools.dll
 				true); // Skip visibility checks
 
@@ -168,19 +164,16 @@ namespace SmashTools.Animations
 			ilg.Emit(OpCodes.Ldarg_1);
 			ilg.Emit(OpCodes.Castclass, AnimatorType);
 
-			if (!objectPath.NullOrEmpty())
+			if (objectPath != null)
 			{
-				foreach (ObjectPath path in objectPath)
+				FieldInfo field = objectPath.FieldInfo;
+				if (field.FieldType.IsValueType)
 				{
-					FieldInfo field = path.FieldInfo;
-					if (field.FieldType.IsValueType)
-					{
-						ilg.Emit(OpCodes.Ldflda, field);
-					}
-					else
-					{
-						ilg.Emit(OpCodes.Ldfld, field);
-					}
+					ilg.Emit(OpCodes.Ldflda, field);
+				}
+				else
+				{
+					ilg.Emit(OpCodes.Ldfld, field);
 				}
 			}
 
@@ -219,7 +212,7 @@ namespace SmashTools.Animations
 		{
 			DynamicMethod method = new DynamicMethod("GetValueForProperty",
 				typeof(float), // Return type
-				new Type[] { typeof(AnimationProperty), typeof(IAnimator) }, // this*, parent
+				[typeof(AnimationProperty), typeof(IAnimationObject)], // this*, parent
 				typeof(AnimationProperty).Module, // SmashTools.dll
 				true); // Skip visibility checks
 
@@ -229,19 +222,16 @@ namespace SmashTools.Animations
 			ilg.Emit(OpCodes.Ldarg_1);
 			ilg.Emit(OpCodes.Castclass, AnimatorType);
 			
-			if (!objectPath.NullOrEmpty())
+			if (objectPath != null)
 			{
-				foreach (ObjectPath path in objectPath)
+				FieldInfo field = objectPath.FieldInfo;
+				if (field.FieldType.IsValueType)
 				{
-					FieldInfo field = path.FieldInfo;
-					if (field.FieldType.IsValueType)
-					{
-						ilg.Emit(OpCodes.Ldflda, field);
-					}
-					else
-					{
-						ilg.Emit(OpCodes.Ldfld, field);
-					}
+					ilg.Emit(OpCodes.Ldflda, field);
+				}
+				else
+				{
+					ilg.Emit(OpCodes.Ldfld, field);
 				}
 			}
 
@@ -281,7 +271,7 @@ namespace SmashTools.Animations
 		{
 			DynamicMethod method = new DynamicMethod("SetValueForProperty",
 				typeof(void), // Return type
-				new Type[] { typeof(AnimationProperty), typeof(IAnimator), typeof(float) }, // this*, parent, value
+				[typeof(AnimationProperty), typeof(IAnimationObject), typeof(float)], // this*, parent, value
 				typeof(AnimationProperty).Module, // SmashTools.dll
 				true); // Skip visibility checks
 
@@ -291,19 +281,16 @@ namespace SmashTools.Animations
 			ilg.Emit(OpCodes.Ldarg_1);
 			ilg.Emit(OpCodes.Castclass, AnimatorType);
 
-			if (!objectPath.NullOrEmpty())
+			if (objectPath != null)
 			{
-				foreach (ObjectPath path in objectPath)
+				FieldInfo field = objectPath.FieldInfo;
+				if (field.FieldType.IsValueType)
 				{
-					FieldInfo field = path.FieldInfo;
-					if (field.FieldType.IsValueType)
-					{
-						ilg.Emit(OpCodes.Ldflda, field);
-					}
-					else
-					{
-						ilg.Emit(OpCodes.Ldfld, field);
-					}
+					ilg.Emit(OpCodes.Ldflda, field);
+				}
+				else
+				{
+					ilg.Emit(OpCodes.Ldfld, field);
 				}
 			}
 
@@ -351,10 +338,10 @@ namespace SmashTools.Animations
 			}
 			throw new NotImplementedException($"{type} is not a supported PropertyType for keyframe-level animation properties.");
 		}
-
+		
 		void IXmlExport.Export()
 		{
-			XmlExporter.WriteCollection(nameof(objectPath), objectPath);
+			XmlExporter.WriteElement(nameof(objectPath), objectPath);
 			XmlExporter.WriteElement(nameof(label), label);
 			XmlExporter.WriteElement(nameof(name), name);
 			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(Type));
@@ -369,30 +356,6 @@ namespace SmashTools.Animations
 			Float,
 			Int,
 			Bool
-		}
-
-		public class ObjectPath : IXmlExport
-		{
-			private Type type;
-			private string name;
-
-			public ObjectPath()
-			{
-			}
-
-			public ObjectPath(FieldInfo fieldPath)
-			{
-				type = fieldPath.DeclaringType;
-				name = fieldPath.Name;
-			}
-
-			public FieldInfo FieldInfo => AccessTools.Field(type, name);
-
-			void IXmlExport.Export()
-			{
-				XmlExporter.WriteObject(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
-				XmlExporter.WriteElement(nameof(name), name);
-			}
 		}
 	}
 }

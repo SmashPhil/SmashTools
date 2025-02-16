@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SmashTools.Xml;
+using Verse;
 
 namespace SmashTools.Animations
 {
@@ -42,7 +43,7 @@ namespace SmashTools.Animations
 
 		public AnimationTransition CreateCopy()
 		{
-			AnimationTransition copy = new AnimationTransition();
+			AnimationTransition copy = new();
 			copy.exitTicks = exitTicks;
 			copy.conditions = new List<AnimationCondition>(conditions);
 
@@ -51,9 +52,19 @@ namespace SmashTools.Animations
 
 		public void AddCondition()
 		{
-			AnimationCondition condition = new AnimationCondition();
+			AnimationCondition condition = new();
 			condition.Transition = this;
-			condition.Parameter = FromState.Layer.Controller.parameters.FirstOrDefault();
+			if (condition.Parameter == null)
+			{
+				AnimationParameterDef paramDef = DefDatabase<AnimationParameterDef>.AllDefsListForReading.FirstOrDefault();
+				if (paramDef == null)
+				{
+					Assert.Raise();
+					Log.Error($"No controller parameters or parameter defs to assign.");
+					return;
+				}
+				condition.Parameter = new AnimationParameter(paramDef);
+			}
 			conditions.Add(condition);
 		}
 

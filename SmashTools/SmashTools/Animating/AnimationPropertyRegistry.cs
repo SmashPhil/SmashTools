@@ -1,32 +1,35 @@
-﻿#define DISABLE_PROPERTY_ANIMATIONS
-
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using Verse;
 using UnityEngine;
+using System.Collections;
+using System.Linq;
 
 namespace SmashTools.Animations
 {
 	public static class AnimationPropertyRegistry
 	{
-		private static readonly Dictionary<Type, List<AnimationPropertyParent>> cachedProperties = new Dictionary<Type, List<AnimationPropertyParent>>();
+		private static readonly Dictionary<IAnimator, List<AnimationPropertyParent>> cachedProperties = [];
 
-		private static readonly Dictionary<Type, List<FieldInfo>> fieldRegistry = new Dictionary<Type, List<FieldInfo>>();
-		private static readonly Dictionary<Type, List<PropertyInfo>> propertyRegistry = new Dictionary<Type, List<PropertyInfo>>();
+		private static readonly Dictionary<Type, List<FieldInfo>> fieldRegistry = [];
+		private static readonly Dictionary<Type, List<PropertyInfo>> propertyRegistry = [];
 
+		// Enqueue context for recursive call and iterate instead
+		private static readonly Queue<SearchContext> recursionQueue = [];
 		// Faster type look-up and handles UnityEngine types which are not parseable by RimWorld
-		private static readonly Dictionary<string, Type> typeNames = new Dictionary<string, Type>();
+		private static readonly Dictionary<string, Type> typeNames = [];
+		// Avoids circular references when processing reference types
+		private static readonly HashSet<object> processedObjects = [];
 
 		static AnimationPropertyRegistry()
 		{
-			RegisterType<Color>((typeof(float), nameof(Color.r)), (typeof(float), nameof(Color.g)), (typeof(float), nameof(Color.b)), (typeof(float), nameof(Color.a)));
-			RegisterType<Vector2>((typeof(float), nameof(Vector2.x)), (typeof(float), nameof(Vector2.y)));
-			RegisterType<Vector3>((typeof(float), nameof(Vector3.x)), (typeof(float), nameof(Vector3.y)), (typeof(float), nameof(Vector3.z)));
-			RegisterType<IntVec2>((typeof(int), nameof(IntVec2.x)), (typeof(int), nameof(IntVec2.z)));
-			RegisterType<IntVec3>((typeof(int), nameof(IntVec3.x)), (typeof(int), nameof(IntVec3.y)), (typeof(int), nameof(IntVec3.z)));
+			RegisterType<Color>(nameof(Color.r), nameof(Color.g), nameof(Color.b), nameof(Color.a));
+			RegisterType<Vector2>(nameof(Vector2.x), nameof(Vector2.y));
+			RegisterType<Vector3>(nameof(Vector3.x), nameof(Vector3.y), nameof(Vector3.z));
+			RegisterType<IntVec2>(nameof(IntVec2.x), nameof(IntVec2.z));
+			RegisterType<IntVec3>(nameof(IntVec3.x), nameof(IntVec3.y), nameof(IntVec3.z));
 		}
 
 		public static bool CachedTypeByName(string name, out Type type)
@@ -34,94 +37,111 @@ namespace SmashTools.Animations
 			return typeNames.TryGetValue(name, out type);
 		}
 
-		public static List<AnimationPropertyParent> GetAnimationProperties(this IAnimator animator)
+		internal static void ClearCache()
 		{
-			if (!cachedProperties.TryGetValue(animator.GetType(), out List<AnimationPropertyParent> result))
+			processedObjects.Clear();
+			cachedProperties.Clear();
+		}
+
+		private static List<AnimationPropertyParent> RunQueue(IAnimator animator)
+		{
+			List<AnimationPropertyParent> result = [];
+			recursionQueue.Enqueue(new(animator, []));
+			while (!recursionQueue.NullOrEmpty())
 			{
-				result = new List<AnimationPropertyParent>();
-				GetAnimationProperties(animator, result);
-				//foreach (object obj in animator.ExtraAnimators)
-				//{
-				//	GetAnimationProperties(obj, result);
-				//}
-				cachedProperties.Add(animator.GetType(), result);
+				SearchContext context = recursionQueue.Dequeue();
+				GetAnimationProperties(in context, result);
 			}
 			return result;
 		}
 
-		/// <param name="parent">Object fields are being retrieved from</param>
-		/// <param name="fieldInfo"></param>
-		/// <param name="result"></param>
-		private static void GetAnimationProperties(IAnimator animator, List<AnimationPropertyParent> result)
+		public static List<AnimationPropertyParent> GetAnimationProperties(IAnimator animator)
 		{
-			Type type = animator.GetType();
+			if (!cachedProperties.TryGetValue(animator, out List<AnimationPropertyParent> result))
+			{
+				result = RunQueue(animator);
+				cachedProperties.Add(animator, result);
+				processedObjects.Clear();
+			}
+			return result;
+		}
+
+		private static void GetAnimationProperties(ref readonly SearchContext context,
+			List<AnimationPropertyParent> result)
+		{
+			// Do not reprocess the same instances
+			if (!processedObjects.Add(context.parent)) return;
+
+			// We'll want to copy the array when enqueueing new context, we don't want to constantly be appending
+			// more depth to the hierarchy path. It should only persist within the scope of this parent.
+			Type type = context.parent.GetType();
 			foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
 			{
-				if (fieldInfo.TryGetAttribute<AnimationPropertyAttribute>(out var animationPropertyAttribute))
+				if (!fieldInfo.TryGetAttribute<AnimationPropertyAttribute>(out var animPropAttr))
 				{
-					if (!HandlesType(fieldInfo.FieldType))
+					continue;
+				}
+				if (fieldInfo.FieldType.IsClass)
+				{
+					object child = fieldInfo.GetValue(context.parent);
+					if (child is IList list)
 					{
-						Log.Error($"Type {fieldInfo.FieldType} is not supported as an animation property. It must be registered in the AnimationPropertyRegistry.");
+						Type innerListType = fieldInfo.FieldType.GetGenericArguments()[0];
+						if (!innerListType.HasInterface(typeof(IAnimationObject)))
+						{
+							Log.Error($@"{innerListType} must implement IAnimationObject if it's to be animated from a list.");
+							continue;
+						}
+						for (int i = 0; i < list.Count; i++)
+						{
+							object listObj = list[i];
+							recursionQueue.Enqueue(new SearchContext(listObj,
+								[.. context.path, new ObjectPath(fieldInfo, index: i)], index: i));
+						}
 						continue;
 					}
-					string label = animationPropertyAttribute.Name;
-					if (label.NullOrEmpty())
+					recursionQueue.Enqueue(new SearchContext(child, [.. context.path, new ObjectPath(fieldInfo)]));
+					continue;
+				}
+				// Type must be registered or supported primitive type
+				if (!HandlesType(fieldInfo.FieldType))
+				{
+					Log.Error($@"Type {fieldInfo.FieldType} is not supported as an animation property. It must be registered 
+in the AnimationPropertyRegistry or be a class type for recursion.");
+					continue;
+				}
+				// Add property info to registry
+				string label = animPropAttr.Name;
+				if (label.NullOrEmpty())
+				{
+					label = fieldInfo.Name;
+				}
+				// Parent must be IAnimationObject to get to this point
+				string identifier = context.Indexer ? ((IAnimationObject)context.parent).ObjectId : null;
+				AnimationPropertyParent container = AnimationPropertyParent.Create(identifier, label, fieldInfo, context.path.ToList());
+				if (IsSupportedPrimitive(fieldInfo.FieldType))
+				{
+					AnimationProperty property = AnimationProperty.Create(type, label, fieldInfo, null);
+					container.SetSingle(property);
+					result.Add(container);
+				}
+				else if (IsContainerProperty(fieldInfo.FieldType))
+				{
+					foreach (FieldInfo innerFieldInfo in fieldInfo.FieldType.GetFields(BindingFlags.Public | BindingFlags.NonPublic
+						| BindingFlags.Instance))
 					{
-						label = fieldInfo.Name;
-					}
-					AnimationPropertyParent container = AnimationPropertyParent.Create(type.Name, label, fieldInfo);
-					if (IsSupportedPrimitive(fieldInfo.FieldType))
-					{
-						AnimationProperty property = AnimationProperty.Create(type, label, fieldInfo);
-						container.Single = property;
-						result.Add(container);
-					}
-					else if (IsContainerProperty(fieldInfo.FieldType))
-					{
-						foreach (FieldInfo innerFieldInfo in fieldInfo.FieldType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+						if (!HandlesType(innerFieldInfo.FieldType) || !IsSupportedPrimitive(innerFieldInfo.FieldType))
 						{
-							if (!HandlesType(innerFieldInfo.FieldType) || !IsSupportedPrimitive(innerFieldInfo.FieldType))
-							{
-								Log.Error($"Type {innerFieldInfo.FieldType} is not supported as an animation property. Nested fields must be a supported primitive type {{ int, float, bool }}");
-								continue;
-							}
-							AnimationProperty property = AnimationProperty.Create(type, innerFieldInfo.Name, innerFieldInfo, fieldInfo);
-							container.Children.Add(property);
+							Log.Error($@"Type {innerFieldInfo.FieldType} is not supported as an animation property. Nested fields must be a 
+supported primitive type {{ int, float, bool }}");
+							continue;
 						}
-						result.Add(container);
+						AnimationProperty property = AnimationProperty.Create(type, innerFieldInfo.Name, innerFieldInfo, fieldInfo);
+						container.Add(property);
 					}
+					result.Add(container);
 				}
 			}
-#if !DISABLE_PROPERTY_ANIMATIONS
-			foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-			{
-				if (propertyInfo.TryGetAttribute<AnimationPropertyAttribute>(out var animationPropertyAttribute))
-				{
-					if (!HandlesType(propertyInfo.PropertyType))
-					{
-						Log.Error($"{propertyInfo.PropertyType} is not a supported type. It must be registered in the AnimationPropertyRegistry so inner values can be fetched.");
-						continue;
-					}
-					if (!propertyInfo.CanRead || !propertyInfo.CanWrite)
-					{
-						Log.Error($"{propertyInfo.PropertyType}::{propertyInfo.Name} must have both a getter and a setter in order to support being used as an animation property.");
-						continue;
-					}
-					if (IsSupportedPrimitive(propertyInfo.PropertyType))
-					{
-						string label = animationPropertyAttribute.Name;
-						if (label.NullOrEmpty())
-						{
-							label = propertyInfo.Name;
-						}
-						AnimationProperty property = AnimationProperty.Create(label, propertyInfo);
-						AnimationPropertyParent container = AnimationPropertyParent.Create(type.Name, label, propertyInfo);
-						container.Single = property;
-						result.Add(container);
-					}
-				}
-			}
-#endif
 		}
 
 		private static bool IsSupportedPrimitive(Type type)
@@ -143,39 +163,38 @@ namespace SmashTools.Animations
 			return fieldRegistry.ContainsKey(type) || propertyRegistry.ContainsKey(type);
 		}
 
-		public static void RegisterType<T>(params (Type type, string name)[] properties)
+		public static void RegisterType<T>(params string[] fieldNames)
 		{
-			if (properties.NullOrEmpty())
+			if (fieldRegistry.ContainsKey(typeof(T)))
 			{
-				Log.Error($"Trying to register AnimationProperty in registry with no properties.");
+				Log.Error($"{typeof(T)} has already been registered. Skipping to avoid duplicate field entries.");
+				return;
+			}
+			if (fieldNames.NullOrEmpty())
+			{
+				Log.Error($"Trying to register AnimationProperty in registry with no fields.");
 				return;
 			}
 			typeNames[GenTypes.GetTypeNameWithoutIgnoredNamespaces(typeof(T))] = typeof(T);
-			foreach ((Type type, string name) in properties)
+			foreach (string name in fieldNames)
 			{
 				FieldInfo fieldInfo = AccessTools.Field(typeof(T), name);
-				if (fieldInfo != null)
+				if (fieldInfo == null)
 				{
-					fieldRegistry.AddOrInsert(typeof(T), fieldInfo);
-					return;
+					Log.Error($"Unable to locate {typeof(T)}.{name}");
+					continue;
 				}
-#if !DISABLE_PROPERTY_ANIMATIONS
-				PropertyInfo propertyInfo = AccessTools.Property(type, name);
-				if (propertyInfo != null)
-				{
-					if (!propertyInfo.CanRead || !propertyInfo.CanWrite) //Properties must have both a getter and setter in order to be usable for animations
-					{
-						propertyRegistry.AddOrInsert(typeof(T), propertyInfo);
-					}
-					else
-					{
-						Log.Error($"{typeof(T)}.{name} property must have both a getter and setter in order to be used as an animation property.");
-					}
-					return;
-				}
-#endif
-				Log.Error($"Unable to locate {typeof(T)}.{name}.");
+				fieldRegistry.AddOrInsert(typeof(T), fieldInfo);
 			}
+		}
+
+		private readonly struct SearchContext(object parent, ObjectPath[] path, int index = -1)
+		{
+			public readonly object parent = parent;
+			public readonly ObjectPath[] path = path;
+			public readonly int index = index;
+
+			public readonly bool Indexer => index >= 0;
 		}
 	}
 }

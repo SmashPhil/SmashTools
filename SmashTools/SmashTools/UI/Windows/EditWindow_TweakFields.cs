@@ -102,7 +102,7 @@ namespace SmashTools
 					}
 					if (fieldInfo.FieldType.IsClass)
 					{
-						if (fieldInfo.FieldType.IsGenericType && fieldInfo.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+						if (fieldInfo.FieldType.IsIList())
 						{
 							if (!fieldInfo.FieldType.GetGenericArguments()[0].IsClass)
 							{

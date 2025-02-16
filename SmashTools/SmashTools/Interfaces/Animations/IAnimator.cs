@@ -13,8 +13,6 @@ namespace SmashTools.Animations
 
 		ModContentPack ModContentPack { get; }
 
-		IEnumerable<IAnimationObject> ExtraAnimators { get; }
-
 		Vector3 DrawPos { get; }
 	}
 }

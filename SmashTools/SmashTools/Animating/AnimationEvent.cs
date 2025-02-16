@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace SmashTools.Animations
 {
-	public class AnimationEvent : IXmlExport, IComparable<AnimationEvent>
+	public class AnimationEvent : IXmlExport, ISelectableUI, IComparable<AnimationEvent>
 	{
 		public int frame;
 		public ResolvedMethod method;

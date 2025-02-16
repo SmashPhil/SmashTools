@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Verse;
 
@@ -32,18 +33,29 @@ namespace SmashTools
 		/// <summary>
 		/// Check if both types are <c>Numeric</c> inside Pair
 		/// </summary>
-		/// <typeparam name="T1"></typeparam>
-		/// <typeparam name="T2"></typeparam>
-		/// <param name="o"></param>
 		public static bool IsNumericType<T1, T2>(this Pair<T1, T2> pair)
 		{
 			return pair.First.GetType().IsNumericType() && pair.Second.GetType().IsNumericType();
 		}
 
 		/// <summary>
+		/// Check if type is IList<> implementation
+		/// </summary>
+		public static bool IsIList(this Type type)
+		{
+			foreach (Type iType in type.GetInterfaces())
+			{
+				if (iType.IsGenericType && iType.GetGenericTypeDefinition() == typeof(IList<>))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/// <summary>
 		/// Create object given <paramref name="type"/> containing the default value of this Type.
 		/// </summary>
-		/// <param name="type"></param>
 		public static object GetDefaultValue(this Type type)
 		{
 			if (type.IsValueType)
@@ -59,7 +71,6 @@ namespace SmashTools
 		/// <summary>
 		/// Determine if method is overridden in any child class
 		/// </summary>
-		/// <param name="method"></param>
 		public static bool MethodImplemented(this MethodInfo method)
 		{
 			return method != null && method.GetBaseDefinition().DeclaringType != method.DeclaringType && !method.IsAbstract;
@@ -68,8 +79,6 @@ namespace SmashTools
 		/// <summary>
 		/// <paramref name="source"/> is the same Type as or derived from <paramref name="target"/>
 		/// </summary>
-		/// <param name="source"></param>
-		/// <param name="target"></param>
 		public static bool SameOrSubclass(this Type source, Type target)
 		{
 			return source == target || source.IsSubclassOf(target);

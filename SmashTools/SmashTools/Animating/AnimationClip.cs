@@ -43,16 +43,9 @@ namespace SmashTools.Animations
 				foreach (AnimationPropertyParent propertyParent in properties)
 				{
 					int propertyMax = -1;
-					if (propertyParent.Single != null)
+					foreach (AnimationProperty property in propertyParent.Properties)
 					{
-						propertyMax = MaxFrame(propertyParent.Single);
-					}
-					else if (!propertyParent.Children.NullOrEmpty())
-					{
-						foreach (AnimationProperty property in propertyParent.Children)
-						{
-							propertyMax = MaxFrame(property);
-						}
+						propertyMax = MaxFrame(property);
 					}
 
 					if (propertyMax > max)
@@ -77,16 +70,9 @@ namespace SmashTools.Animations
 				foreach (AnimationPropertyParent propertyParent in properties)
 				{
 					int propertyMax = -1;
-					if (propertyParent.Single != null)
+					foreach (AnimationProperty property in propertyParent.Properties)
 					{
-						propertyMax = MaxFrame(propertyParent.Single);
-					}
-					else if (!propertyParent.Children.NullOrEmpty())
-					{
-						foreach (AnimationProperty property in propertyParent.Children)
-						{
-							propertyMax = MaxFrame(property);
-						}
+						propertyMax = MaxFrame(property);
 					}
 
 					if (propertyMax > max)

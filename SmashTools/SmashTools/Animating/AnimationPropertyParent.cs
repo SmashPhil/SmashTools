@@ -10,112 +10,117 @@ using Verse;
 
 namespace SmashTools.Animations
 {
-	public class AnimationPropertyParent : IXmlExport, IEnumerable<AnimationProperty>
-	{
+	public class AnimationPropertyParent : IXmlExport, ISelectableUI, IEnumerable<AnimationProperty>
+  {
 		private string identifier;
 		private string label;
 		private string name;
 		private Type type;
+		
+		private readonly List<AnimationProperty> properties = [];
 
-		private AnimationProperty single;
-		private List<AnimationProperty> children = new List<AnimationProperty>();
+		/// <summary>
+		/// Path from IAnimator to field. Denotes the entire hierarchal path to object parent
+		/// eg. IAnimator->ClassContainer->Vector3.x
+		/// </summary>
+		private readonly List<ObjectPath> hierarchyPath = [];
 
 		public AnimationPropertyParent()
 		{
 		}
 
-		private AnimationPropertyParent(string identifier, string label, string name, Type type)
+		private AnimationPropertyParent(string identifier, string label, string name, Type type, 
+			List<ObjectPath> hierarchyPath)
 		{
 			this.identifier = identifier;
 			this.label = label;
 			this.name = name;
 			this.type = type;
+			this.hierarchyPath = hierarchyPath;
+			IsIndexer = hierarchyPath.Any(path => path.IsIndexer);
 		}
 
 		public string Identifier => identifier;
 
 		public string Label => label;
 
+		public string LabelWithIdentifier => Identifier != null ? $"{Label} ({Identifier})" : Label;
+
 		public string Name => name;
 
 		public Type Type => type;
 
-		public AnimationProperty Single { get => single; internal set => single = value; }
+		public bool IsValid => !properties.NullOrEmpty();
 
-		public List<AnimationProperty> Children => children;
+		public bool IsSingle => properties.Count == 1;
 
-		public bool IsValid => Single != null || !Children.NullOrEmpty();
+		public List<AnimationProperty> Properties => properties;
 
-		public AnimationProperty Current => throw new NotImplementedException();
+		public bool IsIndexer { get; private set; }
 
-		public void EvaluateFrame(IAnimator animator, int frame)
+		internal void SetSingle(AnimationProperty property)
 		{
-			if (Single != null)
+			if (IsSingle) properties[0] = property;
+			else Add(property);
+		}
+
+		internal void Add(AnimationProperty property)
+		{
+			properties.Add(property);
+		}
+
+		public void EvaluateFrame(IAnimationObject obj, int frame)
+		{
+			for (int i = 0; i < properties.Count; i++)
 			{
-				Single.Evaluate(animator, frame);
-			}
-			else
-			{
-				for (int i = 0; i < Children.Count; i++)
-				{
-					Children[i].Evaluate(animator, frame);
-				}
+				properties[i].Evaluate(obj, frame);
 			}
 		}
 
 		public bool AllKeyFramesAt(int frame)
 		{
-			if (Single != null)
+			if (!IsValid) return false;
+
+			foreach (AnimationProperty property in properties)
 			{
-				return Single.curve.KeyFrameAt(frame);
-			}
-			else if (!Children.NullOrEmpty())
-			{
-				foreach (AnimationProperty property in Children)
+				if (!property.curve.KeyFrameAt(frame))
 				{
-					if (!property.curve.KeyFrameAt(frame))
-					{
-						return false;
-					}
+					return false;
 				}
-				return true;
 			}
-			return false;
+			return true;
 		}
 
 		public bool AnyKeyFrameAt(int frame)
 		{
-			if (Single != null)
+			foreach (AnimationProperty property in properties)
 			{
-				return Single.curve.KeyFrameAt(frame);
-			}
-			else if (!Children.NullOrEmpty())
-			{
-				foreach (AnimationProperty property in Children)
+				if (property.curve.KeyFrameAt(frame))
 				{
-					if (property.curve.KeyFrameAt(frame))
-					{
-						return true;
-					}
+					return true;
 				}
-				return false;
 			}
 			return false;
 		}
 
 		internal void ResolveReferences()
 		{
-			if (Single != null)
+			foreach (AnimationProperty property in properties)
 			{
-				Single.ResolveReferences();
+				property.ResolveReferences();
 			}
-			else if (!Children.NullOrEmpty())
+		}
+
+		public IAnimationObject ObjectFromHierarchy(IAnimator animator)
+		{
+			object parent = animator;
+			for (int i = 0; i < hierarchyPath.Count; i++)
 			{
-				foreach (AnimationProperty property in Children)
-				{
-					property.ResolveReferences();
-				}
+				ObjectPath path = hierarchyPath[i];
+				parent = path.GetValue(parent);
+				if (parent == null) return null;
 			}
+			return parent as IAnimationObject;
 		}
 
 		void IXmlExport.Export()
@@ -124,29 +129,14 @@ namespace SmashTools.Animations
 			XmlExporter.WriteElement(nameof(label), label);
 			XmlExporter.WriteElement(nameof(name), name);
 			XmlExporter.WriteElement(nameof(type), GenTypes.GetTypeNameWithoutIgnoredNamespaces(type));
-			if (single != null)
-			{
-				XmlExporter.WriteElement(nameof(single), single);
-			}
-			if (!children.NullOrEmpty())
-			{
-				XmlExporter.WriteCollection(nameof(children), children);
-			}
+			
+			XmlExporter.WriteCollection(nameof(properties), properties);
+			XmlExporter.WriteCollection(nameof(hierarchyPath), hierarchyPath);
 		}
 
 		public IEnumerator<AnimationProperty> GetEnumerator()
 		{
-			if (Single != null)
-			{
-				yield return single;
-			}
-			else if (!Children.NullOrEmpty())
-			{
-				foreach (AnimationProperty animationProperty in Children)
-				{
-					yield return animationProperty;
-				}
-			}
+			return properties.GetEnumerator();
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
@@ -154,9 +144,10 @@ namespace SmashTools.Animations
 			return GetEnumerator();
 		}
 
-		public static AnimationPropertyParent Create(string identifier, string label, FieldInfo fieldInfo)
+		public static AnimationPropertyParent Create(string identifier, string label, FieldInfo fieldInfo, 
+			List<ObjectPath> hierarchyPath)
 		{
-			return new AnimationPropertyParent(identifier, label, fieldInfo.Name, fieldInfo.DeclaringType);
+			return new AnimationPropertyParent(identifier, label, fieldInfo.Name, fieldInfo.DeclaringType, hierarchyPath);
 		}
 	}
 }

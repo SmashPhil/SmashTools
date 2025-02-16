@@ -46,13 +46,8 @@ namespace SmashTools.Animations
 
 		private static List<MethodInfo> EventMethods(IAnimator animator)
 		{
-			var list = new List<MethodInfo>();
-
+			List<MethodInfo> list = [];
 			AddEventMethods(animator, list);
-			foreach (object obj in animator.ExtraAnimators)
-			{
-				AddEventMethods(obj, list);
-			}
 			list.AddRange(staticMethods);
 			return list;
 		}

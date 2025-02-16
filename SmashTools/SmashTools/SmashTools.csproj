@@ -100,6 +100,7 @@
     <Compile Include="Animating\AnimationState.cs" />
     <Compile Include="Animating\AnimationTransition.cs" />
     <Compile Include="Animating\KeyFrame.cs" />
+    <Compile Include="Animating\ObjectPath.cs" />
     <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
     <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
     <Compile Include="Animating\Obsolete\AnimatorObject.cs" />
@@ -157,6 +158,7 @@
     <Compile Include="Interfaces\IHighPriorityOnGUI.cs" />
     <Compile Include="Interfaces\IInspectable.cs" />
     <Compile Include="Interfaces\IPathfinder.cs" />
+    <Compile Include="Interfaces\ISelectableUI.cs" />
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Interfaces\ITweakFields.cs" />
     <Compile Include="Interfaces\IXmlExport.cs" />
@@ -180,9 +182,12 @@
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
     <Compile Include="Performance\Multithreading\TaskManager.cs" />
     <Compile Include="Performance\Multithreading\ThreadManager.cs" />
+    <Compile Include="ProjectStartup.cs" />
     <Compile Include="Rendering\CameraView.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
+    <Compile Include="Rendering\TransformData.cs" />
     <Compile Include="Saving\ClassLoader.cs" />
+    <Compile Include="Saving\Scribe\Scribe_Array.cs" />
     <Compile Include="SmashSettings.cs" />
     <Compile Include="DataTypes\RimWorldTime.cs" />
     <Compile Include="DataTypes\Rot8.cs" />
@@ -190,6 +195,7 @@
     <Compile Include="UI\HighPriorityInputs.cs" />
     <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
     <Compile Include="UI\Graph.cs" />
+    <Compile Include="UI\Selector.cs" />
     <Compile Include="UI\UndoManager.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationClipEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\AnimationEditor.cs" />
