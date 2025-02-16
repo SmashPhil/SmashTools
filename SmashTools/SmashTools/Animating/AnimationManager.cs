@@ -13,8 +13,8 @@ namespace SmashTools.Animations
 {
 	public class AnimationManager : IExposable
 	{
-		public IAnimator animator;
-		public AnimationController controller;
+		public readonly IAnimator animator;
+		public readonly AnimationController controller;
 
 		private LayerData[] layerDatas;
 
@@ -22,15 +22,14 @@ namespace SmashTools.Animations
 
 		public AnimationManager(IAnimator animator, AnimationController controller)
 		{
-			Init(animator, controller);
+      this.animator = animator;
+      this.controller = controller;
+      Init(animator, controller);
 
 		}
 
-		public void Init(IAnimator animator, AnimationController controller)
+		private void Init(IAnimator animator, AnimationController controller)
 		{
-			this.animator = animator;
-			this.controller = controller;
-
 			layerDatas = new LayerData[controller.layers.Count];
 
 			for (int i = 0; i < controller.layers.Count; i++)
@@ -50,7 +49,16 @@ namespace SmashTools.Animations
 			}
     }
 
-		public void AnimationTick()
+    public void PostLoad()
+		{
+			foreach (LayerData layerData in layerDatas)
+			{
+				layerData.PostLoad();
+			}
+		}
+
+
+    public void AnimationTick()
 		{
 			for (int i = 0; i < controller.layers.Count; i++)
 			{
@@ -114,7 +122,7 @@ namespace SmashTools.Animations
 					}
 				}
 			}
-			if (layerData.IsValid && layerData.state.clip.loop)
+			if (layerData.IsValid && layerData.state.loop)
 			{
 				layerData.frame = 0;
 			}
@@ -251,7 +259,7 @@ namespace SmashTools.Animations
 				this.layer = layer;
 				defaultState = layer.states.FirstOrDefault(state => state.Type == StateType.Default);
 				state = defaultState;
-			}
+      }
 
 			public Dictionary<FieldInfo, float> Defaults { get; private set; } = [];
 
@@ -266,6 +274,11 @@ namespace SmashTools.Animations
 
 			public bool WriteDefaults => state.writeDefaults && state.clip && !state.clip.properties.NullOrEmpty();
 
+			public void PostLoad()
+			{
+				MapAnimationObjects();
+			}
+
 			public void Update()
 			{
 				Assert.IsTrue(IsValid);
@@ -274,6 +287,14 @@ namespace SmashTools.Animations
           IAnimationObject obj = StateObjects[state][i];
 					state.clip.properties[i].EvaluateFrame(obj, frame);
         }
+				for (int i = 0; i < state.clip.events.Count; i++)
+				{
+					AnimationEvent animEvent = state.clip.events[i];
+					if (animEvent.frame == frame)
+					{
+						animEvent.method.Invoke(animator, [animator]);
+          }
+				}
         frame++;
 			}
 
@@ -303,7 +324,6 @@ namespace SmashTools.Animations
 				this.state = state;
         if (IsValid)
 				{
-          MapAnimationObjects();
           CacheDefaults();
         }
 			}
@@ -318,7 +338,7 @@ namespace SmashTools.Animations
 					AnimationPropertyParent propertyParent = state.clip.properties[i];
 					for (int j = 0; j < propertyParent.Properties.Count; j++)
 					{
-						AnimationProperty property = propertyParent.Properties[i];
+						AnimationProperty property = propertyParent.Properties[j];
 						IAnimationObject obj = StateObjects[state][j];
 						float startingValue = property.GetProperty(obj);
 						Defaults[property.FieldInfo] = startingValue;
@@ -328,13 +348,13 @@ namespace SmashTools.Animations
 
 			private void MapAnimationObjects()
 			{
-				if (state.clip == null) return;
-
 				StateObjects.Clear();
 				for (int s = 0; s < layer.states.Count; s++)
 				{
-					AnimationState state = layer.states[s];
-					StateObjects[state] = new IAnimationObject[state.PropertyCount];
+          AnimationState state = layer.states[s];
+          if (state.clip == null) continue;
+
+          StateObjects[state] = new IAnimationObject[state.PropertyCount];
 					for (int i = 0; i < state.clip.properties.Count; i++)
 					{
 						AnimationPropertyParent propertyParent = state.clip.properties[i];
@@ -352,7 +372,7 @@ namespace SmashTools.Animations
 					AnimationPropertyParent propertyParent = state.clip.properties[i];
 					for (int j = 0; j < propertyParent.Properties.Count; j++)
 					{
-						AnimationProperty property = propertyParent.Properties[i];
+						AnimationProperty property = propertyParent.Properties[j];
 						IAnimationObject obj = StateObjects[state][j];
 						float value = Defaults[property.FieldInfo];
 						property.SetProperty(obj, value);
@@ -367,8 +387,13 @@ namespace SmashTools.Animations
 
 			void IExposable.ExposeData()
 			{
-				//Scribe_Values.Look(ref frame, nameof(frame));
-				//Scribe_Values.Look(ref state.guid, nameof(nextState));
+				Scribe_Values.Look(ref frame, nameof(frame));
+				Scribe_Values.Look(ref state.guid, nameof(nextState));
+
+				if (Scribe.mode == LoadSaveMode.PostLoadInit)
+				{
+          MapAnimationObjects();
+        }
 			}
 		}
 	}

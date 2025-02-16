@@ -632,7 +632,7 @@ namespace SmashTools.Animations
       string tooltip = string.Empty;
       if (animationEvent.method?.method == null)
       {
-        label = $"[{"No Function Selected".Translate()}]";
+        label = $"[{"ST_NoFunctionSelected".Translate()}]";
       }
       else
       {

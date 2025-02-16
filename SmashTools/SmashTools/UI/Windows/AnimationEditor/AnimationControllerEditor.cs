@@ -313,10 +313,10 @@ namespace SmashTools.Animations
 				DoSeparatorHorizontal(nameRect.x, nameRect.y, nameRect.width);
 				nameRect.y += 2;
 
-				UIElements.CheckboxLabeled(nameRect, "ST_Loop".Translate(), ref state.clip.loop);
+				UIElements.CheckboxLabeled(nameRect, "ST_Loop".Translate(), ref state.loop);
 				nameRect.y += WidgetBarHeight;
 
-				GUI.enabled = state.clip.loop;
+				GUI.enabled = state.loop;
 				using (new TextBlock(GUI.enabled ? Color.white : Widgets.InactiveColor))
 				{
 					Widgets.TextFieldNumericLabeled(nameRect, "ST_CycleOffset".Translate(), ref state.clip.cycleOffset, ref cycleOffsetBuffer);
@@ -613,16 +613,6 @@ namespace SmashTools.Animations
 
 			DrawTopBar(rect);
 
-#if DEBUG
-			//Text.Font = GameFont.Small;
-			//Text.Anchor = TextAnchor.UpperLeft;
-
-			//Rect debugTextRect = new Rect(rect.x, rect.y + WidgetBarHeight + 5, rect.width, 24);
-			//Widgets.Label(debugTextRect, $"Zoom: {zoom:0.0}");
-			//debugTextRect.y += debugTextRect.height;
-			//Widgets.Label(debugTextRect, $"Grid: {mouseGridPos}");
-#endif
-
 			if (Mouse.IsOver(gridRect) && Event.current.type == EventType.ScrollWheel)
 			{
 				float value = Event.current.delta.y * ZoomRate;
@@ -630,7 +620,7 @@ namespace SmashTools.Animations
 				Event.current.Use();
 			}
 
-			if (!draggingSelectionBox && DragWindow(visibleRect, DragItem.Grid, button: 2))
+			if (!draggingSelectionBox && DragWindow(gridRect, DragItem.Grid, button: 2))
 			{
 				SetDragPos();
 			}

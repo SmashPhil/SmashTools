@@ -14,7 +14,8 @@ namespace SmashTools.Animations
 		public IntVec2 position;
 		public AnimationClip clip;
 		public float speed = 1;
-		public bool writeDefaults = true;
+    public bool loop = false;
+    public bool writeDefaults = true;
 
 		private StateType stateType = StateType.None;
 
@@ -89,9 +90,10 @@ namespace SmashTools.Animations
 			XmlExporter.WriteObject(nameof(name), name);
 			XmlExporter.WriteObject(nameof(guid), guid);
 			XmlExporter.WriteObject(nameof(position), position);
-			XmlExporter.WriteObject(nameof(clip), clip?.FilePath);
+			XmlExporter.WriteObject(nameof(clip), clip?.Guid);
 			XmlExporter.WriteObject(nameof(speed), speed);
-			XmlExporter.WriteObject(nameof(writeDefaults), writeDefaults);
+      XmlExporter.WriteObject(nameof(loop), loop);
+      XmlExporter.WriteObject(nameof(writeDefaults), writeDefaults);
 
 			XmlExporter.WriteObject(nameof(stateType), stateType);
 

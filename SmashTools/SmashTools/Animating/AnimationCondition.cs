@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using RimWorld;
-using SmashTools;
 using SmashTools.Xml;
 using UnityEngine;
 using Verse;
@@ -13,13 +9,13 @@ using ParamType = SmashTools.Animations.AnimationParameter.ParamType;
 
 namespace SmashTools.Animations
 {
-	public class AnimationCondition : IXmlExport
+  public class AnimationCondition : IXmlExport
 	{
 		private const float UIDropdownPadding = 5;
 
-		public string def;
-		public ComparisonType comparison = ComparisonType.Equal;
-		public float value;
+    private string def;
+    private ComparisonType comparison = ComparisonType.Equal;
+		private float value;
 
 		[Unsaved]
 		private AnimationParameterDef paramDef;
@@ -214,7 +210,7 @@ namespace SmashTools.Animations
 
     public void ResolveParameter()
 		{
-			if (Def == null)
+			if (Def == null && !def.NullOrEmpty())
 			{
 				paramDef = DefDatabase<AnimationParameterDef>.GetNamed(def);
 				Parameter = new AnimationParameter(Def);

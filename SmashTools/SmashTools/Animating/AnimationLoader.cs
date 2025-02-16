@@ -26,7 +26,7 @@ namespace SmashTools.Animations
 
     static AnimationLoader()
     {
-      ParseHelper.Parsers<AnimationClip>.Register(ParseAnimationFileByPath<AnimationClip>);
+      ParseHelper.Parsers<AnimationClip>.Register(ParseAnimationFileByGuid<AnimationClip>);
       ParseHelper.Parsers<AnimationController>.Register(ParseAnimationFileByPath<AnimationController>);
       LoadAll();
     }
@@ -54,10 +54,6 @@ namespace SmashTools.Animations
       {
         T file = LoadFile<T>(fileInfo.FullName);
         string relativePath = path;
-        if (relativePath.StartsWith(AnimationFolder))
-        {
-          relativePath = path.Substring(AnimationFolder.Length);
-        }
         if (Path.HasExtension(relativePath))
         {
           relativePath = Path.GetFileNameWithoutExtension(relativePath);
@@ -92,7 +88,6 @@ namespace SmashTools.Animations
       {
         return file;
       }
-      Log.Message($"Trying to load {filePath}");
       if (!File.Exists(filePath))
       {
         Log.Error($"Unable to load file at \"{filePath}\". File not found.");
