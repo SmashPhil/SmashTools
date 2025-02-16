@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using SmashTools.Xml;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -65,10 +66,10 @@ namespace SmashTools
 			{
 				ParameterInfo parameter = parameters[i];
 
-				//Arguments with prefix are injected arguments
+				// Arguments with prefix are injected arguments
 				if (!parameter.Name.StartsWith("__"))
 				{
-					return; //Injected args must immediately follow any runtime arguments
+					return; // Injected args must immediately follow any runtime arguments
 				}
 				InjectedCount++;
 			}
@@ -144,13 +145,14 @@ namespace SmashTools
 					}
 
 					string text = argStrings[argIndex];
-					if (text.ToUpperInvariant() == "NULL" && (parameters[i].ParameterType.IsClass || Nullable.GetUnderlyingType(parameters[i].ParameterType) != null))
+					if (text.ToUpperInvariant() == "NULL" && (parameters[i].ParameterType.IsClass || 
+						Nullable.GetUnderlyingType(parameters[i].ParameterType) != null))
 					{
 						args[i] = null;
 					}
 					else
 					{
-						args[i] = ParseArgument(parameters[i].ParameterType, text);
+						args[i] = ParseArgument(parameters[i].ParameterType, text, i);
 					}
 				}
 			}
@@ -160,7 +162,7 @@ namespace SmashTools
 			}
 		}
 
-		private static object ParseArgument(Type type, string entry)
+		private object ParseArgument(Type type, string entry, int index)
 		{
 			Type valueType = Nullable.GetUnderlyingType(type);
 			if (valueType != null)
@@ -179,6 +181,11 @@ namespace SmashTools
 			
 			if (type.IsSubclassOf(typeof(Def)))
 			{
+				if (!DelayedCrossRefResolver.Resolved)
+				{
+					DelayedCrossRefResolver.RegisterIndex(args, type, entry, index);
+					return null;
+				}
 				return GenDefDatabase.GetDef(type, entry);
 			}
 			Log.ErrorOnce($"Unhandled type {type.Name} in ResolvedMethod arguments.", type.GetHashCode());

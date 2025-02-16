@@ -86,6 +86,7 @@
   <ItemGroup>
     <Compile Include="Animating\AnimationClip.cs" />
     <Compile Include="Animating\AnimationCondition.cs" />
+    <Compile Include="Animating\AnimationEvents.cs" />
     <Compile Include="Animating\AnimationParameterDef.cs" />
     <Compile Include="Animating\AnimationController.cs" />
     <Compile Include="Animating\AnimationCurve.cs" />
@@ -268,6 +269,7 @@
     <Compile Include="Utility\GUIState.cs" />
     <Compile Include="Utility\Utilities.cs" />
     <Compile Include="Utility\ModVersion.cs" />
+    <Compile Include="Xml\DelayedCrossRefResolver.cs" />
     <Compile Include="Xml\FilePaths.cs" />
     <Compile Include="Xml\XmlExporter.cs" />
     <Compile Include="Xml\XmlParseHelper.cs" />

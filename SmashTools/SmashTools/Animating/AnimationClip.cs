@@ -12,19 +12,18 @@ namespace SmashTools.Animations
 {
 	public sealed class AnimationClip : IAnimationFile
 	{
-		public const string DefaultAnimName = "New-Animation";
-		public const string FileExtension = ".rwa"; //RimWorld Animation
+		public const string DefaultAnimName = "Untitled";
+		public const string FileExtension = ".rwa"; // RimWorld Animation
 		public const int DefaultFrameCount = 60;
 
 		public int frameCount = DefaultFrameCount;
 
-		public bool loop = false;
 		public int cycleOffset;
 
 		private Guid guid;
 
-		public List<AnimationPropertyParent> properties = new List<AnimationPropertyParent>();
-		public List<AnimationEvent> events = new List<AnimationEvent>();
+		public List<AnimationPropertyParent> properties = [];
+		public List<AnimationEvent> events = [];
 
 		public Guid Guid => guid;
 
@@ -127,7 +126,6 @@ namespace SmashTools.Animations
 			ValidateEventOrder();
 
 			XmlExporter.WriteObject(nameof(frameCount), frameCount);
-			XmlExporter.WriteObject(nameof(loop), loop);
 			XmlExporter.WriteObject(nameof(cycleOffset), cycleOffset);
 			XmlExporter.WriteObject(nameof(guid), guid);
 
