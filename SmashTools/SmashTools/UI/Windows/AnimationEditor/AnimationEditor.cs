@@ -53,8 +53,6 @@ namespace SmashTools.Animations
 			this.parent = parent;
 		}
 
-		public bool DeleteSelected => Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Delete);
-
 		public bool SingleSelect => Input.GetMouseButtonDown(0) && !Input.GetKey(KeyCode.LeftControl) 
 			&& !Input.GetKey(KeyCode.LeftShift);
 
@@ -70,7 +68,9 @@ namespace SmashTools.Animations
 		public bool RightClickUp => Event.current != null && Event.current.type == EventType.MouseUp &&
 						 Event.current.button == 1;
 
-		public bool ControlClick => Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand);
+		public bool ShiftClick => Input.GetKey(KeyCode.LeftShift);
+
+    public bool ControlClick => Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand);
 
 		public abstract void Draw(Rect rect);
 
@@ -86,25 +86,33 @@ namespace SmashTools.Animations
 
 		public virtual void OnGUIHighPriority()
 		{
-			if (Input.GetKeyDown(KeyCode.S) && ControlClick)
+			if (Event.current != null && Event.current.type == EventType.KeyDown)
 			{
-				Save();
-			}
-			if (Input.GetKeyDown(KeyCode.C) && ControlClick)
-			{
-				CopyToClipboard();
-			}
-			if (Input.GetKeyDown(KeyCode.V) && ControlClick)
-			{
-				Paste();
-			}
-			if (Input.GetKeyDown(KeyCode.Delete))
-			{
-				Delete();
-			}
-			if (Input.GetKeyDown(KeyCode.Escape))
-			{
-				Escape();
+				if (Event.current.keyCode == KeyCode.S && ControlClick)
+				{
+					Save();
+					Event.current.Use();
+				}
+				if (Event.current.keyCode == KeyCode.C && ControlClick)
+				{
+					CopyToClipboard();
+					Event.current.Use();
+				}
+				if (Event.current.keyCode == KeyCode.V && ControlClick)
+				{
+					Paste();
+					Event.current.Use();
+				}
+				if (Event.current.keyCode == KeyCode.Delete || Event.current.keyCode == KeyCode.Backspace)
+				{
+					Delete();
+					Event.current.Use();
+				}
+				if (Event.current.keyCode == KeyCode.Escape)
+				{
+					Escape();
+					Event.current.Use();
+				}
 			}
 		}
 

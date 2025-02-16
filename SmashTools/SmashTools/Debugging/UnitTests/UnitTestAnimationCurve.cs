@@ -83,8 +83,6 @@ namespace SmashTools.Debugging
 
 			ModContentPack IAnimator.ModContentPack => throw new NotImplementedException();
 
-			IEnumerable<IAnimationObject> IAnimator.ExtraAnimators => throw new NotImplementedException();
-
 			Vector3 IAnimator.DrawPos => throw new NotImplementedException();
 
 			string IAnimationObject.ObjectId => throw new NotImplementedException();

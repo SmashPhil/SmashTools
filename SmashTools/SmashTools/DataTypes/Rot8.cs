@@ -8,10 +8,8 @@ namespace SmashTools
 	/// <summary>
 	/// 8 direction Rot struct for proper diagonal capturing
 	/// </summary>
-	public struct Rot8 : IEquatable<Rot8>
+	public record struct Rot8
 	{
-		private byte rotInt;
-
 		public const byte NorthInt = 0;
 		public const byte EastInt = 1;
 		public const byte SouthInt = 2;
@@ -20,6 +18,8 @@ namespace SmashTools
 		public const byte SouthEastInt = 5;
 		public const byte SouthWestInt = 6;
 		public const byte NorthWestInt = 7;
+
+		private byte rotInt;
 
 		public Rot8(byte newRot)
 		{
@@ -68,9 +68,11 @@ namespace SmashTools
 			rotInt = (byte)(rotAsInt % 8);
 		}
 
-		public bool IsVertical => rotInt == 2 || rotInt == 4;
-		public bool IsHorizontal => rotInt == 1 || rotInt == 3;
-		public bool IsDiagonal => rotInt == 4 || rotInt == 5 || rotInt == 6 || rotInt == 7;
+		public readonly bool IsVertical => rotInt == 2 || rotInt == 4;
+
+		public readonly bool IsHorizontal => rotInt == 1 || rotInt == 3;
+
+		public readonly bool IsDiagonal => rotInt == 4 || rotInt == 5 || rotInt == 6 || rotInt == 7;
 
 		public static Rot8 North => new Rot8(0);
 		public static Rot8 East => new Rot8(1);
@@ -474,16 +476,6 @@ namespace SmashTools
 			};
 		}
 
-		public static bool operator ==(Rot8 a, Rot8 b)
-		{
-			return a.AsInt == b.AsInt;
-		}
-
-		public static bool operator !=(Rot8 a, Rot8 b)
-		{
-			return a.AsInt != b.AsInt;
-		}
-
 		public static implicit operator Rot4(Rot8 rot)
 		{
 			return ToRot4(rot);
@@ -547,16 +539,6 @@ namespace SmashTools
 			}
 			Log.Error($"Unable to parse Rot8: {innerText}");
 			return Invalid;
-		}
-
-		public override bool Equals(object obj)
-		{
-			return obj is Rot8 rot && Equals(rot);
-		}
-
-		public bool Equals(Rot8 other)
-		{
-			return rotInt == other.rotInt;
 		}
 	}
 }

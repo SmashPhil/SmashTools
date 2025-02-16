@@ -61,8 +61,8 @@ namespace SmashTools.Animations
 
 		private readonly Vector2 gridSize = new Vector2(GridSize * GridSquareSize, GridSize * GridSquareSize);
 
-		private float leftWindowSize = MinLeftWindowSize;
-		private bool hideLeftWindow = false;
+    private bool hideLeftWindow = false;
+    private float leftWindowSize = MinLeftWindowSize;
 		private bool initialized = false;
 
 		private float zoom = 2;
@@ -94,13 +94,30 @@ namespace SmashTools.Animations
 
 		private AnimationParameter EditingParameter { get; set; }
 
+		private bool HideLeftWindow
+		{
+			get
+			{
+				return hideLeftWindow;
+			}
+			set
+			{
+				if (value == hideLeftWindow) return;
+
+				if (value) SoundDefOf.TabClose.PlayOneShotOnCamera();
+				else SoundDefOf.TabOpen.PlayOneShotOnCamera();
+
+				hideLeftWindow = value;
+			}
+		}
+
 		private Vector2 MousePosLeftWindowAdjust
 		{
 			get
 			{
-				// TODO - +8 to direction as temporary measure to keep mouse + selection box
+				// (TODO) +8 to direction as temporary measure to keep mouse + selection box
 				// aligned. The selection box is actually being rendered 8 pixels to the left
-				Vector2 windowAdjust = new Vector2(hideLeftWindow ? 0 : leftWindowSize - 8, WidgetBarHeight + TabDrawer.TabHeight);
+				Vector2 windowAdjust = new Vector2(HideLeftWindow ? 0 : leftWindowSize + 8, WidgetBarHeight + TabDrawer.TabHeight);
 				return windowAdjust;
 			}
 		}
@@ -181,7 +198,7 @@ namespace SmashTools.Animations
 				Assert.IsNotNull(parent.animLayer);
 			}
 
-			if (hideLeftWindow)
+			if (HideLeftWindow)
 			{
 				DrawControllerSectionRight(rect);
 			}
@@ -211,9 +228,9 @@ namespace SmashTools.Animations
 			//}
 
 			Rect toggleVisibilityRect = new Rect(rect.xMax - WidgetBarHeight, rect.y, WidgetBarHeight, WidgetBarHeight).ContractedBy(2);
-			if (!hideLeftWindow && Widgets.ButtonImage(toggleVisibilityRect, eyeTex))
+			if (!HideLeftWindow && Widgets.ButtonImage(toggleVisibilityRect, eyeTex))
 			{
-				hideLeftWindow = true;
+        HideLeftWindow = true;
 			}
 
 			DoSeparatorHorizontal(rect.x, rect.y, rect.width);
@@ -349,17 +366,13 @@ namespace SmashTools.Animations
 
 			fieldRect.y += fieldRect.height;
 
-			GUI.enabled = !parent.controller.parameters.NullOrEmpty();
+			Color baseColor = GUI.enabled ? Color.white : Widgets.InactiveColor;
+			Color mouseOverColor = GUI.enabled ? GenUI.MouseoverColor : Widgets.InactiveColor;
+			Rect addConditionBtnRect = new Rect(fieldRect.xMax - WidgetBarHeight - 5, fieldRect.y, WidgetBarHeight, WidgetBarHeight);
+			if (Widgets.ButtonImage(addConditionBtnRect.ContractedBy(2), TexButton.Plus, baseColor, mouseOverColor, GUI.enabled))
 			{
-				Color baseColor = GUI.enabled ? Color.white : Widgets.InactiveColor;
-				Color mouseOverColor = GUI.enabled ? GenUI.MouseoverColor : Widgets.InactiveColor;
-				Rect addConditionBtnRect = new Rect(fieldRect.xMax - WidgetBarHeight - 5, fieldRect.y, WidgetBarHeight, WidgetBarHeight);
-				if (Widgets.ButtonImage(addConditionBtnRect.ContractedBy(2), TexButton.Plus, baseColor, mouseOverColor, GUI.enabled))
-				{
-					transition.AddCondition();
-				}
+				transition.AddCondition();
 			}
-			GUI.enabled = true;
 		}
 
 		private void DrawLayersTab(Rect rect)
@@ -415,7 +428,6 @@ namespace SmashTools.Animations
 					}
 				}
 
-
 				DoSeparatorHorizontal(layerRect.x, layerRect.yMax, layerRect.width);
 				layerRect.y += layerRect.height;
 			}
@@ -444,42 +456,46 @@ namespace SmashTools.Animations
 
 			parameterFilter.Text = Widgets.TextField(searchBarRect, parameterFilter.Text);
 
+			// TODO - Runtime parameters are currently disabled. All parameters must be created through
+			// via AnimationParameterDef
+			GUIState.Disable();
 			GUI.DrawTexture(addParameterBtnRect.ContractedBy(2), TexButton.Plus);
 			if (Widgets.ButtonInvisible(addParameterBtnRect))
 			{
-				List<FloatMenuOption> options = new List<FloatMenuOption>
-				{
-					new FloatMenuOption(ParamType.Float.ToString(), delegate ()
-					{
-						AnimationParameter param = new AnimationParameter();
-						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Float");
-						//param.Type = ParamType.Float;
-						parent.controller.parameters.Add(param);
-					}),
-					new FloatMenuOption(ParamType.Int.ToString(), delegate ()
-					{
-						AnimationParameter param = new AnimationParameter();
-						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Int");
-						//param.Type = ParamType.Int;
-						parent.controller.parameters.Add(param);
-					}),
-					new FloatMenuOption(ParamType.Bool.ToString(), delegate ()
-					{
-						AnimationParameter param = new AnimationParameter();
-						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Bool");
-						//param.Type = ParamType.Bool;
-						parent.controller.parameters.Add(param);
-					}),
-					new FloatMenuOption(ParamType.Trigger.ToString(), delegate ()
-					{
-						AnimationParameter param = new AnimationParameter();
-						//param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Trigger");
-						//param.Type = ParamType.Trigger;
-						parent.controller.parameters.Add(param);
-					}),
-				};
-				Find.WindowStack.Add(new FloatMenu(options));
+				//List<FloatMenuOption> options = new List<FloatMenuOption>
+				//{
+				//	new FloatMenuOption(ParamType.Float.ToString(), delegate ()
+				//	{
+				//		AnimationParameter param = new AnimationParameter();
+				//		param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Float");
+				//		param.Type = ParamType.Float;
+				//		parent.controller.parameters.Add(param);
+				//	}),
+				//	new FloatMenuOption(ParamType.Int.ToString(), delegate ()
+				//	{
+				//		AnimationParameter param = new AnimationParameter();
+				//		param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Int");
+				//		param.Type = ParamType.Int;
+				//		parent.controller.parameters.Add(param);
+				//	}),
+				//	new FloatMenuOption(ParamType.Bool.ToString(), delegate ()
+				//	{
+				//		AnimationParameter param = new AnimationParameter();
+				//		param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Bool");
+				//		param.Type = ParamType.Bool;
+				//		parent.controller.parameters.Add(param);
+				//	}),
+				//	new FloatMenuOption(ParamType.Trigger.ToString(), delegate ()
+				//	{
+				//		AnimationParameter param = new AnimationParameter();
+				//		param.Name = AnimationLoader.GetAvailableName(parent.controller.parameters.Select(p => p.Name), "New Trigger");
+				//		param.Type = ParamType.Trigger;
+				//		parent.controller.parameters.Add(param);
+				//	}),
+				//};
+				//Find.WindowStack.Add(new FloatMenu(options));
 			}
+			GUIState.Enable();
 
 			DoSeparatorHorizontal(rect.x, buttonBarRect.yMax, rect.width);
 
@@ -552,7 +568,7 @@ namespace SmashTools.Animations
 				SetScrollPosNormalized(gridRect, ref scrollPos, viewRect, new Vector2(0.5f, 0.5f));
 				initialized = true;
 			}
-			Vector2 windowAdjust = new Vector2(hideLeftWindow ? 0 : leftWindowSize, WidgetBarHeight + TabDrawer.TabHeight);
+			Vector2 windowAdjust = new(HideLeftWindow ? 0 : leftWindowSize, WidgetBarHeight + TabDrawer.TabHeight);
 			Rect visibleRect = GetVisibleRect(gridRect, scrollPos, viewRect);
 			visibleRect.position -= MousePosLeftWindowAdjust;
 
@@ -633,12 +649,12 @@ namespace SmashTools.Animations
 			Rect topBarRect = new Rect(rect.x, rect.y, rect.width, WidgetBarHeight);
 			DrawBackground(topBarRect);
 
-			if (hideLeftWindow)
+			if (HideLeftWindow)
 			{
 				Rect toggleVisibilityRect = new Rect(rect.x, rect.y, WidgetBarHeight, WidgetBarHeight).ContractedBy(2);
 				if (Widgets.ButtonImage(toggleVisibilityRect, eyeStrikedTex))
 				{
-					hideLeftWindow = false;
+          HideLeftWindow = false;
 				}
 			}
 			else

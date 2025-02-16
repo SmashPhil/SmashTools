@@ -21,37 +21,48 @@ namespace SmashTools.Debugging
 
 		public override IEnumerable<UTResult> Execute()
 		{
-			TestObject testObject = new TestObject();
+			TestObject testObject = new();
 
-			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tInt));
-			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tFloat));
-			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tBool));
+			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tInt), null);
+			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tFloat), null);
+			yield return TestField(testObject, typeof(TestObject), nameof(TestObject.tBool), null);
 
-			FieldInfo vector3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.vector));
-			Assert.IsNotNull(vector3);
-			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.x), vector3);
-			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.y), vector3);
-			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.z), vector3);
+			FieldInfo vector3Field = AccessTools.Field(typeof(TestObject), nameof(TestObject.vector));
+			ObjectPath vector3Path = new(vector3Field);
+			Assert.IsNotNull(vector3Field);
+			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.x), vector3Path);
+			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.y), vector3Path);
+			yield return TestField(testObject, typeof(Vector3), nameof(Vector3.z), vector3Path);
 
-			FieldInfo color = AccessTools.Field(typeof(TestObject), nameof(TestObject.color));
-			Assert.IsNotNull(color);
-			yield return TestField(testObject, typeof(Color), nameof(Color.r), color);
-			yield return TestField(testObject, typeof(Color), nameof(Color.g), color);
-			yield return TestField(testObject, typeof(Color), nameof(Color.b), color);
-			yield return TestField(testObject, typeof(Color), nameof(Color.a), color);
+			FieldInfo colorField = AccessTools.Field(typeof(TestObject), nameof(TestObject.color));
+			ObjectPath colorPath = new(colorField);
+			Assert.IsNotNull(colorField);
+			yield return TestField(testObject, typeof(Color), nameof(Color.r), colorPath);
+			yield return TestField(testObject, typeof(Color), nameof(Color.g), colorPath);
+			yield return TestField(testObject, typeof(Color), nameof(Color.b), colorPath);
+			yield return TestField(testObject, typeof(Color), nameof(Color.a), colorPath);
 
-			FieldInfo intVec3 = AccessTools.Field(typeof(TestObject), nameof(TestObject.intVec3));
-			Assert.IsNotNull(intVec3);
-			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.x), intVec3);
-			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.y), intVec3);
-			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.z), intVec3);
+			FieldInfo intVec3Field = AccessTools.Field(typeof(TestObject), nameof(TestObject.intVec3));
+			ObjectPath intVec3Path = new(intVec3Field);
+			Assert.IsNotNull(intVec3Field);
+			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.x), intVec3Path);
+			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.y), intVec3Path);
+			yield return TestField(testObject, typeof(IntVec3), nameof(IntVec3.z), intVec3Path);
+
+			FieldInfo nestedObjField = AccessTools.Field(typeof(TestObject), nameof(TestObject.nestedObject));
+			ObjectPath nestedObjPath = new(nestedObjField);
+			Assert.IsNotNull(intVec3Field);
+			yield return TestField(testObject, typeof(NestedTestObject), nameof(NestedTestObject.tInt), nestedObjPath);
+			yield return TestField(testObject, typeof(NestedTestObject), nameof(NestedTestObject.tFloat), nestedObjPath);
+			yield return TestField(testObject, typeof(NestedTestObject), nameof(NestedTestObject.tBool), nestedObjPath);
 		}
 
-		private UTResult TestField<T>(T obj, Type type, string name, params FieldInfo[] objectPath) where T : IAnimator
+		private UTResult TestField(IAnimator animator, Type type, string name, params ObjectPath[] objectPath)
 		{
 			FieldInfo fieldInfo = AccessTools.Field(type, name);
-			Assert.IsNotNull(fieldInfo);
-			AnimationProperty property = AnimationProperty.Create(typeof(T), name, fieldInfo, objectPath);
+			Type objType = animator.GetType();
+			// Hierarchy and Object paths are the same since TestObject has no depth
+			AnimationProperty property = AnimationProperty.Create(objType, name, fieldInfo, objectPath?.LastOrDefault());
 			(int frame, float value)[] results = new (int frame, float value)[TestCount];
 			for (int i = 0; i < results.Length; i++)
 			{
@@ -64,15 +75,15 @@ namespace SmashTools.Debugging
 			{
 				// Only testing the actual KeyFrame values to make sure they are assigned
 				// to the object. Any tests on curve evaluations should be done separately
-				property.Evaluate(obj, i);
+				property.Evaluate(animator, i);
 
-				object container = obj;
+				object container = animator;
 				if (!objectPath.NullOrEmpty())
 				{
-					// Traverse down the object path to get to the property value
-					foreach (FieldInfo path in objectPath)
+					foreach (ObjectPath path in objectPath)
 					{
-						container = path.GetValue(container);
+						// Traverse down the object path to get to the property value
+						container = path.FieldInfo.GetValue(container);
 					}
 				}
 
@@ -84,24 +95,24 @@ namespace SmashTools.Debugging
 			}
 			// Set / Get
 			{
-				object container = obj;
+				object container = animator;
 				if (!objectPath.NullOrEmpty())
 				{
-					// Traverse down the object path to get to the property value
-					foreach (FieldInfo path in objectPath)
+					foreach (ObjectPath path in objectPath)
 					{
-						container = path.GetValue(container);
+						// Traverse down the object path to get to the property value
+						container = path.FieldInfo.GetValue(container);
 					}
 				}
 
 				object value = fieldInfo.GetValue(container);
-				float getValue = property.GetProperty(obj);
+				float getValue = property.GetProperty(animator);
 				if (!IsEqual(value, getValue))
 				{
 					return UTResult.For($"[GetValue] {type.Name}.{name}", false);
 				}
-				property.SetProperty(obj, 0);
-				float setValue = property.GetProperty(obj);
+				property.SetProperty(animator, 0);
+				float setValue = property.GetProperty(animator);
 				if (setValue != 0f)
 				{
 					return UTResult.For($"[SetValue] {type.Name}.{name}", false);
@@ -127,15 +138,19 @@ namespace SmashTools.Debugging
 			return false;
 		}
 
-		internal class TestObject : IAnimator
+		private class TestObject : IAnimator
 		{
 			public int tInt;
 			public float tFloat;
 			public bool tBool;
 
-			public Vector3 vector = new Vector3();
-			public Color color = new Color();
-			public IntVec3 intVec3 = new IntVec3();
+			public Vector3 vector = new();
+			public Color color = new();
+			public IntVec3 intVec3 = new();
+
+			public NestedTestObject nestedObject = new();
+
+			public List<NestedTestObject> nestedObjectList = [];
 
 			// None of these should be getting called, these are strictly for allowing this object to pass
 			// as an IAnimator object to SetValue and GetValue delegates.
@@ -144,11 +159,18 @@ namespace SmashTools.Debugging
 
 			ModContentPack IAnimator.ModContentPack => throw new NotImplementedException();
 
-			IEnumerable<IAnimationObject> IAnimator.ExtraAnimators => throw new NotImplementedException();
-
 			Vector3 IAnimator.DrawPos => throw new NotImplementedException();
 
 			string IAnimationObject.ObjectId => throw new NotImplementedException();
+		}
+
+		private class NestedTestObject : IAnimationObject
+		{
+			public int tInt = 0;
+			public float tFloat = 0;
+			public float tBool = 0;
+
+			public string ObjectId => throw new NotImplementedException();
 		}
 	}
 }

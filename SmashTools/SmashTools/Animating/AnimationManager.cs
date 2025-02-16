@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Verse;
 using StateType = SmashTools.Animations.AnimationState.StateType;
+
+using PropertyObjectMap = System.Collections.Generic.Dictionary
+	<SmashTools.Animations.AnimationState,
+	SmashTools.Animations.IAnimationObject[]>;
 
 namespace SmashTools.Animations
 {
@@ -15,12 +18,12 @@ namespace SmashTools.Animations
 
 		private LayerData[] layerDatas;
 
-		private Dictionary<ushort, float> parameters = new Dictionary<ushort, float>();
+		private Dictionary<ushort, float> parameters = [];
 
 		public AnimationManager(IAnimator animator, AnimationController controller)
 		{
 			Init(animator, controller);
-			
+
 		}
 
 		public void Init(IAnimator animator, AnimationController controller)
@@ -34,14 +37,18 @@ namespace SmashTools.Animations
 			{
 				layerDatas[i] = new LayerData(animator, controller.layers[i]);
 			}
-			if (!controller.parameters.NullOrEmpty())
+      foreach (AnimationParameterDef paramDef in DefDatabase<AnimationParameterDef>.AllDefsListForReading)
+      {
+        parameters[paramDef.shortHash] = 0;
+      }
+      if (!controller.parameters.NullOrEmpty())
 			{
 				foreach (AnimationParameter parameter in controller.parameters)
 				{
 					parameters[parameter.Id] = parameter.Value;
 				}
 			}
-		}
+    }
 
 		public void AnimationTick()
 		{
@@ -61,15 +68,15 @@ namespace SmashTools.Animations
 				}
 				else
 				{
-					layerData.state.EvaluateFrame(animator, layerData.frame);
-				}
-				layerData.Update();
+          layerData.Update();
+        }
 			}
 		}
 
 		void IExposable.ExposeData()
 		{
 			Scribe_Collections.Look(ref parameters, nameof(parameters), keyLookMode: LookMode.Value, valueLookMode: LookMode.Value);
+			Scribe_Array.Look(ref layerDatas, nameof(layerDatas), lookMode: LookMode.Deep);
 		}
 
 		// TODO - transitions need exitTime and blending implemented
@@ -99,7 +106,7 @@ namespace SmashTools.Animations
 
 				foreach (AnimationCondition condition in transition.conditions)
 				{
-					float value = parameters[condition.def.shortHash];
+					float value = parameters[condition.Def.shortHash];
 					if (condition.ConditionMet(value))
 					{
 						layerData.SetState(transition.ToState);
@@ -128,10 +135,14 @@ namespace SmashTools.Animations
 
 		internal void SetFrame(AnimationClip clip, int frame)
 		{
-			AnimationState.EvaluateFrame(clip, animator, frame);
+			foreach (LayerData layerData in layerDatas)
+			{
+				layerData.SetFrame(clip, frame);
+			}
 		}
 
-		public void SetFloat(string name, float value)
+    #region Properties
+    public void SetFloat(string name, float value)
 		{
 			SetFloat(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
 		}
@@ -150,11 +161,6 @@ namespace SmashTools.Animations
 			parameters[id] = value;
 		}
 
-		public void SetInt(string name, int value)
-		{
-			SetInt(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
-		}
-
 		public void SetInt(AnimationParameterDef paramDef, int value)
 		{
 			SetInt(paramDef.shortHash, value);
@@ -163,11 +169,6 @@ namespace SmashTools.Animations
 		public void SetInt(ushort id, int value)
 		{
 			SetFloat(id, value);
-		}
-
-		public void SetBool(string name, bool value)
-		{
-			SetBool(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
 		}
 
 		public void SetBool(AnimationParameterDef paramDef, bool value)
@@ -180,11 +181,6 @@ namespace SmashTools.Animations
 			SetFloat(id, value ? 1 : 0);
 		}
 
-		public void SetTrigger(string name, bool value)
-		{
-			SetTrigger(DefDatabase<AnimationParameterDef>.GetNamed(name), value);
-		}
-
 		public void SetTrigger(AnimationParameterDef paramDef, bool value)
 		{
 			SetTrigger(paramDef.shortHash, value);
@@ -195,12 +191,54 @@ namespace SmashTools.Animations
 			SetFloat(id, value ? 1 : 0);
 		}
 
-		private class LayerData
+    public float GetFloat(AnimationParameterDef paramDef)
+    {
+      return GetFloat(paramDef.shortHash);
+    }
+
+    public float GetFloat(ushort id)
+    {
+			return parameters[id];
+    }
+
+    public int GetInt(AnimationParameterDef paramDef)
+    {
+			return GetInt(paramDef.shortHash);
+    }
+
+    public int GetInt(ushort id)
+    {
+      return (int)parameters[id];
+    }
+
+    public bool GetBool(AnimationParameterDef paramDef)
+    {
+      return GetBool(paramDef.shortHash);
+    }
+
+    public bool GetBool(ushort id)
+    {
+      return parameters[id] != 0;
+    }
+
+    public bool GetTrigger(AnimationParameterDef paramDef)
+    {
+      return GetBool(paramDef.shortHash);
+    }
+
+    public bool GetTrigger(ushort id)
+    {
+			return GetBool(id);
+    }
+
+    #endregion Properties
+
+    private class LayerData : IExposable
 		{
-			public readonly IAnimator animator;
+			private readonly IAnimator animator;
 			public readonly AnimationLayer layer;
 			public readonly AnimationState defaultState;
-			
+
 			public int frame; // Current frame in each layer
 			public AnimationState state; // Active state in each layer
 			public AnimationState nextState;
@@ -215,7 +253,9 @@ namespace SmashTools.Animations
 				state = defaultState;
 			}
 
-			public Dictionary<FieldInfo, float> Defaults { get; private set; } = new Dictionary<FieldInfo, float>();
+			public Dictionary<FieldInfo, float> Defaults { get; private set; } = [];
+
+			private PropertyObjectMap StateObjects { get; } = [];
 
 			// Invalid states are treated as empty. Will immediately transition to the next state
 			public bool IsValid => state.clip;
@@ -228,8 +268,24 @@ namespace SmashTools.Animations
 
 			public void Update()
 			{
-				frame++;
+				Assert.IsTrue(IsValid);
+				for (int i = 0; i < state.PropertyCount; i++)
+				{
+          IAnimationObject obj = StateObjects[state][i];
+					state.clip.properties[i].EvaluateFrame(obj, frame);
+        }
+        frame++;
 			}
+
+			internal void SetFrame(AnimationClip clip, int frame)
+			{
+        for (int i = 0; i < clip.properties.Count; i++)
+        {
+          AnimationPropertyParent propertyParent = clip.properties[i];
+          IAnimationObject obj = propertyParent.ObjectFromHierarchy(animator);
+          clip.properties[i].EvaluateFrame(obj, frame);
+        }
+      }
 
 			public void EvaluateTransition()
 			{
@@ -245,7 +301,11 @@ namespace SmashTools.Animations
 					state = defaultState;
 				}
 				this.state = state;
-				CacheDefaults();
+        if (IsValid)
+				{
+          MapAnimationObjects();
+          CacheDefaults();
+        }
 			}
 
 			private void CacheDefaults()
@@ -253,12 +313,32 @@ namespace SmashTools.Animations
 				if (!WriteDefaults || !IsValid) return;
 
 				Defaults.Clear();
-				foreach (AnimationPropertyParent propertyParent in state.clip.properties)
+				for (int i = 0; i < state.clip.properties.Count; i++)
 				{
-					foreach (AnimationProperty property in propertyParent)
+					AnimationPropertyParent propertyParent = state.clip.properties[i];
+					for (int j = 0; j < propertyParent.Properties.Count; j++)
 					{
-						float startingValue = property.GetProperty(animator);
+						AnimationProperty property = propertyParent.Properties[i];
+						IAnimationObject obj = StateObjects[state][j];
+						float startingValue = property.GetProperty(obj);
 						Defaults[property.FieldInfo] = startingValue;
+					}
+				}
+			}
+
+			private void MapAnimationObjects()
+			{
+				if (state.clip == null) return;
+
+				StateObjects.Clear();
+				for (int s = 0; s < layer.states.Count; s++)
+				{
+					AnimationState state = layer.states[s];
+					StateObjects[state] = new IAnimationObject[state.PropertyCount];
+					for (int i = 0; i < state.clip.properties.Count; i++)
+					{
+						AnimationPropertyParent propertyParent = state.clip.properties[i];
+						StateObjects[state][i] = propertyParent.ObjectFromHierarchy(animator);
 					}
 				}
 			}
@@ -267,12 +347,15 @@ namespace SmashTools.Animations
 			{
 				if (!WriteDefaults) return;
 
-				foreach (AnimationPropertyParent propertyParent in state.clip.properties)
+				for (int i = 0; i < state.clip.properties.Count; i++)
 				{
-					foreach (AnimationProperty property in propertyParent)
+					AnimationPropertyParent propertyParent = state.clip.properties[i];
+					for (int j = 0; j < propertyParent.Properties.Count; j++)
 					{
+						AnimationProperty property = propertyParent.Properties[i];
+						IAnimationObject obj = StateObjects[state][j];
 						float value = Defaults[property.FieldInfo];
-						property.SetProperty(animator, value);
+						property.SetProperty(obj, value);
 					}
 				}
 			}
@@ -280,6 +363,12 @@ namespace SmashTools.Animations
 			public void Reset()
 			{
 				SetState(defaultState);
+			}
+
+			void IExposable.ExposeData()
+			{
+				//Scribe_Values.Look(ref frame, nameof(frame));
+				//Scribe_Values.Look(ref state.guid, nameof(nextState));
 			}
 		}
 	}

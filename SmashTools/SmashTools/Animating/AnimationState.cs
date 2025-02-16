@@ -40,24 +40,16 @@ namespace SmashTools.Animations
 
 		public StateType Type => stateType;
 
-		public bool IsPermanent => Type != StateType.Entry && Type != StateType.Exit && Type != StateType.Any;
+		public bool IsPermanent => Type == StateType.Entry || Type == StateType.Exit || Type == StateType.Any;
 
 		public AnimationLayer Layer { get; internal set; }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public void EvaluateFrame(IAnimator animator, int frame)
+		public int PropertyCount
 		{
-			EvaluateFrame(clip, animator, frame);
-		}
-
-		// Strictly an internal setter for AnimationClipEditor
-		public static void EvaluateFrame(AnimationClip clip, IAnimator animator, int frame)
-		{
-			if (!clip || clip.properties == null) return;
-
-			for (int i = 0; i < clip.properties.Count; i++)
+			get
 			{
-				clip.properties[i].EvaluateFrame(animator, frame);
+				if (clip == null) return 0;
+				return clip.properties.Sum(parent => parent.Properties.Count);
 			}
 		}
 
@@ -97,7 +89,7 @@ namespace SmashTools.Animations
 			XmlExporter.WriteObject(nameof(name), name);
 			XmlExporter.WriteObject(nameof(guid), guid);
 			XmlExporter.WriteObject(nameof(position), position);
-			XmlExporter.WriteObject(nameof(clip), clip?.Guid);
+			XmlExporter.WriteObject(nameof(clip), clip?.FilePath);
 			XmlExporter.WriteObject(nameof(speed), speed);
 			XmlExporter.WriteObject(nameof(writeDefaults), writeDefaults);
 

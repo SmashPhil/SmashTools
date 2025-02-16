@@ -17,16 +17,32 @@ namespace SmashTools.Animations
 	{
 		private const float UIDropdownPadding = 5;
 
-		public AnimationParameterDef def;
-		public ComparisonType comparison;
+		public string def;
+		public ComparisonType comparison = ComparisonType.Equal;
 		public float value;
 
+		[Unsaved]
+		private AnimationParameterDef paramDef;
 		[Unsaved]
 		private string inputBuffer;
 		[Unsaved]
 		private AnimationParameter parameter;
 
 		public AnimationTransition Transition { get; internal set; }
+
+		public AnimationParameterDef Def
+		{
+			get
+			{
+				return paramDef;
+			}
+			private set
+			{
+				if (value == paramDef) return;
+				paramDef = value;
+				def = paramDef.defName;
+      }
+		}
 
 		public AnimationParameter Parameter
 		{
@@ -42,6 +58,10 @@ namespace SmashTools.Animations
 			{
 				if (parameter == value) return;
 				parameter = value;
+				if (parameter != null)
+				{
+					Def = parameter.def;
+				}
 			}
 		}
 
@@ -85,54 +105,22 @@ namespace SmashTools.Animations
 				Event.current.button == 1 && Mouse.IsOver(rect))
 			{
 				Event.current.Use();
-				List<FloatMenuOption> options = new List<FloatMenuOption>()
-				{
-					new FloatMenuOption("Delete".Translate(), delegate ()
+				List<FloatMenuOption> options = 
+				[
+					new ("Delete".Translate(), delegate ()
 					{
 						Transition.conditions.Remove(this);
 					})
-				};
+				];
 
 				Find.WindowStack.Add(new FloatMenu(options));
 			}
 
-			// Draw input of param type
-			List<AnimationParameter> parameters = Transition.FromState.Layer.Controller.parameters;
-			if (Parameter.Type == ParamType.Float)
+      List<AnimationParameter> parameters = Transition.FromState.Layer.Controller.parameters;
+
+      if (Parameter.Type == ParamType.Float)
 			{
-				Rect[] rects = rect.SplitVertically(3, new float[] { 0.4f, 0.3f, 0.3f }, UIDropdownPadding);
-				Rect parameterRect = rects[0];
-				Rect comparisonRect = rects[1];
-				Rect inputRect = rects[2];
-				if (AnimationEditor.Dropdown(parameterRect, Parameter?.Name ?? string.Empty, null))
-				{
-					if (!parameters.NullOrEmpty())
-					{
-						List<FloatMenuOption> options = new List<FloatMenuOption>();
-						foreach (AnimationParameter parameter in parameters)
-						{
-							options.Add(new FloatMenuOption(parameter.Name, delegate ()
-							{
-								Parameter = parameter;
-							}));
-						}
-						Find.WindowStack.Add(new FloatMenu(options));
-					}
-					else
-					{
-						SoundDefOf.ClickReject.PlayOneShotOnCamera();
-					}
-				}
-				if (AnimationEditor.Dropdown(comparisonRect, comparison.ToString() ?? string.Empty, null))
-				{
-					List<FloatMenuOption> options = new List<FloatMenuOption>
-					{
-						new FloatMenuOption(ComparisonType.LessThan.ToString(), () => comparison = ComparisonType.LessThan),
-						new FloatMenuOption(ComparisonType.GreaterThan.ToString(), () => comparison = ComparisonType.GreaterThan)
-					};
-					Find.WindowStack.Add(new FloatMenu(options));
-				}
-				Widgets.TextFieldNumeric(parameterRect, ref value, ref inputBuffer, min: float.MinValue, float.MaxValue);
+				FieldFloat(rect);
 			}
 			else if (Parameter.Type == ParamType.Int)
 			{
@@ -140,34 +128,7 @@ namespace SmashTools.Animations
 			}
 			else if (Parameter.Type == ParamType.Bool)
 			{
-				Rect checkboxRect = new Rect(rect.xMax - 24, rect.y, 24, 24);
-				Rect parameterRect = new Rect(rect)
-				{
-					width = rect.width - checkboxRect.width - UIDropdownPadding
-				};
-				
-				if (AnimationEditor.Dropdown(parameterRect, Parameter?.Name ?? string.Empty, null))
-				{
-					if (!parameters.NullOrEmpty())
-					{
-						List<FloatMenuOption> options = new List<FloatMenuOption>();
-						foreach (AnimationParameter parameter in parameters)
-						{
-							options.Add(new FloatMenuOption(parameter.Name, delegate ()
-							{
-								Parameter = parameter;
-							}));
-						}
-						Find.WindowStack.Add(new FloatMenu(options));
-					}
-					else
-					{
-						SoundDefOf.ClickReject.PlayOneShotOnCamera();
-					}
-				}
-				bool checkOn = value != 0;
-				UIElements.CheckboxButton(checkboxRect, ref checkOn);
-				value = checkOn ? 1 : 0;
+				FieldBool(rect);
 			}
 			else if (Parameter.Type == ParamType.Trigger)
 			{
@@ -175,16 +136,88 @@ namespace SmashTools.Animations
 			}
 		}
 
-		public void ResolveParameter()
+		private void FieldFloat(Rect rect)
 		{
-			Assert.IsNotNull(def);
-			if (def != null)
+      List<AnimationParameter> parameters = Transition.FromState.Layer.Controller.parameters;
+      Rect[] rects = rect.SplitVertically(3, [0.4f, 0.3f, 0.3f], UIDropdownPadding);
+      Rect parameterRect = rects[0];
+      Rect comparisonRect = rects[1];
+      Rect inputRect = rects[2];
+      if (AnimationEditor.Dropdown(parameterRect, Parameter?.Name ?? string.Empty, null))
+      {
+        if (!parameters.NullOrEmpty())
+        {
+          List<FloatMenuOption> options = new List<FloatMenuOption>();
+          foreach (AnimationParameter parameter in parameters)
+          {
+            options.Add(new FloatMenuOption(parameter.Name, delegate ()
+            {
+              Parameter = parameter;
+            }));
+          }
+          Find.WindowStack.Add(new FloatMenu(options));
+        }
+        else
+        {
+          SoundDefOf.ClickReject.PlayOneShotOnCamera();
+        }
+      }
+      if (AnimationEditor.Dropdown(comparisonRect, comparison.ToString() ?? string.Empty, null))
+      {
+        List<FloatMenuOption> options = new List<FloatMenuOption>
+          {
+            new FloatMenuOption(ComparisonType.LessThan.ToString(), () => comparison = ComparisonType.LessThan),
+            new FloatMenuOption(ComparisonType.GreaterThan.ToString(), () => comparison = ComparisonType.GreaterThan)
+          };
+        Find.WindowStack.Add(new FloatMenu(options));
+      }
+      Widgets.TextFieldNumeric(parameterRect, ref value, ref inputBuffer, min: float.MinValue, float.MaxValue);
+    }
+
+    private void FieldInt(Rect rect)
+    {
+      
+    }
+
+		private void FieldBool(Rect rect)
+		{
+			List<AnimationParameterDef> parameters = DefDatabase<AnimationParameterDef>.AllDefsListForReading;
+      Rect checkboxRect = new Rect(rect.xMax - 24, rect.y, 24, 24);
+      Rect parameterRect = new Rect(rect)
+      {
+        width = rect.width - checkboxRect.width - UIDropdownPadding
+      };
+
+      if (AnimationEditor.Dropdown(parameterRect, Parameter?.Name ?? Def?.LabelCap ?? "NULL", null))
+      {
+        if (!parameters.NullOrEmpty())
+        {
+          List<FloatMenuOption> options = [];
+          foreach (AnimationParameterDef paramDef in parameters)
+          {
+            options.Add(new FloatMenuOption(paramDef.LabelCap, delegate ()
+            {
+              Parameter = new AnimationParameter(paramDef);
+            }));
+          }
+          Find.WindowStack.Add(new FloatMenu(options));
+        }
+        else
+        {
+          SoundDefOf.ClickReject.PlayOneShotOnCamera();
+        }
+      }
+      bool checkOn = value != 0;
+      UIElements.CheckboxButton(checkboxRect, ref checkOn);
+      value = checkOn ? 1 : 0;
+    }
+
+    public void ResolveParameter()
+		{
+			if (Def == null)
 			{
-				Parameter = new AnimationParameter()
-				{
-					def = def,
-					Value = value,
-				};
+				paramDef = DefDatabase<AnimationParameterDef>.GetNamed(def);
+				Parameter = new AnimationParameter(Def);
 			}
 		}
 
