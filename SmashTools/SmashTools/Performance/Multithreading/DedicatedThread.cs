@@ -6,88 +6,103 @@ using Verse;
 
 namespace SmashTools.Performance
 {
-	public class DedicatedThread
-	{
-		public readonly Thread thread;
-		public readonly int id;
-		public readonly ThreadType type;
-		public UpdateLoop update;
+  public class DedicatedThread
+  {
+    public readonly Thread thread;
+    public readonly int id;
+    public readonly ThreadType type;
+    public UpdateLoop update;
 
-		private readonly ConcurrentQueue<AsyncAction> queue;
+    private readonly ConcurrentQueue<AsyncAction> queue;
 
-		private bool shouldExit;
+    private bool shouldExit;
 
-		public delegate void UpdateLoop();
+    public delegate void UpdateLoop();
 
-		public DedicatedThread(int id, ThreadType type)
-		{
-			this.id = id;
-			this.type = type;
-			
-			queue = new ConcurrentQueue<AsyncAction>();
-			thread = new Thread(Execute)
-			{
-				IsBackground = true
-			};
-			thread.Start();
-		}
+    public DedicatedThread(int id, ThreadType type)
+    {
+      this.id = id;
+      this.type = type;
 
-		public bool Terminated { get; private set; }
+      queue = new ConcurrentQueue<AsyncAction>();
+      thread = new Thread(Execute)
+      {
+        IsBackground = true
+      };
+      thread.Start();
+    }
 
-		public bool InLongOperation { get; private set; }
+    public bool Terminated { get; private set; }
 
-		public int QueueCount => queue.Count;
+    public bool InLongOperation { get; private set; }
 
-		/// <summary>
-		/// For Debugging purposes only. Allows reading of action queue with moment-in-time snapshot.
-		/// </summary>
-		internal IEnumerator<AsyncAction> GetEnumerator() => queue.GetEnumerator();
+    /// <summary>
+    /// Halt new actions from being queued in this thread while still executing existing queue.
+    /// </summary>
+    /// <remarks>Use when thread needs to be halted temporarily.</remarks>
+    public bool Suspended { get; set; }
 
-		public void Queue(AsyncAction action)
-		{
-			queue.Enqueue(action);
-		}
+    /// <summary>
+    /// Remaining actions to be executed in this thread.
+    /// </summary>
+    public int QueueCount => queue.Count;
 
-		internal void Stop()
-		{
-			shouldExit = true;
-		}
+    /// <summary>
+    /// For Debugging purposes only. Allows reading of action queue with moment-in-time snapshot.
+    /// </summary>
+    internal IEnumerator<AsyncAction> GetEnumerator() => queue.GetEnumerator();
 
-		private void Execute()
-		{
-			while (!shouldExit)
-			{
-				if (queue.TryDequeue(out AsyncAction asyncAction))
-				{
-					if (asyncAction is { IsValid: true } )
-					{
-						try
-						{
-							InLongOperation = asyncAction.LongOperation;
-							asyncAction.Invoke();
-						}
-						catch (Exception ex)
-						{
-							Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
-							asyncAction.ExceptionThrown(ex);
-						}
-					}
-					asyncAction.ReturnToPool();
-				}
-				//Prioritize running queue over update loop
-				while (!shouldExit && queue.Count == 0)
-				{
-					update?.Invoke();
-					Thread.Sleep(10);
-				}
-			}
-			Terminated = true;
-		}
+    public void Queue(AsyncAction action)
+    {
+      if (Suspended)
+      {
+        Log.Error($"Thread {id} has been queued an item while suspended. It will not execute.");
+        return;
+      }
+      queue.Enqueue(action);
+    }
 
-		public enum ThreadType
-		{ 
-			Single,
-			Shared
-		}
-	}
+    internal void Stop()
+    {
+      shouldExit = true;
+    }
+
+    private void Execute()
+    {
+      while (!shouldExit)
+      {
+        if (queue.TryDequeue(out AsyncAction asyncAction))
+        {
+          if (asyncAction is { IsValid: true })
+          {
+            try
+            {
+              InLongOperation = asyncAction.LongOperation;
+              asyncAction.Invoke();
+            }
+            catch (Exception ex)
+            {
+              Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
+              asyncAction.ExceptionThrown(ex);
+            }
+          }
+          asyncAction.ReturnToPool();
+        }
+        // Prioritize running queue over update loop
+        do
+        {
+          if (!Suspended) update?.Invoke();
+          Thread.Sleep(10);
+        }
+        while (!shouldExit && queue.Count == 0);
+      }
+      Terminated = true;
+    }
+
+    public enum ThreadType
+    {
+      Single,
+      Shared
+    }
+  }
 }

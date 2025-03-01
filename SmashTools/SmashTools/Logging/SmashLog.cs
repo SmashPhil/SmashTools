@@ -225,7 +225,7 @@ namespace SmashTools
 				string textNoBrackets = Regex.Replace(text, RichTextRegex, "", RegexOptions.Singleline, TimeSpan.FromMilliseconds(5));
 				return textNoBrackets;
 			}
-			catch (Exception)
+			catch (RegexMatchTimeoutException)
 			{
 			}
 			return text;

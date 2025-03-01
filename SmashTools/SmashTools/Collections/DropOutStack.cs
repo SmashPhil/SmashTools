@@ -20,6 +20,8 @@ namespace SmashTools
 		private int top;
 		private int count;
 
+		private object lockObj = new();
+
 		public DropOutStack(int capacity)
 		{
 			this.items = new T[capacity];
@@ -29,7 +31,7 @@ namespace SmashTools
 
 		public void Push(T item)
 		{
-			lock(this)
+			lock (lockObj)
 			{
 				items[top] = item;
 				top = GenMath.PositiveMod(++top, items.Length);
@@ -43,7 +45,7 @@ namespace SmashTools
 			{
 				throw new InvalidOperationException("Empty stack");
 			}
-			lock (this)
+			lock (lockObj)
 			{
 				top = GenMath.PositiveMod(items.Length + --top, items.Length);
 				T item = items[top];
@@ -71,7 +73,7 @@ namespace SmashTools
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			lock (this)
+			lock (lockObj)
 			{
 				for (int i = 0; i < Count; i++)
 				{

@@ -1,22 +1,22 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
+using Verse;
 
 namespace SmashTools.Performance
 {
 	public static class AsyncPool<T> where T : class, new()
 	{
-		private static readonly ConcurrentBag<T> returnItems = new ConcurrentBag<T>();
+		private static readonly ConcurrentBag<T> returnItems = [];
 
 		private static int bagLimit = int.MaxValue;
 
-#if DEBUG
 		/// <summary>
 		/// Tracks the amount of objects created from AsyncPool retrievals and how many are returned.
 		/// </summary>
-		/// <remarks>If more are returned than created, this will cause a memory leak. Return only what has been retrieved via <see cref="Get"/></remarks>
+		/// <remarks>If more are returned than created, this will cause a memory leak. 
+		/// Return only what has been retrieved via <see cref="Get"/></remarks>
 		private static int counter = 0;
-#endif
 
 		public static int Count => returnItems.Count;
 
@@ -34,7 +34,11 @@ namespace SmashTools.Performance
 
 		public static void Return(T item)
 		{
-			if (Count == bagLimit) return;
+			if (Count >= bagLimit)
+			{
+				Log.WarningOnce($"AsyncPool has hit max limit for item pooling. Type={typeof(T).FullName}", $"AsyncPool_{typeof(T).Name}".GetHashCode());
+        return;
+      }
 
 			ItemReturned();
 			returnItems.Add(item);
@@ -48,22 +52,17 @@ namespace SmashTools.Performance
 		[Conditional("DEBUG")]
 		private static void ItemReturned()
 		{
-#if DEBUG
 			Interlocked.Increment(ref counter);
-
 			// More items have been borrowed than returned to bag.
 			// Should this ever increment over 0, it means more objects
 			// are being returned than retrieved.
 			Assert.IsTrue(counter <= 0);
-#endif
 		}
 
 		[Conditional("DEBUG")]
 		private static void ItemRemoved()
 		{
-#if DEBUG
 			Interlocked.Decrement(ref counter);
-#endif
 		}
 	}
 }
