@@ -16,7 +16,7 @@ namespace SmashTools
 		{
 			if (lookMode == LookMode.Undefined && !Scribe_Universal.TryResolveLookMode(typeof(T), out lookMode))
 			{
-				Trace.Raise($"LookArray call with type {typeof(T)} must have lookMode set explicitly.");
+				Trace.Fail($"LookArray call with type {typeof(T)} must have lookMode set explicitly.");
 				return;
 			}
 
@@ -98,7 +98,7 @@ namespace SmashTools
 						int size;
 						if (sizeAttribute == null)
 						{
-							Trace.Raise($"Size attribute for array not found. Defaulting to size of xml items listed.");
+							Trace.Fail($"Size attribute for array not found. Defaulting to size of xml items listed.");
 							size = curXmlParent.ChildNodes.Count;
 						}
 						else

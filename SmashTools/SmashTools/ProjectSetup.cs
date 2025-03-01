@@ -40,9 +40,9 @@ namespace SmashTools
         nameof(XmlParseHelper.ReadCustomAttributes)));
 
       // Logging
-      Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
-        transpiler: new HarmonyMethod(typeof(SmashLog),
-        nameof(SmashLog.RemoveRichTextTranspiler)));
+      //Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
+      //  transpiler: new HarmonyMethod(typeof(SmashLog),
+      //  nameof(SmashLog.RemoveRichTextTranspiler)));
 
       // Map
       Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),

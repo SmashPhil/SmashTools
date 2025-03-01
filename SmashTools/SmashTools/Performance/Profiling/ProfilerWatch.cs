@@ -100,7 +100,7 @@ namespace SmashTools.Performance
 				}
 				profiling = value;
 				string status = profiling ? "<color=green>ENABLED</color>" : "<color=gray>DISABLED</color>";
-				Debug.TSMessage($"<color=orange>[ProfilerWatch]</color> Profiling={status}");
+				Log.Message($"<color=orange>[ProfilerWatch]</color> Profiling={status}");
 				if (profiling && !routineRunning)
 				{
 					CoroutineManager.StartCoroutine(CaptureFrameRoutine);
@@ -122,7 +122,7 @@ namespace SmashTools.Performance
 					profile = new ThreadProfiler();
 					if (!profilers.TryAdd(threadId, profile))
 					{
-						Assert.Raise();
+						Assert.Fail();
 					}
 				}
 				return profile;
@@ -369,7 +369,7 @@ namespace SmashTools.Performance
 			}
 			catch (Exception ex)
 			{
-				Debug.TSError($"Failed to apply harmony patch on {methodInfo.DeclaringType}.{methodInfo.Name}. Exception={ex}");
+				Log.Error($"Failed to apply harmony patch on {methodInfo.DeclaringType}.{methodInfo.Name}. Exception={ex}");
 			}
 			return 1;
 		}

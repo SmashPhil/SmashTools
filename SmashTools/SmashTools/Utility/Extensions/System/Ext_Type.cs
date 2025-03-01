@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HarmonyLib;
 using Verse;
 
 namespace SmashTools
@@ -53,23 +54,24 @@ namespace SmashTools
 			return false;
 		}
 
+		public static void SetStaticFieldsDefault(this Type type)
+		{
+      foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+			{
+        fieldInfo.SetValue(null, fieldInfo.FieldType.GetDefaultValue());
+      }
+    }
+
 		/// <summary>
-		/// Create object given <paramref name="type"/> containing the default value of this Type.
+		/// Return object of default value for <paramref name="type"/>
 		/// </summary>
 		public static object GetDefaultValue(this Type type)
 		{
-			if (type.IsValueType)
-			{
-				return Activator.CreateInstance(type);
-			}
-			else
-			{
-				return null;
-			}
-		}
+      return type.IsValueType ? Activator.CreateInstance(type) : null;
+    }
 
 		/// <summary>
-		/// Determine if method is overridden in any child class
+		/// Method is overridden in any child class
 		/// </summary>
 		public static bool MethodImplemented(this MethodInfo method)
 		{

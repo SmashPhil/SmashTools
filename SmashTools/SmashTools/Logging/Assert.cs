@@ -13,29 +13,35 @@ namespace SmashTools
 		public static void IsTrue(bool condition, string message = null)
 		{
 			if (condition) return;
-			Raise(message);
+      Fail(message);
 		}
 
-		[Conditional("DEBUG")]
+    [Conditional("DEBUG")]
+    public static void IsFalse(bool condition, string message = null)
+    {
+      if (!condition) return;
+      Fail(message);
+    }
+
+    [Conditional("DEBUG")]
 		public static void IsNull<T>(T obj, string message = null) where T : class
 		{
 			if (obj == null) return;
-			Raise(message);
+      Fail(message);
 		}
 
 		[Conditional("DEBUG")]
 		public static void IsNotNull<T>(T obj, string message = null) where T : class
 		{
 			if (obj != null) return;
-			Raise(message);
+      Fail(message);
 		}
 
 		[Conditional("DEBUG")]
-		public static void Raise(string message = null)
+		public static void Fail(string message = null)
 		{
-			Log.Error(message ?? "Assertion Failed");
 			if (Debugger.IsAttached) Debugger.Break();
-			Debug.ShowStack(message ?? "Assertion Failed!");
+			Debug.ShowStack("Assertion Failed!", message);
 		}
 	}
 }

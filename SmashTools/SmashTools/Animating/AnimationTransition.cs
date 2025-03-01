@@ -59,7 +59,7 @@ namespace SmashTools.Animations
 				AnimationParameterDef paramDef = DefDatabase<AnimationParameterDef>.AllDefsListForReading.FirstOrDefault();
 				if (paramDef == null)
 				{
-					Assert.Raise();
+					Assert.Fail();
 					Log.Error($"No controller parameters or parameter defs to assign.");
 					return;
 				}

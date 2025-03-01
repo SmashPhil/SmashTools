@@ -45,7 +45,7 @@ namespace SmashTools.Xml
     {
       if (Resolved)
       {
-        Trace.Raise($@"Cannot resolve delayed cross references again. This is only meant to gather def references
+        Trace.Fail($@"Cannot resolve delayed cross references again. This is only meant to gather def references
 in non-def xml files and resolve them when DefDatabase has been loaded.");
         return;
       }

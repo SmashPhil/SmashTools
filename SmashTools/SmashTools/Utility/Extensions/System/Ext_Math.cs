@@ -149,8 +149,6 @@ namespace SmashTools
 		/// <summary>
 		/// Round to nearest n digits. <paramref name="roundTo"/> is representative of the decimal place. Eg. 0.01 for 2 decimal places
 		/// </summary>
-		/// <param name="num"></param>
-		/// <param name="roundTo"></param>
 		public static float RoundTo(this float num, float roundTo)
 		{
 			return Mathf.Round(num / roundTo) * roundTo;
@@ -159,34 +157,30 @@ namespace SmashTools
 		/// <summary>
 		/// Round to nearest n
 		/// </summary>
-		/// <param name="num"></param>
-		/// <param name="roundTo"></param>
 		public static int RoundTo(this int num, int roundTo)
 		{
 			return Mathf.RoundToInt((float)num / roundTo) * roundTo;
 		}
 
-		public static int PowTwo(int exp)
+		/// <summary>
+		/// 2 raised to the power of <paramref name="n"/>
+		/// </summary>
+		public static int PowTwo(int n)
 		{
-			return 1 << exp;
+			return 1 << n;
 		}
 
 		/// <summary>
-		/// Math.Pow simple casting for integers
+		/// <paramref name="x"/> raised to the power of <paramref name="y"/> for 64bit integers
 		/// </summary>
-		/// <param name="val"></param>
-		/// <param name="exp"></param>
-		public static long Pow(this int val, int exp)
+		public static long Pow(this int x, int y)
 		{
-			return (long)Math.Pow(val, exp);
+			return (long)Math.Pow(x, y);
 		}
 
 		/// <summary>
 		/// Take amount from a value bounded by 0, returning the amount remaining in the value
 		/// </summary>
-		/// <param name="value"></param>
-		/// <param name="take"></param>
-		/// <param name="remaining"></param>
 		public static int Take(this int value, int take, out int remaining)
 		{
 			remaining = 0;

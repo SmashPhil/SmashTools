@@ -30,7 +30,7 @@ namespace SmashTools.Debugging
 			{
 				if (!tests.TryAdd(testType, new ConcurrentBag<UnitTest>()))
 				{
-					Assert.Raise();
+					Assert.Fail();
 				}
 			}
 			Parallel.ForEach(GenTypes.AllTypes, type =>
@@ -111,7 +111,7 @@ namespace SmashTools.Debugging
 				Assert.IsNotNull(type);
 				MethodInfo abortMethod = AccessTools.Method(type, "StatusBoxAbortRequestedHandler");
 				Assert.IsNotNull(abortMethod);
-				abortMethod.Invoke(null, new object[] { false });
+				abortMethod.Invoke(null, [false]);
 			}
 			LongEventHandler.ExecuteWhenFinished(delegate ()
 			{
@@ -184,7 +184,7 @@ namespace SmashTools.Debugging
 					if (!RunningUnitTests) goto EndTest;
 					yield return new WaitForSecondsRealtime(1);
 				}
-				yield return ExecuteTests(UnitTest.TestType.GameLoaded, results);
+        yield return ExecuteTests(UnitTest.TestType.GameLoaded, results);
 				if (StopTest) goto EndTest;
 			}
 
@@ -201,7 +201,7 @@ namespace SmashTools.Debugging
 		/// <returns>Should continue running Unit Tests</returns>
 		private static IEnumerator ExecuteTests(UnitTest.TestType type, List<string> output)
 		{
-			List<string> subResults = new List<string>();
+			List<string> subResults = [];
 			foreach (UnitTest unitTest in unitTests[type])
 			{
 				Assert.IsTrue(unitTest.ExecuteOn == type);

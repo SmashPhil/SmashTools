@@ -10,28 +10,28 @@ namespace SmashTools
 		public static void IsTrue(bool condition, string message = null)
 		{
 			if (condition) return;
-			Raise(message);
+      Fail(message);
 		}
 
 		[Conditional("TRACE")]
 		public static void IsNull<T>(T obj, string message = null) where T : class
 		{
 			if (obj == null) return;
-			Raise(message);
+      Fail(message);
 		}
 
 		[Conditional("TRACE")]
 		public static void IsNotNull<T>(T obj, string message = null) where T : class
 		{
 			if (obj != null) return;
-			Raise(message);
+      Fail(message);
 		}
 
 		[Conditional("TRACE")]
-		public static void Raise(string message = null)
+		public static void Fail(string message = null)
 		{
 #if DEBUG
-			Assert.Raise(message);
+			Assert.Fail(message);
 #else
 			Log.Error(message ?? "Assertion Failed");
 #endif

@@ -122,6 +122,7 @@
     <Compile Include="Collections\CircularArray.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
     <Compile Include="Collections\DropOutStack.cs" />
+    <Compile Include="Collections\ObjectPool.cs" />
     <Compile Include="Collections\SimpleDictionary.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
@@ -159,6 +160,7 @@
     <Compile Include="Interfaces\IHighPriorityOnGUI.cs" />
     <Compile Include="Interfaces\IInspectable.cs" />
     <Compile Include="Interfaces\IPathfinder.cs" />
+    <Compile Include="Interfaces\IPoolable.cs" />
     <Compile Include="Interfaces\ISelectableUI.cs" />
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Interfaces\ITweakFields.cs" />
@@ -179,7 +181,10 @@
     <Compile Include="Performance\Multithreading\AsyncLongOperationAction.cs" />
     <Compile Include="Performance\Multithreading\AsyncPool.cs" />
     <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
+    <Compile Include="Performance\Multithreading\ListSnapshot.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
+    <Compile Include="Performance\Profiling\ObjectCounter.cs" />
+    <Compile Include="Performance\Profiling\ObjectCountWatcher.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
     <Compile Include="Performance\Multithreading\TaskManager.cs" />
     <Compile Include="Performance\Multithreading\ThreadManager.cs" />
@@ -205,7 +210,8 @@
     <Compile Include="UI\Windows\AnimationEditor\Dialog_DefDropdown.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_MethodSelector.cs" />
     <Compile Include="UI\Windows\Dialog_CameraView.cs" />
-    <Compile Include="UI\Windows\Dialog_Popup.cs" />
+    <Compile Include="UI\Windows\StackTracePopup.cs" />
+    <Compile Include="UI\Windows\ModalWindow.cs" />
     <Compile Include="UI\Windows\Performance\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_ItemDropdown.cs" />
