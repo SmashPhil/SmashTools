@@ -11,11 +11,14 @@ namespace SmashTools
 	public class Dialog_DedicatedThreadActivity : Window
 	{
 		private const float AsyncActionEntryHeight = 30;
+    private const int QueueLimit = 50;
 
-		private DedicatedThread dedicatedThread;
+    private DedicatedThread dedicatedThread;
 		private Func<DedicatedThread> dedicatedThreadGetter;
 
-		private int queueLimit = 50;
+		private List<AsyncAction> actionsSnapshot = [];
+
+		
 
 		private Vector2 scrollPos;
 		private Rect viewRect;
@@ -76,58 +79,44 @@ namespace SmashTools
 		public override void DoWindowContents(Rect inRect)
 		{
 			DedicatedThread dedicatedThread = DedicatedThread;
-			if (dedicatedThread == null)
-			{
-				return;
-			}
+			if (dedicatedThread == null) return;
 
-			using (new TextBlock(GameFont.Medium))
-			{
-				Rect labelRect = inRect.ContractedBy(5);
-				labelRect.height = 32;
+			using TextBlock textFont = new(GameFont.Medium);
 
-				int count = dedicatedThread.QueueCount;
-				string countReadout = count < 5 ? $"~{count}" : count.ToString();
-				Widgets.Label(labelRect, $"DedicatedThread #{dedicatedThread.id} (Count = {countReadout})");
+      Rect labelRect = inRect.ContractedBy(5);
+      labelRect.height = 32;
 
-				Text.Font = GameFont.Small;
+      actionsSnapshot.Clear();
+      dedicatedThread.Snapshot(actionsSnapshot);
+      int count = Mathf.Min(actionsSnapshot.Count, QueueLimit);
 
-				Rect activityRect = inRect;
-				activityRect.yMin = labelRect.yMax + 5;
-				activityRect.height -= 5;
-				Widgets.DrawMenuSection(activityRect);
+      Widgets.Label(labelRect, $"DedicatedThread #{dedicatedThread.id} (Count={actionsSnapshot.Count})");
 
-				Rect outRect = activityRect.ContractedBy(2);
+      Text.Font = GameFont.Small;
 
-				int index = 0;
+      Rect activityRect = inRect;
+      activityRect.yMin = labelRect.yMax + 5;
+      activityRect.height -= 5;
+      Widgets.DrawMenuSection(activityRect);
 
-				Widgets.BeginScrollView(outRect, ref scrollPos, viewRect);
-				{
-					using (var enumerator = dedicatedThread.GetEnumerator())
-					{
-						while (enumerator.MoveNext())
-						{
-							if (index >= queueLimit)
-							{
-								break;
-							}
-							AsyncAction asyncAction = enumerator.Current;
+      Rect outRect = activityRect.ContractedBy(2);
 
-							Rect entryRect = viewRect;
-							entryRect.y = index * AsyncActionEntryHeight;
-							entryRect.height = AsyncActionEntryHeight;
+      // Begin ScrollView
+      Widgets.BeginScrollView(outRect, ref scrollPos, viewRect);
+      for (int i = 0; i < count; i++)
+      {
+        AsyncAction asyncAction = actionsSnapshot[i];
+        Rect entryRect = viewRect;
+        entryRect.y = i * AsyncActionEntryHeight;
+        entryRect.height = AsyncActionEntryHeight;
 
-							Widgets.Label(entryRect, $"{index}. {asyncAction.GetType().Name}");
-							Widgets.DrawLineHorizontal(entryRect.x, entryRect.yMax, entryRect.width);
+        Widgets.Label(entryRect, $"{i}. {asyncAction.GetType().Name}");
+        Widgets.DrawLineHorizontal(entryRect.x, entryRect.yMax, entryRect.width);
+      }
+      Widgets.EndScrollView();
+      // End ScrollView
 
-							index++;
-						}
-					}
-				}
-				Widgets.EndScrollView();
-
-				RecalculateViewRect(outRect, index);
-			}
-		}
+      RecalculateViewRect(outRect, count);
+    }
 	}
 }

@@ -9,7 +9,23 @@ namespace SmashTools
 {
 	public static class GUIState
 	{
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		// TODO 1.6 - Remove
+		[Obsolete("Use TextBlock with disposable pattern", true)]
+    public static void Push()
+    {
+    }
+    // TODO 1.6 - Remove
+    [Obsolete("Use TextBlock with disposable pattern", true)]
+    public static void Reset()
+    {
+    }
+    // TODO 1.6 - Remove
+    [Obsolete("Use TextBlock with disposable pattern", true)]
+    public static void Pop()
+    {
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void Disable()
 		{
 			GUI.enabled = false;

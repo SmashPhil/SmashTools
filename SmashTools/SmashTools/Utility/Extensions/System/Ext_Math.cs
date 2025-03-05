@@ -109,18 +109,26 @@ namespace SmashTools
 		/// Get Absolute Value of IntVec2
 		/// </summary>
 		/// <param name="c"></param>
-		public static IntVec2 Abs(IntVec2 c)
+		public static IntVec2 Abs(IntVec2 cell)
 		{
-			return new IntVec2(Mathf.Abs(c.x), Mathf.Abs(c.z));
+			return new IntVec2(Mathf.Abs(cell.x), Mathf.Abs(cell.z));
 		}
 
 		/// <summary>
 		/// Get Absolute Value of IntVec3
 		/// </summary>
 		/// <param name="c"></param>
-		public static IntVec3 Abs(IntVec3 c)
+		public static IntVec3 Abs(IntVec3 cell)
 		{
-			return new IntVec3(Mathf.Abs(c.x), Mathf.Abs(c.y), Mathf.Abs(c.z));
+			return new IntVec3(Mathf.Abs(cell.x), Mathf.Abs(cell.y), Mathf.Abs(cell.z));
+		}
+
+		/// <summary>
+		/// Arithmetic series formula eg. (1 + 2 + 3 + ... + k) * n
+		/// </summary>
+		public static int ArithmeticSeries(int k, int n)
+		{
+			return n * (k * (k + 1)) / 2;
 		}
 
 		/// <summary>
