@@ -1,62 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SmashTools;
+﻿using System.Collections.Generic;
 
 namespace SmashTools.Debugging
 {
-	public abstract class UnitTest
-	{
-		public abstract TestType ExecuteOn { get; }
+  public abstract class UnitTest
+  {
+    public abstract TestType ExecuteOn { get; }
 
-		public abstract string Name { get; }
+    public abstract string Name { get; }
 
-		public virtual ExecutionPriority Priority => ExecutionPriority.Normal;
+    public virtual ExecutionPriority Priority => ExecutionPriority.Normal;
 
-		public abstract IEnumerable<UTResult> Execute();
+    public abstract IEnumerable<UTResult> Execute();
 
-		protected UTResult True => new UTResult(string.Empty, true);
+    public enum TestType
+    {
+      Disabled = 0,
+      MainMenu,
+      GameLoaded,
+    }
 
-		protected UTResult False => new UTResult(string.Empty, false);
+    public enum ExecutionPriority : int
+    {
+      Last = -2,
+      Low = -1,
+      Normal = 0,
+      High = 1,
+      First = 2
+    }
+  }
 
-		public enum TestType
-		{
-			Disabled = 0,
-			MainMenu,
-			GameLoaded,
-		}
+  public struct UTResult
+  {
+    public UTResult(string name, bool passed)
+    {
+      string adjustedName = !name.NullOrEmpty() ? $"{name} = " : string.Empty;
+      Results = [(adjustedName, passed)];
+    }
 
-		public enum ExecutionPriority : int
-		{
-			Last = -2,
-			Low = -1,
-			Normal = 0,
-			High = 1,
-			First = 2
-		}
-	}
+    public List<(string name, bool result)> Results { get; private set; }
 
-	public struct UTResult
-	{
-		public UTResult(string name, bool passed)
-		{
-			string adjustedName = !name.NullOrEmpty() ? $"{name} = " : string.Empty;
-			Results = new List<(string name, bool result)>() { (adjustedName, passed) };
-		}
+    public void Add(string name, bool passed)
+    {
+      Results ??= [];
+      Results.Add((name, passed));
+    }
 
-		public List<(string name, bool result)> Results { get; private set; }
-
-		public void Add(string name, bool passed)
-		{
-			Results ??= new List<(string name, bool result)>();
-			Results.Add((name, passed));
-		}
-
-		public static UTResult For(string name, bool passed)
-		{
-			return new UTResult(name, passed);
-		}
-	}
+    public static UTResult For(string name, bool passed)
+    {
+      return new UTResult(name, passed);
+    }
+  }
 }

@@ -16,7 +16,8 @@ namespace SmashTools
 {
   public class ProjectSetup : Mod
   {
-    public const string ProjectLabel = "[SmashTools]";
+    public const string ProjectLabel = "SmashTools";
+    public const string LogLabel = $"[{ProjectLabel}]";
     public const string HarmonyId = "SmashPhil.SmashTools";
 
     public static event Action onNewGame;
@@ -40,9 +41,23 @@ namespace SmashTools
         nameof(XmlParseHelper.ReadCustomAttributes)));
 
       // Logging
-      //Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
-      //  transpiler: new HarmonyMethod(typeof(SmashLog),
-      //  nameof(SmashLog.RemoveRichTextTranspiler)));
+      Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Message), parameters: [typeof(string)]),
+        transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextFromDebugLogTranspiler)));
+      Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Warning)),
+        transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextFromDebugLogWarningTranspiler)));
+      Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Error)),
+        transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextFromDebugLogErrorTranspiler)));
+
+#if DEBUG 
+      // Just removing brackets from stacktrace window for clarity. Let's not force other modders
+      // to deal with the performance hit of constant regex filtering.
+      Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
+        transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextMessageDetailsTranspiler)));
+#endif
 
       // Map
       Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),

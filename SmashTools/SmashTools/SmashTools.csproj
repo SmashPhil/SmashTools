@@ -23,11 +23,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>CS0649</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\..\SteamLibrary\steamapps\common\RimWorld\Mods\Vehicles\1.5\Assemblies\</OutputPath>
+    <OutputPath>..\..\..\1.5\Assemblies\</OutputPath>
     <DefineConstants>RELEASE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -142,6 +143,7 @@
     <Compile Include="Debugging\TimerUtility.cs" />
     <Compile Include="Debugging\StartupAction\StartupTest.cs" />
     <Compile Include="Debugging\UnitTests\UnitTest.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestCellRectUtils.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestAnimationCurve.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestAnimDynamicMethod.cs" />
@@ -183,6 +185,7 @@
     <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\ListSnapshot.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
+    <Compile Include="Performance\Profiling\Benchmark.cs" />
     <Compile Include="Performance\Profiling\ObjectCounter.cs" />
     <Compile Include="Performance\Profiling\ObjectCountWatcher.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />

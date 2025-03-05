@@ -78,7 +78,7 @@ namespace SmashTools.Performance
     }
 
 #if DEBUG
-    [DebugAction(category = "Mods", name = "Log Object Counters", actionType = DebugActionType.Action)]
+    [DebugOutput(category = ProjectSetup.ProjectLabel, name = "Log Object Counters", onlyWhenPlaying = true)]
     private static void LogAllDebugAction()
     {
       LogAll();
