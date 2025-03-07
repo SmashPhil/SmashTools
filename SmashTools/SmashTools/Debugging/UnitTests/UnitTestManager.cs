@@ -9,14 +9,15 @@ using HarmonyLib;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using Verse.Profile;
 
 namespace SmashTools.Debugging
 {
   public static class UnitTestManager
   {
     private static bool runningUnitTests;
-    private static Dictionary<UnitTest.TestType, List<UnitTest>> unitTests = new Dictionary<UnitTest.TestType, List<UnitTest>>();
-    private static List<string> results = new List<string>();
+    private static Dictionary<UnitTest.TestType, List<UnitTest>> unitTests = [];
+    private static List<string> results = [];
 
     public static event Action<bool> OnUnitTestStateChange;
 
@@ -50,7 +51,7 @@ namespace SmashTools.Debugging
 
     public static List<UnitTest> AllUnitTests => unitTests.Values.SelectMany(t => t).ToList();
 
-    private static bool StopTest { get; set; }
+    private static bool StopRequested { get; set; }
 
     // Supresses startup action unit tests once it has been executed once to avoid infinite test loops when transitioning scenes.
     private static bool UnitTestsExecuted { get; set; }
@@ -110,6 +111,7 @@ namespace SmashTools.Debugging
         Assert.IsNotNull(abortMethod);
         abortMethod.Invoke(null, [false]);
       }
+
       LongEventHandler.ExecuteWhenFinished(delegate ()
       {
         CoroutineManager.QueueInvoke(UnitTestRoutine);
@@ -143,8 +145,7 @@ namespace SmashTools.Debugging
 
       bool testFromMainMenu = GenScene.InEntryScene;
 
-      RunningUnitTests = true;
-      using var cleanup = new TestCleanup();
+      using UnitTestEnabler utb = new();
 
       results.Clear();
       results.Add($"---------- Unit Tests ----------");
@@ -154,13 +155,15 @@ namespace SmashTools.Debugging
         {
           GenScene.GoToMainMenu();
         }
+
         while (Current.ProgramState != ProgramState.Entry || LongEventHandler.AnyEventNowOrWaiting)
         {
-          if (!RunningUnitTests) goto EndTest;
-          yield return new WaitForSecondsRealtime(1);
+          if (StopRequested) goto EndTest;
+          yield return null;
         }
-        yield return ExecuteTests(UnitTest.TestType.MainMenu, results);
-        if (StopTest) goto EndTest;
+
+        ExecuteTests(UnitTest.TestType.MainMenu, results);
+        if (StopRequested) goto EndTest;
       }
 
       if (TestPlan[UnitTest.TestType.GameLoaded])
@@ -169,44 +172,58 @@ namespace SmashTools.Debugging
         {
           Root_Play.SetupForQuickTestPlay();
           PageUtility.InitGameStart();
-        }, "GeneratingMap", true, delegate (Exception ex)
-        {
-          GameAndMapInitExceptionHandlers.ErrorWhileGeneratingMap(ex);
-          RunningUnitTests = false;
-        }, true, null);
+        }, "GeneratingMap", true, ExceptionHandler, true, null);
 
         while (Current.ProgramState != ProgramState.Playing || LongEventHandler.AnyEventNowOrWaiting)
         {
-          if (!RunningUnitTests) goto EndTest;
-          yield return new WaitForSecondsRealtime(1);
+          if (StopRequested) goto EndTest;
+          yield return null;
         }
-        yield return ExecuteTests(UnitTest.TestType.GameLoaded, results);
-        if (StopTest) goto EndTest;
+
+        ExecuteTests(UnitTest.TestType.GameLoaded, results);
+        if (StopRequested) goto EndTest;
       }
 
       EndTest:;
       if (testFromMainMenu)
       {
         GenScene.GoToMainMenu();
+
+        while (Current.ProgramState != ProgramState.Entry || LongEventHandler.AnyEventNowOrWaiting)
+        {
+          if (StopRequested) goto EndTest;
+          yield return null;
+        }
       }
       results.Add($"-------- End Unit Tests --------");
       DumpResults(results);
       Log.TryOpenLogWindow();
+
+      static void ExceptionHandler(Exception ex)
+      {
+        DelayedErrorWindowRequest.Add($"Exception thrown while running tests.\n{ex}", 
+          "UnitTestManager Aborted Operation");
+        Scribe.ForceStop();
+        GenScene.GoToMainMenu();
+      }
     }
 
-    /// <returns>Should continue running Unit Tests</returns>
-    private static IEnumerator ExecuteTests(UnitTest.TestType type, List<string> output)
+    /// <summary>
+    /// Executes test suite associated with <paramref name="type"/>
+    /// </summary>
+    private static void ExecuteTests(UnitTest.TestType type, List<string> output)
     {
       List<string> subResults = [];
       foreach (UnitTest unitTest in unitTests[type])
       {
         Assert.IsTrue(unitTest.ExecuteOn == type);
-        if (StopTest) yield break;
+        if (StopRequested) return;
         if (IsolatedTest != null && IsolatedTest != unitTest) continue;
 
         try
         {
           bool success = true;
+          LongEventHandler.SetCurrentEventText($"Running {unitTest.Name}");
           foreach (UTResult result in unitTest.Execute())
           {
             foreach ((string name, bool passed) in result.Results)
@@ -233,7 +250,6 @@ namespace SmashTools.Debugging
           output.Add($"<error>Exception thrown!</error>\n{ex}");
         }
         subResults.Clear();
-        yield return null;
       }
     }
 
@@ -245,18 +261,19 @@ namespace SmashTools.Debugging
       }
     }
 
-    private static void Terminate()
+    private readonly struct UnitTestEnabler : IDisposable
     {
-      RunningUnitTests = false;
-      TestPlan.Clear();
-      IsolatedTest = null;
-    }
-
-    private readonly struct TestCleanup : IDisposable
-    {
-      readonly void IDisposable.Dispose()
+      public UnitTestEnabler()
       {
-        UnitTestManager.Terminate();
+        RunningUnitTests = true;
+        StopRequested = false;
+      }
+
+      void IDisposable.Dispose()
+      {
+        RunningUnitTests = false;
+        TestPlan.Clear();
+        IsolatedTest = null;
       }
     }
   }
