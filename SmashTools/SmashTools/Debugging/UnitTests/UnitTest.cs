@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace SmashTools.Debugging
 {
@@ -27,14 +28,32 @@ namespace SmashTools.Debugging
       High = 1,
       First = 2
     }
+
+    public static string TestTypeLabel(TestType testType)
+    {
+      return testType switch
+      {
+        TestType.Disabled => "Disabled",
+        TestType.MainMenu => "Main Menu",
+        TestType.GameLoaded => "Loaded Game",
+        _ => throw new System.NotImplementedException(),
+      };
+    }
   }
 
   public struct UTResult
   {
+    private readonly Action onFail;
+
+    public UTResult(Action onFail)
+    {
+      this.onFail = onFail;
+    }
+
     public UTResult(string name, bool passed)
     {
       string adjustedName = !name.NullOrEmpty() ? $"{name} = " : string.Empty;
-      Results = [(adjustedName, passed)];
+      Add(adjustedName, passed);
     }
 
     public List<(string name, bool result)> Results { get; private set; }
@@ -43,6 +62,7 @@ namespace SmashTools.Debugging
     {
       Results ??= [];
       Results.Add((name, passed));
+      if (!passed) onFail?.Invoke();
     }
 
     public static UTResult For(string name, bool passed)

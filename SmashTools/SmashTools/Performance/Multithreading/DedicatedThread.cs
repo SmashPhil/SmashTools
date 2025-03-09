@@ -67,19 +67,21 @@ namespace SmashTools.Performance
       {
         foreach (AsyncAction asyncAction in queue.GetConsumingEnumerable(cts.Token))
         {
-          if (asyncAction.IsValid)
+          if (!asyncAction.IsValid) continue;
+
+          try
           {
-            try
-            {
-              asyncAction.Invoke();
-            }
-            catch (Exception ex)
-            {
-              Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
-              asyncAction.ExceptionThrown(ex);
-            }
+            asyncAction.Invoke();
           }
-          asyncAction.ReturnToPool();
+          catch (Exception ex)
+          {
+            Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
+            asyncAction.ExceptionThrown(ex);
+          }
+          finally
+          {
+            asyncAction.ReturnToPool();
+          }
         }
       }
       catch (OperationCanceledException)
