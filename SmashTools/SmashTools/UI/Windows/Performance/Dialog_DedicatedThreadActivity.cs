@@ -8,80 +8,80 @@ using SmashTools.Performance;
 
 namespace SmashTools
 {
-	public class Dialog_DedicatedThreadActivity : Window
-	{
-		private const float AsyncActionEntryHeight = 30;
+  public class Dialog_DedicatedThreadActivity : Window
+  {
+    private const float AsyncActionEntryHeight = 30;
     private const int QueueLimit = 50;
 
     private DedicatedThread dedicatedThread;
-		private Func<DedicatedThread> dedicatedThreadGetter;
+    private Func<DedicatedThread> dedicatedThreadGetter;
 
-		private List<AsyncAction> actionsSnapshot = [];
+    private List<AsyncAction> actionsSnapshot = [];
 
-		
 
-		private Vector2 scrollPos;
-		private Rect viewRect;
 
-		public Dialog_DedicatedThreadActivity(DedicatedThread dedicatedThread)
-		{
-			this.dedicatedThread = dedicatedThread;
+    private Vector2 scrollPos;
+    private Rect viewRect;
 
-			SetWindowProperties();
-		}
+    public Dialog_DedicatedThreadActivity(DedicatedThread dedicatedThread)
+    {
+      this.dedicatedThread = dedicatedThread;
 
-		public Dialog_DedicatedThreadActivity(Func<DedicatedThread> dedicatedThreadGetter)
-		{
-			this.dedicatedThreadGetter = dedicatedThreadGetter;
+      SetWindowProperties();
+    }
 
-			SetWindowProperties();
-		}
+    public Dialog_DedicatedThreadActivity(Func<DedicatedThread> dedicatedThreadGetter)
+    {
+      this.dedicatedThreadGetter = dedicatedThreadGetter;
 
-		public override Vector2 InitialSize => new Vector2(600, 400);
+      SetWindowProperties();
+    }
 
-		public DedicatedThread DedicatedThread
-		{
-			get
-			{
-				if (dedicatedThread != null)
-				{
-					return dedicatedThread;
-				}
-				else if (dedicatedThreadGetter != null)
-				{
-					return dedicatedThreadGetter();
-				}
-				return null;
-			}
-		}
+    public override Vector2 InitialSize => new Vector2(600, 400);
 
-		private void SetWindowProperties()
-		{
-			this.resizeable = true;
-			this.doCloseX = true;
-			this.closeOnClickedOutside = false;
-			this.draggable = true;
-			this.absorbInputAroundWindow = false;
-			this.preventCameraMotion = false;
-		}
+    public DedicatedThread DedicatedThread
+    {
+      get
+      {
+        if (dedicatedThread != null)
+        {
+          return dedicatedThread;
+        }
+        else if (dedicatedThreadGetter != null)
+        {
+          return dedicatedThreadGetter();
+        }
+        return null;
+      }
+    }
 
-		public override void PostOpen()
-		{
-			base.PostOpen();
-		}
+    private void SetWindowProperties()
+    {
+      this.resizeable = true;
+      this.doCloseX = true;
+      this.closeOnClickedOutside = false;
+      this.draggable = true;
+      this.absorbInputAroundWindow = false;
+      this.preventCameraMotion = false;
+    }
 
-		private void RecalculateViewRect(Rect rect, int entryCount)
-		{
-			viewRect = rect;
-			viewRect.height = entryCount * AsyncActionEntryHeight;
-		}
+    public override void PostOpen()
+    {
+      base.PostOpen();
+    }
 
-		public override void DoWindowContents(Rect inRect)
-		{
-			DedicatedThread dedicatedThread = DedicatedThread;
-			if (dedicatedThread == null) return;
+    private void RecalculateViewRect(Rect rect, int entryCount)
+    {
+      viewRect = rect;
+      viewRect.height = entryCount * AsyncActionEntryHeight;
+    }
 
-			using TextBlock textFont = new(GameFont.Medium);
+    public override void DoWindowContents(Rect inRect)
+    {
+      DedicatedThread dedicatedThread = DedicatedThread;
+      if (dedicatedThread == null) return;
+
+      using TextBlock textFont = new(GameFont.Medium);
 
       Rect labelRect = inRect.ContractedBy(5);
       labelRect.height = 32;
@@ -118,5 +118,5 @@ namespace SmashTools
 
       RecalculateViewRect(outRect, count);
     }
-	}
+  }
 }

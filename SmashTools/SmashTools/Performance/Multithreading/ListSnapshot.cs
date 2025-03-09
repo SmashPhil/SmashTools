@@ -14,7 +14,7 @@ namespace SmashTools.Performance
   /// <remarks>List snapshot will be returned to object pool upon disposal.</remarks>
   public readonly struct ListSnapshot<T> : IDisposable, IEnumerable<T>
   {
-    private readonly List<T> items;
+    public readonly List<T> items;
 
     public ListSnapshot(List<T> listToCopy)
     {

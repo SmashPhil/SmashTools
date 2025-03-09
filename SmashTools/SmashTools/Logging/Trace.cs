@@ -13,7 +13,14 @@ namespace SmashTools
       Fail(message);
 		}
 
-		[Conditional("TRACE")]
+    [Conditional("TRACE")]
+    public static void IsFalse(bool condition, string message = null)
+    {
+      if (!condition) return;
+      Fail(message);
+    }
+
+    [Conditional("TRACE")]
 		public static void IsNull<T>(T obj, string message = null) where T : class
 		{
 			if (obj == null) return;

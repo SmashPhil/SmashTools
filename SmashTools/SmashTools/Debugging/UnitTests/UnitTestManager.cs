@@ -226,6 +226,13 @@ namespace SmashTools.Debugging
           LongEventHandler.SetCurrentEventText($"Running {unitTest.Name}");
           foreach (UTResult result in unitTest.Execute())
           {
+            if (result.Results.NullOrEmpty())
+            {
+              success = false;
+              output.Add($"<warning>{unitTest.Name} returned test with no results.</warning>");
+              continue;
+            }
+
             foreach ((string name, bool passed) in result.Results)
             {
               string message = passed ? $"    {name} <success>Passed</success>" : $"    {name} <error>Failed</error>";

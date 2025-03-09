@@ -143,6 +143,7 @@
     <Compile Include="Debugging\TimerUtility.cs" />
     <Compile Include="Debugging\StartupAction\StartupTest.cs" />
     <Compile Include="Debugging\UnitTests\UnitTest.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestObjectPool.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestCellRectUtils.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestAnimationCurve.cs" />
@@ -234,6 +235,7 @@
     <Compile Include="Utility\Extensions\Collections\Ext_LinkedList.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Queue.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Comp.cs" />
+    <Compile Include="Utility\Extensions\Game\Ext_Messages.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_Animation.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\DefIndexManager.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_EventManager.cs" />
