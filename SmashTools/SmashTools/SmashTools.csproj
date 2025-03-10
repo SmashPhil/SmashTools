@@ -140,9 +140,11 @@
     <Compile Include="Debugging\GameState.cs" />
     <Compile Include="Debugging\MainMenuKeyBindHandler.cs" />
     <Compile Include="Debugging\QuickStartMenu.cs" />
-    <Compile Include="Debugging\TimerUtility.cs" />
     <Compile Include="Debugging\StartupAction\StartupTest.cs" />
+    <Compile Include="Debugging\UnitTests\MapTemplate.cs" />
+    <Compile Include="Debugging\UnitTests\TestPlanDef.cs" />
     <Compile Include="Debugging\UnitTests\UnitTest.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestComponentCache.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestObjectPool.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestCellRectUtils.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
