@@ -141,10 +141,13 @@
     <Compile Include="Debugging\MainMenuKeyBindHandler.cs" />
     <Compile Include="Debugging\QuickStartMenu.cs" />
     <Compile Include="Debugging\StartupAction\StartupTest.cs" />
-    <Compile Include="Debugging\UnitTests\MapTemplate.cs" />
+    <Compile Include="Debugging\UnitTests\GenerationTemplate.cs" />
+    <Compile Include="Debugging\UnitTests\MapGeneratorDefOf.cs" />
+    <Compile Include="Debugging\UnitTests\TemplateScenarioDefOf.cs" />
     <Compile Include="Debugging\UnitTests\TestPlanDef.cs" />
     <Compile Include="Debugging\UnitTests\UnitTest.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestComponentCache.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestDedicatedThread.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestObjectPool.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestCellRectUtils.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
@@ -152,8 +155,10 @@
     <Compile Include="Debugging\UnitTests\UnitTestAnimDynamicMethod.cs" />
     <Compile Include="Enums\MathOp.cs" />
     <Compile Include="Enums\UISettingsType.cs" />
+    <Compile Include="Events\EventDisabler.cs" />
     <Compile Include="Events\EventManager.cs" />
     <Compile Include="Events\EventTrigger.cs" />
+    <Compile Include="Events\GameEvent.cs" />
     <Compile Include="Interfaces\Animations\IAnimationFile.cs" />
     <Compile Include="Interfaces\Animations\IAnimationObject.cs" />
     <Compile Include="Interfaces\IAnimationTarget.cs" />
@@ -174,6 +179,7 @@
     <Compile Include="Logging\Debug.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Logging\Trace.cs" />
+    <Compile Include="MapGeneration\GenSteps\GenStep_RocksNearEdge.cs" />
     <Compile Include="Patching\ForceMethodImplementation.cs" />
     <Compile Include="Patching\Harmony\Compatibility_RimHUD.cs" />
     <Compile Include="Patching\PatchOperations\PatchOperationAddSafely.cs" />
@@ -238,6 +244,7 @@
     <Compile Include="Utility\Extensions\Collections\Ext_Queue.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Comp.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Messages.cs" />
+    <Compile Include="Utility\Extensions\Game\Ext_CellRect.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_Animation.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\DefIndexManager.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_EventManager.cs" />

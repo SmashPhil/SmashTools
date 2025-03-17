@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Verse;
 
 namespace SmashTools.Performance
@@ -15,7 +16,8 @@ namespace SmashTools.Performance
 
     private static int nextId = 0;
 
-    private static readonly DedicatedThread[] threads = new DedicatedThread[MaxThreads + MaxPooledThreads];
+    private static readonly DedicatedThread[] threads =
+      new DedicatedThread[MaxThreads + MaxPooledThreads];
 
     private static readonly ushort[] pooledThreadCounts = new ushort[MaxPooledThreads];
 
@@ -54,22 +56,25 @@ namespace SmashTools.Performance
         Log.Error($"Attempting to create more dedicated threads than allowed.");
         return null;
       }
-      DedicatedThread dedicatedThread = new DedicatedThread(nextId, DedicatedThread.ThreadType.Single);
+
+      DedicatedThread dedicatedThread =
+        new DedicatedThread(nextId, DedicatedThread.ThreadType.Single);
       lock (threadListLock)
       {
         activeThreads.Add(dedicatedThread);
         threads[nextId] = dedicatedThread;
         FindNextUsableId();
       }
+
       return dedicatedThread;
     }
 
     /// <summary>
     /// Create or fetch <see cref="DedicatedThread"/> with shared ownership.
     /// </summary>
-		/// <remarks>
-		/// When all owners have released the thread, it will be disposed.
-		/// </remarks>
+    /// <remarks>
+    /// When all owners have released the thread, it will be disposed.
+    /// </remarks>
     public static DedicatedThread GetShared(int id)
     {
       if (id < 0 || id > MaxPooledThreads)
@@ -77,15 +82,18 @@ namespace SmashTools.Performance
         Log.Error($"Attempting to get shared Thread with invalid id.");
         return null;
       }
+
       int index = id + MaxThreads;
       lock (threadListLock)
       {
         if (threads[index] == null)
         {
-          DedicatedThread dedicatedThread = new DedicatedThread(index, DedicatedThread.ThreadType.Shared);
+          DedicatedThread dedicatedThread =
+            new DedicatedThread(index, DedicatedThread.ThreadType.Shared);
           threads[index] = dedicatedThread;
           activeThreads.Add(dedicatedThread);
         }
+
         pooledThreadCounts[id]++;
         return threads[index];
       }
@@ -97,6 +105,7 @@ namespace SmashTools.Performance
       {
         return TryReleaseShared(dedicatedThread);
       }
+
       DisposeThread(dedicatedThread);
       return true;
     }
@@ -113,6 +122,7 @@ namespace SmashTools.Performance
           return true;
         }
       }
+
       return false;
     }
 
@@ -120,7 +130,7 @@ namespace SmashTools.Performance
     {
       lock (threadListLock)
       {
-        dedicatedThread.Stop();
+        dedicatedThread.StopImmediately();
         activeThreads.Remove(dedicatedThread);
         threads[dedicatedThread.id] = null;
         FindNextUsableId();
@@ -137,22 +147,32 @@ namespace SmashTools.Performance
           return;
         }
       }
+
       nextId = -1;
     }
 
     public static void ReleaseThreadsAndClearCache()
     {
-      using ListSnapshot<DedicatedThread> threads = ThreadsSnapshot;
+      // It should take nowhere even close to 5 seconds to send cancellation token and wait for
+      // dedicated thread to terminate. If we hit this threshold, then we probably deadlocked.
+      const int JoinTimeoutMs = 5000;
 
-      // Will take a few more clock cycles for thread worker to receive cancellation token and
-      // terminate. We must wait until then otherwise MemoryUtility.ClearAllMapsAndWorld will
-      // set map fields to null and ongoing operations will throw. This function is executed
+      using ListSnapshot<DedicatedThread> threadsSnapshot = ThreadsSnapshot;
+
+      // Will take at least a few more clock cycles for thread worker to receive cancellation
+      // token and terminate. We must wait until then otherwise MemoryUtility.ClearAllMapsAndWorld
+      // will set map fields to null and ongoing operations will throw. This function is executed
       // right before that happens.
-      foreach (DedicatedThread dedicatedThread in threads)
+      foreach (DedicatedThread dedicatedThread in threadsSnapshot)
       {
         dedicatedThread.Release();
-        dedicatedThread.thread.Join();
+        if (!dedicatedThread.thread.Join(JoinTimeoutMs))
+        {
+          Log.Error($"Thread {dedicatedThread.id} has failed to terminate.");
+          dedicatedThread.StopImmediately(); // Call once more for good measure and move on
+        }
       }
+
       ComponentCache.ClearCache();
     }
   }

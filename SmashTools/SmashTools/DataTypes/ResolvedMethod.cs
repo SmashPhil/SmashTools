@@ -1,252 +1,263 @@
-﻿using HarmonyLib;
-using SmashTools.Xml;
-using System;
+﻿using System;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Xml;
+using HarmonyLib;
+using JetBrains.Annotations;
+using SmashTools.Xml;
 using Verse;
 
 
 namespace SmashTools
 {
-	public class ResolvedMethod
-	{
-		internal const string UnsafeAttributeName = "ExactParams";
+  [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+  public class ResolvedMethod
+  {
+    internal const string UnsafeAttributeName = "ExactParams";
 
-		public MethodInfo method;
-		public object[] args;
+    public MethodInfo method;
+    public object[] args;
 
-		private int runtimeArgs = -1;
+    private int runtimeArgs = -1;
 
-		public ResolvedMethod()
-		{
-		}
+    public ResolvedMethod()
+    {
+    }
 
-		public ResolvedMethod(MethodInfo method)
-		{
-			this.method = method;
-			RecacheRuntimeArgCount();
-			RecacheInjectedCount();
-			LoadDefaultArgs();
-		}
+    public ResolvedMethod(MethodInfo method)
+    {
+      this.method = method;
+      RecacheRuntimeArgCount();
+      RecacheInjectedCount();
+      LoadDefaultArgs();
+    }
 
-		public int InjectedCount { get; private set; }
+    public int InjectedCount { get; private set; }
 
-		public int RuntimeArguments
-		{
-			get
-			{
-				if (runtimeArgs < 0)
-				{
-					RecacheRuntimeArgCount();
-				}
-				return runtimeArgs;
-			}
-		}
+    public int RuntimeArguments
+    {
+      get
+      {
+        if (runtimeArgs < 0)
+        {
+          RecacheRuntimeArgCount();
+        }
 
-		private void RecacheRuntimeArgCount()
-		{
-			Type type = GetType();
-			if (!type.IsGenericType)
-			{
-				runtimeArgs = 0;
-			}
-			else
-			{
-				runtimeArgs = type.GetGenericArguments().Length;
-			}
-		}
+        return runtimeArgs;
+      }
+    }
 
-		private void RecacheInjectedCount()
-		{
-			InjectedCount = 0;
-			ParameterInfo[] parameters = method.GetParameters();
-			for (int i = RuntimeArguments; i < parameters.Length; i++)
-			{
-				ParameterInfo parameter = parameters[i];
+    private void RecacheRuntimeArgCount()
+    {
+      Type type = GetType();
+      if (!type.IsGenericType)
+      {
+        runtimeArgs = 0;
+      }
+      else
+      {
+        runtimeArgs = type.GetGenericArguments().Length;
+      }
+    }
 
-				// Arguments with prefix are injected arguments
-				if (!parameter.Name.StartsWith("__"))
-				{
-					return; // Injected args must immediately follow any runtime arguments
-				}
-				InjectedCount++;
-			}
-		}
+    private void RecacheInjectedCount()
+    {
+      InjectedCount = 0;
+      ParameterInfo[] parameters = method.GetParameters();
+      for (int i = RuntimeArguments; i < parameters.Length; i++)
+      {
+        ParameterInfo parameter = parameters[i];
 
-		private void LoadDefaultArgs()
-		{
-			ParameterInfo[] parameters = method.GetParameters();
-			args = new object[parameters.Length];
-			for (int i = RuntimeArguments + InjectedCount; i < parameters.Length; i++)
-			{
-				args[i] = parameters[i].ParameterType.GetDefaultValue();
-			}
-		}
+        // Arguments with prefix are injected arguments
+        if (!parameter.Name.StartsWith("__"))
+        {
+          return; // Injected args must immediately follow any runtime arguments
+        }
 
-		public void LoadDataFromXmlCustom(XmlNode xmlNode)
-		{
-			string entry = xmlNode.InnerText;
+        InjectedCount++;
+      }
+    }
 
-			string[] methodInfoBody = entry.Split('(');
-			try
-			{
-				string[] array = methodInfoBody.FirstOrDefault().Split('.');
-				string methodName = array[array.Length - 1];
-				string typeName;
-				if (array.Length == 3)
-				{
-					typeName = array[0] + "." + array[1];
-				}
-				else
-				{
-					typeName = array[0];
-				}
-				Type type = GenTypes.GetTypeInAnyAssembly(typeName);
-				method = AccessTools.Method(type, methodName);
+    private void LoadDefaultArgs()
+    {
+      ParameterInfo[] parameters = method.GetParameters();
+      args = new object[parameters.Length];
+      for (int i = RuntimeArguments + InjectedCount; i < parameters.Length; i++)
+      {
+        args[i] = parameters[i].ParameterType.GetDefaultValue();
+      }
+    }
 
-				string argString = methodInfoBody.LastOrDefault().Replace(")", "");
-				string[] argStrings = argString.Split(',');
-				object[] resolvedArgs = new object[argStrings.Length];
-				ParameterInfo[] parameters = method.GetParameters();
-				//Type[] argTypes = .Select(p => p.ParameterType).ToArray();
+    public void LoadDataFromXmlCustom(XmlNode xmlNode)
+    {
+      string entry = xmlNode.InnerText;
 
-				if (argStrings.Length > parameters.Length)
-				{
-					Log.Error($"Number of parameters is less than number of args passed in. Xml={entry}");
-					return;
-				}
+      string[] methodInfoBody = entry.Split('(');
+      try
+      {
+        string[] array = methodInfoBody.FirstOrDefault().Split('.');
+        string methodName = array[array.Length - 1];
+        string typeName;
+        if (array.Length == 3)
+        {
+          typeName = array[0] + "." + array[1];
+        }
+        else
+        {
+          typeName = array[0];
+        }
 
-				bool exactParameters = false;
-				if (xmlNode.Attributes[UnsafeAttributeName] is XmlAttribute unsafeAttribute)
-				{
-					exactParameters = bool.Parse(unsafeAttribute.Value.ToLowerInvariant());
-				}
+        Type type = GenTypes.GetTypeInAnyAssembly(typeName);
+        method = AccessTools.Method(type, methodName);
 
-				RecacheRuntimeArgCount();
-				RecacheInjectedCount();
+        string argString = methodInfoBody.LastOrDefault().Replace(")", "");
+        string[] argStrings = argString.Split(',');
+        object[] resolvedArgs = new object[argStrings.Length];
+        ParameterInfo[] parameters = method.GetParameters();
+        //Type[] argTypes = .Select(p => p.ParameterType).ToArray();
 
-				if (exactParameters && (argStrings.Length + RuntimeArguments) != parameters.Length)
-				{
-					Log.Error($"Number of parameters doesn't match number of args passed in. Xml={entry}");
-				}
+        if (argStrings.Length > parameters.Length)
+        {
+          Log.Error($"Number of parameters is less than number of args passed in. Xml={entry}");
+          return;
+        }
 
-				LoadDefaultArgs();
-				for (int i = RuntimeArguments + InjectedCount; i < parameters.Length; i++)
-				{
-					int argIndex = i - RuntimeArguments;
-					ParameterInfo parameter = parameters[0];
+        bool exactParameters = false;
+        if (xmlNode.Attributes[UnsafeAttributeName] is XmlAttribute unsafeAttribute)
+        {
+          exactParameters = bool.Parse(unsafeAttribute.Value.ToLowerInvariant());
+        }
 
-					if (argStrings.OutOfBounds(argIndex))
-					{
-						args[i] = Type.Missing; //Handles optional parameters
-						continue;
-					}
+        RecacheRuntimeArgCount();
+        RecacheInjectedCount();
 
-					string text = argStrings[argIndex];
-					if (text.ToUpperInvariant() == "NULL" && (parameters[i].ParameterType.IsClass || 
-						Nullable.GetUnderlyingType(parameters[i].ParameterType) != null))
-					{
-						args[i] = null;
-					}
-					else
-					{
-						args[i] = ParseArgument(parameters[i].ParameterType, text, i);
-					}
-				}
-			}
-			catch (IndexOutOfRangeException)
-			{
-				Log.Error($"Formatting error in {entry}. Unable to parse into resolved method.");
-			}
-		}
+        if (exactParameters && (argStrings.Length + RuntimeArguments) != parameters.Length)
+        {
+          Log.Error($"Number of parameters doesn't match number of args passed in. Xml={entry}");
+        }
 
-		private object ParseArgument(Type type, string entry, int index)
-		{
-			Type valueType = Nullable.GetUnderlyingType(type);
-			if (valueType != null)
-			{
-				if (entry.NullOrEmpty())
-				{
-					return null;
-				}
-				return ParseHelper.FromString(entry, type);
-			}
+        LoadDefaultArgs();
+        for (int i = RuntimeArguments + InjectedCount; i < parameters.Length; i++)
+        {
+          int argIndex = i - RuntimeArguments;
+          ParameterInfo parameter = parameters[0];
 
-			if (ParseHelper.HandlesType(type))
-			{
-				return ParseHelper.FromString(entry, type);
-			}
-			
-			if (type.IsSubclassOf(typeof(Def)))
-			{
-				if (!DelayedCrossRefResolver.Resolved)
-				{
-					DelayedCrossRefResolver.RegisterIndex(args, type, entry, index);
-					return null;
-				}
-				return GenDefDatabase.GetDef(type, entry);
-			}
-			Log.ErrorOnce($"Unhandled type {type.Name} in ResolvedMethod arguments.", type.GetHashCode());
-			return type.GetDefaultValue();
-		}
+          if (argStrings.OutOfBounds(argIndex))
+          {
+            args[i] = Type.Missing; //Handles optional parameters
+            continue;
+          }
 
-		public virtual object Invoke(object obj, params object[] injectedArgs)
-		{
-			InjectArguments(injectedArgs);
-			return method.Invoke(obj, args);
-		}
+          string text = argStrings[argIndex];
+          if (text.ToUpperInvariant() == "NULL" && (parameters[i].ParameterType.IsClass ||
+            Nullable.GetUnderlyingType(parameters[i].ParameterType) != null))
+          {
+            args[i] = null;
+          }
+          else
+          {
+            args[i] = ParseArgument(parameters[i].ParameterType, text, i);
+          }
+        }
+      }
+      catch (IndexOutOfRangeException)
+      {
+        Log.Error($"Formatting error in {entry}. Unable to parse into resolved method.");
+      }
+    }
 
-		public override string ToString()
-		{
-			if (method == null)
-			{
-				return null;
-			}
-			string type = GenTypes.GetTypeNameWithoutIgnoredNamespaces(method.DeclaringType);
-			string readout = $"{type}.{method.Name}";
-			if (!args.NullOrEmpty())
-			{
-				readout += $"({string.Join(",", args.Select(obj => obj?.ToString() ?? "NULL"))})";
-			}
-			return readout;
-		}
+    private object ParseArgument(Type type, string entry, int index)
+    {
+      Type valueType = Nullable.GetUnderlyingType(type);
+      if (valueType != null)
+      {
+        if (entry.NullOrEmpty())
+        {
+          return null;
+        }
 
-		public string ToStringSignature()
-		{
-			string readout = method.Name;
-			if (!args.NullOrEmpty())
-			{
-				readout += $"( {string.Join(", ", args.Select(obj => obj.GetType()))} )";
-			}
-			return readout;
-		}
+        return ParseHelper.FromString(entry, type);
+      }
 
-		protected void InjectArguments(object[] injectedArgs)
-		{
-			if (InjectedCount > 0 && !injectedArgs.NullOrEmpty())
-			{
-				for (int i = RuntimeArguments; i < injectedArgs.Length; i++)
-				{
-					args[i] = injectedArgs[i];
-				}
-			}
-		}
-	}
+      if (ParseHelper.HandlesType(type))
+      {
+        return ParseHelper.FromString(entry, type);
+      }
 
-	public class ResolvedMethod<T> : ResolvedMethod
-	{
-		public override object Invoke(object obj, params object[] injectedArgs)
-		{
-			throw new MethodAccessException("ResolvedMethod subtypes should never call the base Invoke method.");
-		}
+      if (type.IsSubclassOf(typeof(Def)))
+      {
+        if (!DelayedCrossRefResolver.Resolved)
+        {
+          DelayedCrossRefResolver.RegisterIndex(args, type, entry, index);
+          return null;
+        }
 
-		public object Invoke(object obj, T param, params object[] injectedArgs)
-		{
-			InjectArguments(injectedArgs);
-			args[0] = param;
-			return method.Invoke(obj, args);
-		}
-	}
+        return GenDefDatabase.GetDef(type, entry);
+      }
+
+      Log.ErrorOnce($"Unhandled type {type.Name} in ResolvedMethod arguments.", type.GetHashCode());
+      return type.GetDefaultValue();
+    }
+
+    public virtual object Invoke(object obj, params object[] injectedArgs)
+    {
+      InjectArguments(injectedArgs);
+      return method.Invoke(obj, args);
+    }
+
+    public override string ToString()
+    {
+      if (method == null)
+      {
+        return null;
+      }
+
+      string type = GenTypes.GetTypeNameWithoutIgnoredNamespaces(method.DeclaringType);
+      string readout = $"{type}.{method.Name}";
+      if (!args.NullOrEmpty())
+      {
+        readout += $"({string.Join(",", args.Select(obj => obj?.ToString() ?? "NULL"))})";
+      }
+
+      return readout;
+    }
+
+    public string ToStringSignature()
+    {
+      string readout = method.Name;
+      if (!args.NullOrEmpty())
+      {
+        readout += $"( {string.Join(", ", args.Select(obj => obj.GetType()))} )";
+      }
+
+      return readout;
+    }
+
+    protected void InjectArguments(object[] injectedArgs)
+    {
+      if (InjectedCount > 0 && !injectedArgs.NullOrEmpty())
+      {
+        for (int i = RuntimeArguments; i < injectedArgs.Length; i++)
+        {
+          args[i] = injectedArgs[i];
+        }
+      }
+    }
+  }
+
+  public class ResolvedMethod<T> : ResolvedMethod
+  {
+    public override object Invoke(object obj, params object[] injectedArgs)
+    {
+      throw new MethodAccessException(
+        "ResolvedMethod subtypes should never call the base Invoke method.");
+    }
+
+    public object Invoke(object obj, T param, params object[] injectedArgs)
+    {
+      InjectArguments(injectedArgs);
+      args[0] = param;
+      return method.Invoke(obj, args);
+    }
+  }
 }

@@ -19,7 +19,6 @@ namespace SmashTools
     private List<AsyncAction> actionsSnapshot = [];
 
 
-
     private Vector2 scrollPos;
     private Rect viewRect;
 
@@ -51,6 +50,7 @@ namespace SmashTools
         {
           return dedicatedThreadGetter();
         }
+
         return null;
       }
     }
@@ -90,7 +90,8 @@ namespace SmashTools
       dedicatedThread.Snapshot(actionsSnapshot);
       int count = Mathf.Min(actionsSnapshot.Count, QueueLimit);
 
-      Widgets.Label(labelRect, $"DedicatedThread #{dedicatedThread.id} (Count={actionsSnapshot.Count})");
+      Widgets.Label(labelRect,
+        $"DedicatedThread #{dedicatedThread.id} (Count={actionsSnapshot.Count})");
 
       Text.Font = GameFont.Small;
 
@@ -113,6 +114,7 @@ namespace SmashTools
         Widgets.Label(entryRect, $"{i}. {asyncAction.GetType().Name}");
         Widgets.DrawLineHorizontal(entryRect.x, entryRect.yMax, entryRect.width);
       }
+
       Widgets.EndScrollView();
       // End ScrollView
 

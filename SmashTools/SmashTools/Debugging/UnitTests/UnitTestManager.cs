@@ -7,7 +7,9 @@ using System.Reflection;
 using System.Threading.Tasks;
 using HarmonyLib;
 using RimWorld;
+using RimWorld.Planet;
 using Verse;
+using Verse.Profile;
 
 namespace SmashTools.Debugging;
 
@@ -21,6 +23,11 @@ public static class UnitTestManager
 
   static UnitTestManager()
   {
+#if !DEBUG
+    Trace.Fail(
+      $"Initializing UnitTestManager outside of a debug build.\n" +
+      $"{UnityEngine.StackTraceUtility.ExtractStackTrace()}");
+#else
     ConcurrentDictionary<UnitTest.TestType, ConcurrentBag<UnitTest>> tests = [];
     foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
     {
@@ -43,6 +50,7 @@ public static class UnitTestManager
       unitTests.Add(testType,
         [.. tests[testType].OrderByDescending(test => (int)test.Priority)]);
     }
+#endif
   }
 
   private static Dictionary<UnitTest.TestType, bool> TestTypes { get; set; } = [];
@@ -160,7 +168,7 @@ public static class UnitTestManager
             }
 
             while (Current.ProgramState != ProgramState.Entry ||
-                   LongEventHandler.AnyEventNowOrWaiting)
+              LongEventHandler.AnyEventNowOrWaiting)
             {
               if (StopRequested) goto EndTest;
               yield return null;
@@ -172,12 +180,12 @@ public static class UnitTestManager
           {
             LongEventHandler.QueueLongEvent(delegate()
             {
-              Root_Play.SetupForQuickTestPlay();
+              SetupForTest(block.template);
               PageUtility.InitGameStart();
             }, "GeneratingMap", true, TestExceptionHandler, true, null);
 
             while (Current.ProgramState != ProgramState.Playing ||
-                   LongEventHandler.AnyEventNowOrWaiting)
+              LongEventHandler.AnyEventNowOrWaiting)
             {
               if (StopRequested) goto EndTest;
               yield return null;
@@ -185,6 +193,7 @@ public static class UnitTestManager
 
             break;
           }
+          case UnitTest.TestType.Disabled:
           default:
             throw new NotImplementedException();
         }
@@ -213,7 +222,7 @@ public static class UnitTestManager
   private static IEnumerator UnitTestRoutine()
   {
     Assert.IsTrue(!TestTypes.NullOrEmpty() &&
-                  TestTypes.Count == Enum.GetValues(typeof(UnitTest.TestType)).Length);
+      TestTypes.Count == Enum.GetValues(typeof(UnitTest.TestType)).Length);
 
     bool testFromMainMenu = GenScene.InEntryScene;
 
@@ -247,7 +256,7 @@ public static class UnitTestManager
       }, "GeneratingMap", true, TestExceptionHandler, true, null);
 
       while (Current.ProgramState != ProgramState.Playing ||
-             LongEventHandler.AnyEventNowOrWaiting)
+        LongEventHandler.AnyEventNowOrWaiting)
       {
         if (StopRequested) goto EndTest;
         yield return null;
@@ -304,22 +313,27 @@ public static class UnitTestManager
       {
         bool success = true;
         LongEventHandler.SetCurrentEventText($"Running {unitTest.Name}");
-        foreach (UTResult result in unitTest.Execute())
+        foreach (UTResult summary in unitTest.Execute())
         {
-          if (result.Results.NullOrEmpty())
+          if (summary.Results.NullOrEmpty())
           {
             success = false;
             output.Add($"<warning>{unitTest.Name} returned test with no results.</warning>");
             continue;
           }
 
-          foreach ((string name, bool passed) in result.Results)
+          foreach ((string name, UTResult.Result result) in summary.Results)
           {
-            string message = passed ?
-                               $"    {name} <success>Passed</success>" :
-                               $"    {name} <error>Failed</error>";
+            string message = result switch
+            {
+              UTResult.Result.Failed  => $"    {name} <error>Failed</error>",
+              UTResult.Result.Passed  => $"    {name} <success>Passed</success>",
+              UTResult.Result.Skipped => $"    {name} Skipped",
+              _                       => throw new NotImplementedException(),
+            };
+
             // Dump all results for this unit test if any sub-test fails
-            success &= passed;
+            success &= result != UTResult.Result.Failed;
             subResults.Add(message);
           }
         }
@@ -350,6 +364,108 @@ public static class UnitTestManager
     {
       SmashLog.Message(result);
     }
+  }
+
+  private static void SetupForTest(GenerationTemplate template = null)
+  {
+    // If template is null, default to QuickTest parameters
+    if (template == null)
+    {
+      Root_Play.SetupForQuickTestPlay();
+      return;
+    }
+
+    Current.ProgramState = ProgramState.Entry;
+    Current.Game = new Game();
+    Current.Game.InitData = new GameInitData();
+    Current.Game.Scenario = TemplateScenarioDefOf.TestScenario.scenario;
+    Find.Scenario.PreConfigure();
+    Current.Game.storyteller = new Storyteller(StorytellerDefOf.Cassandra, DifficultyDefOf.Rough);
+
+    Current.Game.World = WorldGenerator.GenerateWorld(template.world.percent,
+      GenText.RandomSeedString(),
+      template.world.rainfall, template.world.temperature, template.world.population);
+    Find.GameInitData.ChooseRandomStartingTile();
+    if (template.map?.biome != null)
+    {
+      Find.WorldGrid[Find.GameInitData.startingTile].biome = template.map.biome;
+    }
+
+    Find.Scenario.PostIdeoChosen();
+  }
+
+  /// <summary>
+  /// Intercept initial map generation when running unit tests to generate map from template.
+  /// </summary>
+  /// <notes>
+  /// Postfix | Game::InitNewGame
+  /// </notes>
+  internal static bool InitNewGame(Game __instance, List<Map> ___maps)
+  {
+    if (RunningUnitTests)
+    {
+      string modManifest = LoadedModManager.RunningMods.Select(mod =>
+          $"{mod.PackageIdPlayerFacing}" +
+          $"{(mod.ModMetaData.VersionCompatible ? "(incompatible version)" : "")}")
+       .ToLineList("  - ");
+      Log.Message($"Initializing new game with mods:\n{modManifest}");
+      if (___maps.Any())
+      {
+        Log.Error("Called InitNewGame() but there already is a map. There should be 0 maps...");
+        return false;
+      }
+
+      if (__instance.InitData == null)
+      {
+        Log.Error("Called InitNewGame() but init data is null. Create it first.");
+        return false;
+      }
+
+      MemoryUtility.UnloadUnusedUnityAssets();
+      Current.ProgramState = ProgramState.MapInitializing;
+      IntVec3 intVec = new(__instance.InitData.mapSize, 1, __instance.InitData.mapSize);
+      Settlement settlement =
+        Find.WorldObjects.Settlements.Find(stl => stl.Faction == Faction.OfPlayer);
+
+      if (settlement == null)
+      {
+        throw new InvalidOperationException(
+          "Could not generate starting map because there is no any player faction base.");
+      }
+
+      __instance.tickManager.gameStartAbsTick = GenTicks.ConfiguredTicksAbsAtGameStart;
+      __instance.Info.startingTile = __instance.InitData.startingTile;
+      __instance.Info.startingAndOptionalPawns = __instance.InitData.startingAndOptionalPawns;
+      Map currentMap = MapGenerator.GenerateMap(intVec, settlement, settlement.MapGeneratorDef,
+        settlement.ExtraGenStepDefs);
+      __instance.World.info.initialMapSize = intVec;
+      if (__instance.InitData.permadeath)
+      {
+        __instance.Info.permadeathMode = true;
+        __instance.Info.permadeathModeUniqueName =
+          PermadeathModeUtility.GeneratePermadeathSaveName();
+      }
+
+      PawnUtility.GiveAllStartingPlayerPawnsThought(ThoughtDefOf.NewColonyOptimism);
+      __instance.FinalizeInit();
+      Current.Game.CurrentMap = currentMap;
+      Find.CameraDriver.JumpToCurrentMapLoc(MapGenerator.PlayerStartSpot);
+      Find.CameraDriver.ResetSize();
+
+      // Don't bother with RimWorld's "pause on load" logic, we won't be staying
+      // in this map past execution of unit tests. All we need is 1 tick.
+      LongEventHandler.ExecuteWhenFinished(__instance.tickManager.DoSingleTick);
+
+      Find.Scenario.PostGameStart();
+      __instance.history.FinalizeInit();
+      ResearchUtility.ApplyPlayerStartingResearch();
+      GameComponentUtility.StartedNewGame();
+      __instance.InitData = null;
+
+      return false;
+    }
+
+    return true;
   }
 
   private readonly struct UnitTestEnabler : IDisposable
