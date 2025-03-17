@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
+using JetBrains.Annotations;
 using Verse;
 
 namespace SmashTools.Performance
@@ -12,7 +14,10 @@ namespace SmashTools.Performance
     public readonly int id;
     public readonly ThreadType type;
 
-    private readonly BlockingCollection<AsyncAction> queue;
+    private bool isSuspended;
+    private bool shouldExit;
+    private readonly ManualResetEvent pauseConsumer;
+    private readonly ConcurrentQueue<AsyncAction> queue;
     private readonly CancellationTokenSource cts;
 
     public DedicatedThread(int id, ThreadType type)
@@ -21,6 +26,7 @@ namespace SmashTools.Performance
       this.type = type;
       cts = new CancellationTokenSource();
 
+      pauseConsumer = new ManualResetEvent(false);
       queue = [];
       thread = new Thread(Execute)
       {
@@ -30,44 +36,110 @@ namespace SmashTools.Performance
       thread.Start();
     }
 
+    internal int QueueCount => queue.Count;
+
     public bool Terminated { get; private set; }
 
+    internal bool IsBlocked => !pauseConsumer.WaitOne(0);
+
     /// <summary>
-    /// Halt new actions from being queued in this thread while still executing existing queue.
+    /// Halt new actions from being enqueued and block thread execution.
     /// </summary>
-    /// <remarks>Use when thread needs to be halted temporarily.</remarks>
-    public bool Suspended { get; set; }
+    public bool IsSuspended
+    {
+      get { return isSuspended; }
+      set
+      {
+        isSuspended = value;
+        if (!isSuspended)
+        {
+          TryUnpauseConsumer();
+        }
+      }
+    }
 
     /// <summary>
     /// For Debugging purposes only. Allows reading of action queue with moment-in-time snapshot.
     /// </summary>
+    [Conditional("DEBUG")]
     internal void Snapshot(List<AsyncAction> items)
     {
       items.AddRange(queue);
     }
 
-    public void Queue(AsyncAction action)
+    /// <summary>
+    /// Enqueue action to queue for execution and unblock the consumer thread.
+    /// </summary>
+    public void Enqueue(AsyncAction action)
     {
-      if (Suspended)
+      if (IsSuspended)
       {
-        Log.Error($"Thread {id} has been queued an item while suspended. It will not execute.");
+        Trace.Fail($"Thread {id} has been queued an item while suspended. It will not execute.");
         return;
       }
-      queue.Add(action);
+
+      queue.Enqueue(action);
+      bool unpaused = TryUnpauseConsumer();
+      Trace.IsTrue(unpaused, "Unable to resume thread with item added to queue.");
     }
 
+    /// <summary>
+    /// Enqueue item to action queue without unblocking consumer thread.
+    /// </summary>
+    /// <remarks>Should not be used outside of debugging contexts.</remarks>
+    internal void EnqueueSilently(AsyncAction action)
+    {
+      queue.Enqueue(action);
+    }
+
+    internal bool TryUnpauseConsumer()
+    {
+      if (queue.Count == 0) return false;
+
+      pauseConsumer.Set();
+      return true;
+    }
+
+    /// <summary>
+    /// Thread will finish executing the rest of the queue and then terminate
+    /// </summary>
+    [UsedImplicitly]
     internal void Stop()
     {
+      shouldExit = true;
+      // Unblock consumer so we can exit the loop and terminate
+      Assert.IsTrue(Terminated == pauseConsumer.SafeWaitHandle.IsClosed);
+      if (!pauseConsumer.SafeWaitHandle.IsClosed)
+      {
+        pauseConsumer.Set();
+      }
+    }
+
+    /// <summary>
+    /// Stops thread execution as soon as possible, discarding any remaining queued actions
+    /// </summary>
+    internal void StopImmediately()
+    {
       cts.Cancel();
+      Stop();
     }
 
     private void Execute()
     {
-      try
+      while (!shouldExit)
       {
-        foreach (AsyncAction asyncAction in queue.GetConsumingEnumerable(cts.Token))
+        bool blocked = pauseConsumer.WaitOne();
+        pauseConsumer.Reset();
+
+        // Should always be resuming from a blocked state at this point in time. The idea is to
+        // achieve BlockingCollection-like behavior that waits for an item to enqueue before
+        // resuming execution, rather than polling constantly like an idiot.
+        Assert.IsTrue(blocked);
+
+        while (queue.Count > 0 && !cts.IsCancellationRequested && !IsSuspended)
         {
-          if (!asyncAction.IsValid) continue;
+          if (!queue.TryDequeue(out AsyncAction asyncAction) || !asyncAction.IsValid)
+            continue;
 
           try
           {
@@ -75,7 +147,8 @@ namespace SmashTools.Performance
           }
           catch (Exception ex)
           {
-            Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread #{id:D3}.\nException={ex}");
+            Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread " +
+              $"#{id:D3}.\nException={ex}");
             asyncAction.ExceptionThrown(ex);
           }
           finally
@@ -84,23 +157,16 @@ namespace SmashTools.Performance
           }
         }
       }
-      catch (OperationCanceledException)
-      {
-      }
+
       Terminated = true;
+      // Release all resources currently waiting on this event handle
+      pauseConsumer.Close();
     }
 
     public enum ThreadType
     {
       Single,
       Shared
-    }
-
-    public enum ThreadStatus
-    {
-      Idle,
-      Slow,
-      Busy,
     }
   }
 }

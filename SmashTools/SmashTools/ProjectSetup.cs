@@ -5,6 +5,7 @@ using HarmonyLib;
 using LudeonTK;
 using RimWorld;
 using SmashTools.Animations;
+using SmashTools.Debugging;
 using SmashTools.Performance;
 using SmashTools.Xml;
 using UnityEngine;
@@ -19,10 +20,6 @@ namespace SmashTools
     public const string ProjectLabel = "SmashTools";
     public const string LogLabel = $"[{ProjectLabel}]";
     public const string HarmonyId = "SmashPhil.SmashTools";
-
-    public static event Action onNewGame;
-    public static event Action onLoadGame;
-    public static event Action onMainMenu;
 
     public static Harmony Harmony { get; private set; }
 
@@ -62,7 +59,7 @@ namespace SmashTools
           nameof(SmashLog.RemoveRichTextMessageDetailsTranspiler)));
 #endif
 
-      // Map
+      // Game, World, and Map events
       Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),
         postfix: new HarmonyMethod(typeof(DetachedMapComponent),
           nameof(DetachedMapComponent.InstantiateAllMapComponents)));
@@ -76,18 +73,33 @@ namespace SmashTools
           nameof(ComponentCache.ClearCache)));
       Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
         postfix: new HarmonyMethod(typeof(ComponentCache),
-          nameof(ComponentCache.ClearMapComps), new Type[] { typeof(Map) }));
+          nameof(ComponentCache.ClearMapComps), [typeof(Map)]));
       Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
         prefix: new HarmonyMethod(typeof(ComponentCache),
           nameof(ComponentCache.ClearCache)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(MemoryUtility),
-          nameof(MemoryUtility.ClearAllMapsAndWorld)),
-        prefix: new HarmonyMethod(typeof(ThreadManager),
-          nameof(ThreadManager.ReleaseThreadsAndClearCache)));
       Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.FinalizeInit)),
         postfix: new HarmonyMethod(typeof(ProjectSetup),
           nameof(BackfillRegisteredAreas)));
+      Harmony.Patch(
+        original: AccessTools.Method(typeof(MemoryUtility),
+          nameof(MemoryUtility.ClearAllMapsAndWorld)),
+        prefix: new HarmonyMethod(typeof(GameEvent),
+          nameof(GameEvent.OnWorldUnloading)),
+        postfix: new HarmonyMethod(typeof(GameEvent),
+          nameof(GameEvent.OnWorldRemoved)));
+      Harmony.Patch(
+        original: AccessTools.Method(typeof(GameComponentUtility),
+          nameof(GameComponentUtility.StartedNewGame)),
+        postfix: new HarmonyMethod(typeof(GameEvent),
+          nameof(GameEvent.OnNewGame)));
+      Harmony.Patch(
+        original: AccessTools.Method(typeof(GameComponentUtility),
+          nameof(GameComponentUtility.LoadedGame)),
+        postfix: new HarmonyMethod(typeof(GameEvent),
+          nameof(GameEvent.OnLoadGame)));
+      Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
+        postfix: new HarmonyMethod(typeof(GameEvent),
+          nameof(GameEvent.OnMainMenu)));
 
       // IThingHolderPawnOverlayer
       Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
@@ -103,19 +115,9 @@ namespace SmashTools
       Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
         postfix: new HarmonyMethod(typeof(ProjectSetup),
           nameof(DrawDebugWindowButton)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(GameComponentUtility),
-          nameof(GameComponentUtility.StartedNewGame)),
-        postfix: new HarmonyMethod(typeof(ProjectSetup),
-          nameof(OnNewGame)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(GameComponentUtility),
-          nameof(GameComponentUtility.LoadedGame)),
-        postfix: new HarmonyMethod(typeof(ProjectSetup),
-          nameof(OnLoadGame)));
-      Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
-        postfix: new HarmonyMethod(typeof(ProjectSetup),
-          nameof(OnMainMenu)));
+      Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
+        prefix: new HarmonyMethod(typeof(UnitTestManager),
+          nameof(UnitTestManager.InitNewGame)));
 
       // Input handling (DEBUG)
       Harmony.Patch(
@@ -154,10 +156,12 @@ namespace SmashTools
       StaticConstructorOnModInit();
 
       SceneManager.sceneLoaded += (scene, mode) => ThreadManager.ReleaseThreadsAndClearCache();
+      GameEvent.onWorldUnloading += ThreadManager.ReleaseThreadsAndClearCache;
+
 #if DEBUG
-      onNewGame += StartupTest.ExecuteNewGameTesting;
-      onLoadGame += StartupTest.ExecutePostLoadTesting;
-      onMainMenu += StartupTest.ExecuteOnStartupTesting;
+      GameEvent.onNewGame += StartupTest.ExecuteNewGameTesting;
+      GameEvent.onLoadGame += StartupTest.ExecutePostLoadTesting;
+      GameEvent.onMainMenu += StartupTest.ExecuteOnStartupTesting;
 #endif
     }
 
@@ -194,27 +198,12 @@ namespace SmashTools
     private static void DrawDebugWindowButton(WidgetRow ___widgetRow, ref float ___widgetRowFinalX)
     {
       if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu,
-            "Open Startup Actions menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
+        "Open Startup Actions menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
       {
         StartupTest.OpenMenu();
       }
 
       ___widgetRowFinalX = ___widgetRow.FinalX;
-    }
-
-    private static void OnNewGame()
-    {
-      onNewGame?.Invoke();
-    }
-
-    private static void OnLoadGame()
-    {
-      onLoadGame?.Invoke();
-    }
-
-    private static void OnMainMenu()
-    {
-      onMainMenu?.Invoke();
     }
 
     private static bool InspectablePaneButtons(Rect rect, ref float lineEndWidth)
@@ -232,7 +221,7 @@ namespace SmashTools
 
     private static void BackfillRegisteredAreas(Map __instance)
     {
-      Ext_Map.TryAddAreas(__instance);
+      __instance.TryAddAreas();
     }
   }
 }

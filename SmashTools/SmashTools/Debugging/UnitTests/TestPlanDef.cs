@@ -10,7 +10,7 @@ public class TestBlock
 {
   public UnitTest.TestType type;
   public List<Type> tests;
-  public MapTemplate template;
+  public GenerationTemplate template;
 
   public List<UnitTest> UnitTests { get; } = [];
 

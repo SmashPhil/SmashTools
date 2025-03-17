@@ -33,10 +33,10 @@ namespace SmashTools.Debugging
     {
       return testType switch
       {
-        TestType.Disabled => "Disabled",
-        TestType.MainMenu => "Main Menu",
+        TestType.Disabled   => "Disabled",
+        TestType.MainMenu   => "Main Menu",
         TestType.GameLoaded => "Loaded Game",
-        _ => throw new System.NotImplementedException(),
+        _                   => throw new System.NotImplementedException(),
       };
     }
   }
@@ -50,24 +50,41 @@ namespace SmashTools.Debugging
       this.onFail = onFail;
     }
 
-    public UTResult(string name, bool passed)
+    public UTResult(string name, Result result)
     {
       string adjustedName = !name.NullOrEmpty() ? $"{name} = " : string.Empty;
-      Add(adjustedName, passed);
+      Add(adjustedName, result);
     }
 
-    public List<(string name, bool result)> Results { get; private set; }
+    public List<(string name, Result result)> Results { get; private set; }
+
+    public void Add(string name, Result result)
+    {
+      Results ??= [];
+      Results.Add((name, result));
+      if (result == Result.Failed) onFail?.Invoke();
+    }
 
     public void Add(string name, bool passed)
     {
-      Results ??= [];
-      Results.Add((name, passed));
-      if (!passed) onFail?.Invoke();
+      Add(name, passed ? Result.Passed : Result.Failed);
+    }
+
+    public static UTResult For(string name, Result result)
+    {
+      return new UTResult(name, result);
     }
 
     public static UTResult For(string name, bool passed)
     {
-      return new UTResult(name, passed);
+      return new UTResult(name, passed ? Result.Passed : Result.Failed);
+    }
+
+    public enum Result
+    {
+      Failed,
+      Passed,
+      Skipped,
     }
   }
 }
