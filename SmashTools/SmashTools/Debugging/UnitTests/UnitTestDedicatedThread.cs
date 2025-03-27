@@ -30,7 +30,7 @@ namespace SmashTools.Debugging
       result.Add("DedicatedThread (Polling Blocked)", dedicatedThread.IsBlocked);
 
       AsyncLongOperationAction pollingOp = AsyncPool<AsyncLongOperationAction>.Get();
-      pollingOp.Set(() => SleepThread(ItemWorkMS, mres: mres));
+      pollingOp.OnInvoke += () => SleepThread(ItemWorkMS, mres: mres);
       dedicatedThread.Enqueue(pollingOp);
       // Signal should be received this time, enqueueing item will set the event handler and resume
       // the thread's execution.
@@ -83,13 +83,13 @@ namespace SmashTools.Debugging
       for (int i = 0; i < 3; i++)
       {
         workOp = AsyncPool<AsyncLongOperationAction>.Get();
-        workOp.Set(() => SleepThread(ItemWorkMS));
+        workOp.OnInvoke += () => SleepThread(ItemWorkMS);
         thread.EnqueueSilently(workOp);
       }
 
       // Set wait handle in the last one so we can resume test execution
       workOp = AsyncPool<AsyncLongOperationAction>.Get();
-      workOp.Set(() => SleepThread(ItemWorkMS, mres: resetEvent));
+      workOp.OnInvoke += () => SleepThread(ItemWorkMS, mres: resetEvent);
       thread.EnqueueSilently(workOp);
     }
 

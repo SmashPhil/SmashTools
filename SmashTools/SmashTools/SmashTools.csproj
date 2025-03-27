@@ -123,6 +123,7 @@
     <Compile Include="Collections\CircularArray.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
     <Compile Include="Collections\DropOutStack.cs" />
+    <Compile Include="Collections\ImmutableArray.cs" />
     <Compile Include="Collections\ObjectPool.cs" />
     <Compile Include="Collections\SimpleDictionary.cs" />
     <Compile Include="Collections\RotatingList.cs" />
@@ -146,8 +147,10 @@
     <Compile Include="Debugging\UnitTests\TemplateScenarioDefOf.cs" />
     <Compile Include="Debugging\UnitTests\TestPlanDef.cs" />
     <Compile Include="Debugging\UnitTests\UnitTest.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestAsyncHandler.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestComponentCache.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestDedicatedThread.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTestAsyncPool.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestObjectPool.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestCellRectUtils.cs" />
     <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
@@ -194,6 +197,7 @@
     <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\ListSnapshot.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
+    <Compile Include="Performance\Multithreading\UnityThread.cs" />
     <Compile Include="Performance\Profiling\Benchmark.cs" />
     <Compile Include="Performance\Profiling\ObjectCounter.cs" />
     <Compile Include="Performance\Profiling\ObjectCountWatcher.cs" />
@@ -243,6 +247,7 @@
     <Compile Include="Utility\Extensions\Collections\Ext_LinkedList.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_Queue.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Comp.cs" />
+    <Compile Include="Utility\Extensions\Game\Ext_LongEventHandler.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Messages.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_CellRect.cs" />
     <Compile Include="Utility\Extensions\ProjectExtensions\Ext_Animation.cs" />
@@ -287,6 +292,7 @@
     <Compile Include="Utility\Extensions\Game\Ext_Unity.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_World.cs" />
     <Compile Include="Utility\GUIState.cs" />
+    <Compile Include="Utility\LongEventText.cs" />
     <Compile Include="Utility\Utilities.cs" />
     <Compile Include="Utility\ModVersion.cs" />
     <Compile Include="Xml\DelayedCrossRefResolver.cs" />

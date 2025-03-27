@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Threading;
+using RimWorld;
+using UnityEngine;
 using Verse;
+using Verse.Sound;
+using ThreadPriority = System.Threading.ThreadPriority;
 
 namespace SmashTools.Performance
 {
@@ -15,17 +20,39 @@ namespace SmashTools.Performance
   /// </remarks>
   public static unsafe class Benchmark
   {
+    public static void StartCheckingForCancellation(KeyCode keyCode, CancellationTokenSource cts)
+    {
+      CoroutineManager.Instance.StartCoroutine(InputLoop(keyCode, cts));
+      return;
+
+      static IEnumerator InputLoop(KeyCode keyCode, CancellationTokenSource cts)
+      {
+        while (!cts.IsCancellationRequested)
+        {
+          if (Input.GetKeyDown(keyCode))
+          {
+            SoundDefOf.Click.PlayOneShotOnCamera();
+            cts.Cancel();
+            yield break;
+          }
+
+          yield return null;
+        }
+      }
+    }
+
     /// <returns>
     /// Time to run N <paramref name="iterations"/> of <paramref name="function"/> 
     /// </returns>
     /// <param name="iterations">Number of times to run this benchmark test.</param>
     /// <param name="function">Function to execute each iteration.</param>
     /// <param name="measurement">Measurement of accuracy for benchmark results.</param>
-    public static Results Run(int iterations, delegate*<void> function, 
+    public static Results Run(int iterations, delegate*<void> function,
       Measurement measurement = Measurement.Milliseconds)
     {
 #if !RELEASE
-      Log.Warning($"Benchmarks should be executed in Release to allow for JIT to make full optimizations.");
+      Log.Warning(
+        $"Benchmarks should be executed in Release to allow for JIT to make full optimizations.");
 #endif
 
       if (Debugger.IsAttached)
@@ -53,12 +80,18 @@ The results will be wildly inaccurate.");
         watch = Stopwatch.StartNew();
         for (int i = iterations; i > 0; i -= 10)
         {
-          function(); function();
-          function(); function();
-          function(); function();
-          function(); function();
-          function(); function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
         }
+
         watch.Stop();
       }
       else
@@ -70,8 +103,10 @@ The results will be wildly inaccurate.");
         {
           function();
         }
+
         watch.Stop();
       }
+
       return new Results(watch, iterations, measurement);
     }
 
@@ -82,11 +117,12 @@ The results will be wildly inaccurate.");
     /// <param name="function">Function to execute each iteration.</param>
     /// <param name="context">Reference to object passed in with each function call.</param>
     /// <param name="measurement">Measurement of accuracy for benchmark results.</param>
-    public static Results Run<T>(int iterations, delegate*<ref T, void> function, ref T context, 
+    public static Results Run<T>(int iterations, delegate*<ref T, void> function, ref T context,
       Measurement measurement = Measurement.Milliseconds)
     {
 #if !RELEASE
-      Log.Warning($"Benchmarks should be executed in Release to allow for JIT to make full optimizations.");
+      Log.Warning(
+        $"Benchmarks should be executed in Release to allow for JIT to make full optimizations.");
 #endif
 
       if (Debugger.IsAttached)
@@ -114,12 +150,18 @@ The results will be wildly inaccurate.");
         watch = Stopwatch.StartNew();
         for (int i = iterations; i > 0; i -= 10)
         {
-          function(ref context); function(ref context);
-          function(ref context); function(ref context);
-          function(ref context); function(ref context);
-          function(ref context); function(ref context);
-          function(ref context); function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
+          function(ref context);
         }
+
         watch.Stop();
       }
       else
@@ -131,8 +173,10 @@ The results will be wildly inaccurate.");
         {
           function(ref context);
         }
+
         watch.Stop();
       }
+
       return new Results(watch, iterations, measurement);
     }
 
@@ -147,17 +191,19 @@ The results will be wildly inaccurate.");
     /// <param name="iterations">Number of times to run this benchmark test.</param>
     /// <param name="function">Function to execute each iteration.</param>
     /// <param name="measurement">Measurement of accuracy for benchmark results.</param>
-    public static Results Run(int iterations, Action function, 
+    public static Results Run(int iterations, Action function,
       Measurement measurement = Measurement.Milliseconds)
     {
 #if !RELEASE
-      Log.Warning("Benchmarks should be executed in Release to allow for JIT to make full optimizations.");
+      Log.WarningOnce(
+        "Benchmarks should be executed in Release to allow for JIT to make full optimizations.",
+        typeof(Benchmark).GetHashCode());
 #endif
 
       if (Debugger.IsAttached)
       {
-        Log.Error(@"Benchmarks should not be executed with debugger attached. 
-The results will be inaccurate.");
+        Log.Error(
+          "Benchmarks should not be executed with debugger attached. The results will be inaccurate.");
       }
 
       // We may be working on a low priority thread, set to normal priority
@@ -179,12 +225,18 @@ The results will be inaccurate.");
         watch = Stopwatch.StartNew();
         for (int i = iterations; i > 0; i -= 10)
         {
-          function(); function();
-          function(); function();
-          function(); function();
-          function(); function();
-          function(); function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
+          function();
         }
+
         watch.Stop();
       }
       else
@@ -196,8 +248,10 @@ The results will be inaccurate.");
         {
           function();
         }
+
         watch.Stop();
       }
+
       return new Results(watch, iterations, measurement);
     }
 
@@ -205,11 +259,11 @@ The results will be inaccurate.");
     {
       return measurement switch
       {
-        Measurement.Seconds => "s",
+        Measurement.Seconds      => "s",
         Measurement.Milliseconds => "ms",
         Measurement.Microseconds => "us",
-        Measurement.Nanoseconds => "ns",
-        _ => throw new NotImplementedException(),
+        Measurement.Nanoseconds  => "ns",
+        _                        => throw new NotImplementedException(),
       };
     }
 
@@ -236,9 +290,9 @@ The results will be inaccurate.");
 
         total = measurement switch
         {
-          Measurement.Seconds => stopwatch.Elapsed.TotalMilliseconds / 1000,
-          Measurement.Microseconds => stopwatch.Elapsed.Ticks * 1000,
-          Measurement.Nanoseconds => stopwatch.Elapsed.Ticks * 1000000,
+          Measurement.Seconds           => stopwatch.Elapsed.TotalMilliseconds / 1000,
+          Measurement.Microseconds      => stopwatch.Elapsed.Ticks * 1000,
+          Measurement.Nanoseconds       => stopwatch.Elapsed.Ticks * 1000000,
           Measurement.Milliseconds or _ => stopwatch.Elapsed.TotalMilliseconds,
         };
         mean = total / iterations;

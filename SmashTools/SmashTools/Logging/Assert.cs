@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using UnityEngine;
-using Verse;
+﻿using System.Diagnostics;
 
 namespace SmashTools
 {
