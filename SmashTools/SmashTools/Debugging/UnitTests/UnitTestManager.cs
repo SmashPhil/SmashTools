@@ -3,11 +3,11 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
-using HarmonyLib;
 using RimWorld;
 using RimWorld.Planet;
+using SmashTools.Performance;
+using UnityEngine;
 using Verse;
 using Verse.Profile;
 
@@ -15,6 +15,8 @@ namespace SmashTools.Debugging;
 
 public static class UnitTestManager
 {
+  private static readonly Vector2 StatusRectSize = new(240f, 75f);
+
   private static bool runningUnitTests;
   private static readonly Dictionary<UnitTest.TestType, List<UnitTest>> unitTests = [];
   private static readonly List<string> results = [];
@@ -23,11 +25,6 @@ public static class UnitTestManager
 
   static UnitTestManager()
   {
-#if !DEBUG
-    Trace.Fail(
-      $"Initializing UnitTestManager outside of a debug build.\n" +
-      $"{UnityEngine.StackTraceUtility.ExtractStackTrace()}");
-#else
     ConcurrentDictionary<UnitTest.TestType, ConcurrentBag<UnitTest>> tests = [];
     foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
     {
@@ -50,10 +47,11 @@ public static class UnitTestManager
       unitTests.Add(testType,
         [.. tests[testType].OrderByDescending(test => (int)test.Priority)]);
     }
-#endif
+
+    UnitTestAsyncHandler.Init();
   }
 
-  private static Dictionary<UnitTest.TestType, bool> TestTypes { get; set; } = [];
+  private static Dictionary<UnitTest.TestType, bool> TestTypes { get; } = [];
 
   private static TestPlanDef TestPlan { get; set; }
 
@@ -61,10 +59,7 @@ public static class UnitTestManager
 
   public static List<UnitTest> AllUnitTests => unitTests.Values.SelectMany(t => t).ToList();
 
-  private static bool StopRequested { get; set; }
-
-  // Supresses startup action unit tests once it has been executed once to avoid infinite test loops when transitioning scenes.
-  private static bool UnitTestsExecuted { get; set; }
+  internal static bool StopRequested { get; private set; }
 
   public static bool RunningUnitTests
   {
@@ -78,7 +73,6 @@ public static class UnitTestManager
     }
   }
 
-#if DEBUG
   public static void Run(UnitTest unitTest)
   {
     if (unitTest.ExecuteOn == UnitTest.TestType.Disabled) return;
@@ -101,29 +95,15 @@ public static class UnitTestManager
     }
   }
 
-  private static void StopHugslibQuickstart()
-  {
-    if (ModsConfig.IsActive("UnlimitedHugs.HugsLib"))
-    {
-      Type type = AccessTools.TypeByName("HugsLib.Quickstart.QuickstartController");
-      Assert.IsNotNull(type);
-      MethodInfo abortMethod = AccessTools.Method(type, "StatusBoxAbortRequestedHandler");
-      Assert.IsNotNull(abortMethod);
-      abortMethod.Invoke(null, [false]);
-    }
-  }
-
   /// <remarks>Not including any test types will default to running all available tests.</remarks>
   private static void ExecuteUnitTests(params UnitTest.TestType[] testTypes)
   {
     if (testTypes.NullOrEmpty())
       testTypes = [UnitTest.TestType.MainMenu, UnitTest.TestType.GameLoaded];
 
-    UnitTestsExecuted = true;
     EnableForTests(testTypes);
 
-    StopHugslibQuickstart();
-    LongEventHandler.ExecuteWhenFinished(delegate()
+    LongEventHandler.ExecuteWhenFinished(delegate
     {
       CoroutineManager.QueueInvoke(UnitTestRoutine);
     });
@@ -131,28 +111,29 @@ public static class UnitTestManager
 
   private static void ExecuteUnitTests(TestPlanDef testPlanDef)
   {
-    UnitTestsExecuted = true;
     TestPlan = testPlanDef;
-    StopHugslibQuickstart();
-    LongEventHandler.ExecuteWhenFinished(delegate
-    {
-      CoroutineManager.QueueInvoke(TestPlanRoutine);
-    });
+    LongEventHandler.QueueLongEvent(TestPlanRoutine, null, true, TestExceptionHandler,
+      showExtraUIInfo: false);
   }
-#endif
 
-  private static IEnumerator TestPlanRoutine()
+  private static void TestPlanRoutine()
   {
-    using UnitTestEnabler utb = new();
+    using UnitTestEnabler ute = new();
+
+    // Force enable MonoBehaviour so we can process MainThread invokes immediately.
+    using UnityThread.SpinHandle handle = new();
 
     results.Clear();
-    results.Add($"---------- Unit Tests ----------");
+    results.Add("---------- Unit Tests ----------");
 
     UnitTest.TestType currentTestType = UnitTest.TestType.Disabled;
+
     foreach (TestBlock block in TestPlan.plan)
     {
-      if (StopRequested) break;
-      if (block.type == UnitTest.TestType.Disabled) continue;
+      if (StopRequested)
+        goto EndTest;
+      if (block.type == UnitTest.TestType.Disabled)
+        continue;
 
       if (currentTestType != block.type)
       {
@@ -166,31 +147,12 @@ public static class UnitTestManager
             {
               GenScene.GoToMainMenu();
             }
-
-            while (Current.ProgramState != ProgramState.Entry ||
-              LongEventHandler.AnyEventNowOrWaiting)
-            {
-              if (StopRequested) goto EndTest;
-              yield return null;
-            }
-
             break;
           }
           case UnitTest.TestType.GameLoaded:
           {
-            LongEventHandler.QueueLongEvent(delegate()
-            {
-              SetupForTest(block.template);
-              PageUtility.InitGameStart();
-            }, "GeneratingMap", true, TestExceptionHandler, true, null);
-
-            while (Current.ProgramState != ProgramState.Playing ||
-              LongEventHandler.AnyEventNowOrWaiting)
-            {
-              if (StopRequested) goto EndTest;
-              yield return null;
-            }
-
+            if (!UnitTestAsyncHandler.GenerateMap(block))
+              goto EndTest;
             break;
           }
           case UnitTest.TestType.Disabled:
@@ -198,7 +160,6 @@ public static class UnitTestManager
             throw new NotImplementedException();
         }
       }
-
       ExecuteTests(block.type, block.UnitTests, results);
     }
 
@@ -206,17 +167,11 @@ public static class UnitTestManager
     if (Current.ProgramState != ProgramState.Entry)
     {
       GenScene.GoToMainMenu();
-
-      while (Current.ProgramState != ProgramState.Entry || LongEventHandler.AnyEventNowOrWaiting)
-      {
-        if (StopRequested) goto EndTest;
-        yield return null;
-      }
     }
-
-    results.Add($"-------- End Unit Tests --------");
+    LongEventHandler.ClearQueuedEvents();
+    results.Add("-------- End Unit Tests --------");
     DumpResults(results);
-    Log.TryOpenLogWindow();
+    UnityThread.ExecuteOnMainThread(Log.TryOpenLogWindow);
   }
 
   private static IEnumerator UnitTestRoutine()
@@ -239,21 +194,32 @@ public static class UnitTestManager
 
       while (Current.ProgramState != ProgramState.Entry || LongEventHandler.AnyEventNowOrWaiting)
       {
+        if (StopRequested)
+          goto EndTest;
+        yield return null;
+      }
+
+      LongEventHandler.QueueLongEvent(
+        delegate { ExecuteTests(UnitTest.TestType.MainMenu, results); }, null, true,
+        TestExceptionHandler);
+
+      while (LongEventHandler.AnyEventNowOrWaiting)
+      {
         if (StopRequested) goto EndTest;
         yield return null;
       }
 
-      ExecuteTests(UnitTest.TestType.MainMenu, results);
       if (StopRequested) goto EndTest;
     }
 
     if (TestTypes[UnitTest.TestType.GameLoaded])
     {
-      LongEventHandler.QueueLongEvent(delegate()
+      LongEventHandler.QueueLongEvent(delegate
       {
+        MemoryUtility.ClearAllMapsAndWorld();
         Root_Play.SetupForQuickTestPlay();
         PageUtility.InitGameStart();
-      }, "GeneratingMap", true, TestExceptionHandler, true, null);
+      }, "GeneratingMap", true, TestExceptionHandler);
 
       while (Current.ProgramState != ProgramState.Playing ||
         LongEventHandler.AnyEventNowOrWaiting)
@@ -262,8 +228,9 @@ public static class UnitTestManager
         yield return null;
       }
 
-      ExecuteTests(UnitTest.TestType.GameLoaded, results);
-      if (StopRequested) goto EndTest;
+      LongEventHandler.QueueLongEvent(
+        delegate { ExecuteTests(UnitTest.TestType.GameLoaded, results); }, null, true,
+        TestExceptionHandler);
     }
 
     EndTest: ;
@@ -271,9 +238,11 @@ public static class UnitTestManager
     {
       GenScene.GoToMainMenu();
 
-      while (Current.ProgramState != ProgramState.Entry || LongEventHandler.AnyEventNowOrWaiting)
+      while (Current.ProgramState != ProgramState.Entry ||
+        LongEventHandler.AnyEventNowOrWaiting)
       {
-        if (StopRequested) goto EndTest;
+        if (StopRequested)
+          break;
         yield return null;
       }
     }
@@ -305,9 +274,12 @@ public static class UnitTestManager
     List<string> subResults = [];
     foreach (UnitTest unitTest in tests)
     {
-      Assert.IsTrue(unitTest.ExecuteOn == type);
       if (StopRequested) return;
       if (IsolatedTest != null && IsolatedTest != unitTest) continue;
+
+      Log.Message($"Running {unitTest.Name}...");
+      Assert.IsTrue(unitTest.ExecuteOn == type,
+        $"Executing unit test {unitTest.Name} on wrong TestType ({unitTest.ExecuteOn} on {type})");
 
       try
       {
@@ -344,54 +316,25 @@ public static class UnitTestManager
         }
         else
         {
-          output.Add($"<error>{unitTest.Name} Failed</error>");
+          output.Add($"[{unitTest.Name}] <error>Failed</error>");
           output.AddRange(subResults);
         }
       }
       catch (Exception ex)
       {
-        SmashLog.Message($"<error>[{unitTest.Name} Exception thrown!]</error>\n{ex}");
-        output.Add($"<error>Exception thrown!</error>\n{ex}");
+        output.Add($"[{unitTest.Name}] <error>Exception thrown!</error>\n{ex}");
       }
 
       subResults.Clear();
     }
   }
 
-  private static void DumpResults(List<string> results)
+  private static void DumpResults(List<string> resultsToDump)
   {
-    foreach (string result in results)
+    foreach (string result in resultsToDump)
     {
       SmashLog.Message(result);
     }
-  }
-
-  private static void SetupForTest(GenerationTemplate template = null)
-  {
-    // If template is null, default to QuickTest parameters
-    if (template == null)
-    {
-      Root_Play.SetupForQuickTestPlay();
-      return;
-    }
-
-    Current.ProgramState = ProgramState.Entry;
-    Current.Game = new Game();
-    Current.Game.InitData = new GameInitData();
-    Current.Game.Scenario = TemplateScenarioDefOf.TestScenario.scenario;
-    Find.Scenario.PreConfigure();
-    Current.Game.storyteller = new Storyteller(StorytellerDefOf.Cassandra, DifficultyDefOf.Rough);
-
-    Current.Game.World = WorldGenerator.GenerateWorld(template.world.percent,
-      GenText.RandomSeedString(),
-      template.world.rainfall, template.world.temperature, template.world.population);
-    Find.GameInitData.ChooseRandomStartingTile();
-    if (template.map?.biome != null)
-    {
-      Find.WorldGrid[Find.GameInitData.startingTile].biome = template.map.biome;
-    }
-
-    Find.Scenario.PostIdeoChosen();
   }
 
   /// <summary>

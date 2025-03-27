@@ -1,5 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
+using HarmonyLib;
+using JetBrains.Annotations;
 using Verse;
 
 namespace SmashTools.Performance
@@ -11,8 +14,15 @@ namespace SmashTools.Performance
   /// </summary>
   public static class ThreadManager
   {
-    public const sbyte MaxThreads = 20;
-    public const byte MaxPooledThreads = 20;
+    // It should take nowhere even close to 5 seconds to send cancellation token and wait for
+    // dedicated thread to terminate. If we hit this threshold, then we probably deadlocked.
+    private const int JoinTimeout = 5000; // ms
+
+    private const sbyte MaxThreads = 20;
+    private const byte MaxPooledThreads = 20;
+
+    private static readonly FieldInfo eventThreadField =
+      AccessTools.Field(typeof(LongEventHandler), "eventThread");
 
     private static int nextId = 0;
 
@@ -21,17 +31,39 @@ namespace SmashTools.Performance
 
     private static readonly ushort[] pooledThreadCounts = new ushort[MaxPooledThreads];
 
-    private static readonly List<DedicatedThread> activeThreads = new List<DedicatedThread>();
+    private static readonly List<DedicatedThread> activeThreads = [];
 
-    private static object threadListLock = new object();
+    private static readonly object threadListLock = new();
+
+    public static bool InMainOrEventThread
+    {
+      get
+      {
+        if (UnityData.IsInMainThread)
+          return true;
+        Thread eventThread = (Thread)eventThreadField.GetValue(null);
+        return eventThread == null ||
+          Thread.CurrentThread.ManagedThreadId == eventThread.ManagedThreadId;
+      }
+    }
 
     // Just reading the _size int, it can't be guaranteed this count isn't stale
     // if being checked immediately after List has been modified.
-    public static bool AllThreadsTerminated => activeThreads.Count == 0;
+    public static bool AllThreadsTerminated
+    {
+      get
+      {
+        lock (threadListLock)
+        {
+          return activeThreads.Count == 0;
+        }
+      }
+    }
 
     /// <summary>
     /// Snapshot of active threads.
     /// </summary>
+    [UsedImplicitly]
     public static ListSnapshot<DedicatedThread> ThreadsSnapshot
     {
       get
@@ -57,8 +89,7 @@ namespace SmashTools.Performance
         return null;
       }
 
-      DedicatedThread dedicatedThread =
-        new DedicatedThread(nextId, DedicatedThread.ThreadType.Single);
+      DedicatedThread dedicatedThread = new(nextId, DedicatedThread.ThreadType.Single);
       lock (threadListLock)
       {
         activeThreads.Add(dedicatedThread);
@@ -88,8 +119,7 @@ namespace SmashTools.Performance
       {
         if (threads[index] == null)
         {
-          DedicatedThread dedicatedThread =
-            new DedicatedThread(index, DedicatedThread.ThreadType.Shared);
+          DedicatedThread dedicatedThread = new(index, DedicatedThread.ThreadType.Shared);
           threads[index] = dedicatedThread;
           activeThreads.Add(dedicatedThread);
         }
@@ -153,27 +183,28 @@ namespace SmashTools.Performance
 
     public static void ReleaseThreadsAndClearCache()
     {
-      // It should take nowhere even close to 5 seconds to send cancellation token and wait for
-      // dedicated thread to terminate. If we hit this threshold, then we probably deadlocked.
-      const int JoinTimeoutMs = 5000;
-
       using ListSnapshot<DedicatedThread> threadsSnapshot = ThreadsSnapshot;
 
       // Will take at least a few more clock cycles for thread worker to receive cancellation
-      // token and terminate. We must wait until then otherwise MemoryUtility.ClearAllMapsAndWorld
+      // request and terminate. We must wait until then otherwise MemoryUtility.ClearAllMapsAndWorld
       // will set map fields to null and ongoing operations will throw. This function is executed
       // right before that happens.
       foreach (DedicatedThread dedicatedThread in threadsSnapshot)
       {
-        dedicatedThread.Release();
-        if (!dedicatedThread.thread.Join(JoinTimeoutMs))
-        {
-          Log.Error($"Thread {dedicatedThread.id} has failed to terminate.");
-          dedicatedThread.StopImmediately(); // Call once more for good measure and move on
-        }
+        ReleaseAndJoin(dedicatedThread);
       }
 
       ComponentCache.ClearCache();
+    }
+
+    public static void ReleaseAndJoin(DedicatedThread dedicatedThread)
+    {
+      dedicatedThread.Release();
+      if (!dedicatedThread.thread.Join(JoinTimeout))
+      {
+        Log.Error($"Thread {dedicatedThread.id} has failed to terminate.");
+        dedicatedThread.StopImmediately(); // Call once more for good measure and move on
+      }
     }
   }
 }

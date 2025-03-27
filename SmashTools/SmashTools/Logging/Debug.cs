@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using SmashTools.Debugging;
+using SmashTools.Performance;
 using UnityEngine;
 using Verse;
 
@@ -13,12 +14,17 @@ namespace SmashTools
       // Extract stack trace before potentially sending it off to CoroutineManager
       // where the stack trace will be completely different.
       StackTracePopup popup = new(popupSize, label, message);
+      if (UnitTestManager.RunningUnitTests)
+      {
+        popup.SendToLog();
+        return;
+      }
 
       if (!UnityData.IsInMainThread)
       {
         // WindowStack is not thread safe, we'll need to hand it off to the
         // CoroutineManager to invoke on the main thread.
-        CoroutineManager.QueueInvoke(() => Find.WindowStack.Add(popup));
+        UnityThread.ExecuteOnMainThread(() => Find.WindowStack.Add(popup));
         return;
       }
       Find.WindowStack.Add(popup);

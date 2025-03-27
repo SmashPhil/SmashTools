@@ -1,37 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
-using Verse;
-using SmashTools;
+using JetBrains.Annotations;
 
-namespace SmashTools.Performance
+namespace SmashTools.Performance;
+
+// ReSharper disable PossibleNullReferenceException
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public class AsyncLongOperationAction : AsyncAction
 {
-  public class AsyncLongOperationAction : AsyncAction
+  public event Action OnInvoke;
+  public event Func<bool> OnValidate;
+
+  public override bool LongOperation => true;
+
+  public override bool IsValid => OnInvoke != null && (OnValidate == null || OnValidate());
+
+  public override void Invoke()
   {
-    private Action action;
-    private Func<bool> isValid;
+    OnInvoke();
+  }
 
-    public override bool LongOperation => true;
-
-    public override bool IsValid => isValid?.Invoke() ?? true;
-
-    public void Set(Action action, Func<bool> isValid = null)
-    {
-      this.action = action;
-      this.isValid = isValid;
-    }
-
-    public override void Invoke()
-    {
-      action.Invoke();
-    }
-
-    public override void ReturnToPool()
-    {
-      action = null;
-      isValid = null;
-      AsyncPool<AsyncLongOperationAction>.Return(this);
-    }
+  public override void ReturnToPool()
+  {
+    OnInvoke = null;
+    OnValidate = null;
+    AsyncPool<AsyncLongOperationAction>.Return(this);
   }
 }
