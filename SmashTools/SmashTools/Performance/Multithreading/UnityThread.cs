@@ -12,12 +12,9 @@ namespace SmashTools.Performance;
 [StaticConstructorOnModInit]
 public class UnityThread : MonoBehaviour
 {
-  private readonly List<Action> onGuiAction = [];
   private readonly ConcurrentQueue<ConcurrentAction> queue = [];
 
   private bool keepEnabled;
-
-  private static readonly object onGuiLock = new();
 
   static UnityThread()
   {
@@ -25,17 +22,6 @@ public class UnityThread : MonoBehaviour
   }
 
   private static UnityThread Instance { get; }
-
-  private void OnGUI()
-  {
-    lock (onGuiLock)
-    {
-      foreach (Action action in onGuiAction)
-      {
-        action();
-      }
-    }
-  }
 
   [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members",
     Justification = "Unity API")]
@@ -68,22 +54,6 @@ public class UnityThread : MonoBehaviour
   internal static void Release()
   {
     Instance.keepEnabled = false;
-  }
-
-  public static void AddOnGUI(Action action)
-  {
-    lock (onGuiLock)
-    {
-      Instance.onGuiAction.Add(action);
-    }
-  }
-
-  public static void RemoveOnGUI(Action action)
-  {
-    lock (onGuiLock)
-    {
-      Instance.onGuiAction.Remove(action);
-    }
   }
 
   public static ConcurrentAction ExecuteOnMainThread(params Action[] invokeList)
@@ -132,25 +102,15 @@ public class UnityThread : MonoBehaviour
     }
   }
 
-  public readonly struct OnGUIFunc : IDisposable
+  public class ConcurrentAction : IDisposable
   {
-    private readonly Action action;
-
-    public OnGUIFunc(Action action)
-    {
-      this.action = action;
-      AddOnGUI(this.action);
-    }
-
-    void IDisposable.Dispose()
-    {
-      RemoveOnGUI(action);
-    }
-  }
-
-  public class ConcurrentAction(Action[] actions) : IDisposable
-  {
+    private readonly Action[] actions;
     private readonly ManualResetEventSlim waitHandle = new();
+
+    public ConcurrentAction(Action[] actions)
+    {
+      this.actions = actions;
+    }
 
     public void Invoke()
     {
