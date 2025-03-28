@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#define RUN_ASYNC
+
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -47,8 +49,9 @@ public static class UnitTestManager
       unitTests.Add(testType,
         [.. tests[testType].OrderByDescending(test => (int)test.Priority)]);
     }
-
+#if RUN_ASYNC
     UnitTestAsyncHandler.Init();
+#endif
   }
 
   private static Dictionary<UnitTest.TestType, bool> TestTypes { get; } = [];
@@ -112,11 +115,92 @@ public static class UnitTestManager
   private static void ExecuteUnitTests(TestPlanDef testPlanDef)
   {
     TestPlan = testPlanDef;
-    LongEventHandler.QueueLongEvent(TestPlanRoutine, null, true, TestExceptionHandler,
+#if RUN_ASYNC
+    LongEventHandler.QueueLongEvent(TestPlanAsync, null, true, TestExceptionHandler,
       showExtraUIInfo: false);
+#else
+    LongEventHandler.ExecuteWhenFinished(delegate
+    {
+      CoroutineManager.QueueInvoke(TestPlanRoutine);
+    });
+#endif
   }
 
-  private static void TestPlanRoutine()
+  private static IEnumerator TestPlanRoutine()
+  {
+    using UnitTestEnabler ute = new();
+
+    // Force enable MonoBehaviour so we can process MainThread invokes immediately.
+    using UnityThread.SpinHandle handle = new();
+
+    results.Clear();
+    results.Add("---------- Unit Tests ----------");
+
+    UnitTest.TestType currentTestType = UnitTest.TestType.Disabled;
+
+    foreach (TestBlock block in TestPlan.plan)
+    {
+      if (StopRequested)
+        goto EndTest;
+      if (block.type == UnitTest.TestType.Disabled)
+        continue;
+
+      if (currentTestType != block.type)
+      {
+        // Transition between scenes
+        currentTestType = block.type;
+        switch (currentTestType)
+        {
+          case UnitTest.TestType.MainMenu:
+          {
+            if (Current.ProgramState != ProgramState.Entry)
+            {
+              GenScene.GoToMainMenu();
+              while (Current.ProgramState != ProgramState.Entry ||
+                LongEventHandler.AnyEventNowOrWaiting)
+              {
+                if (StopRequested)
+                  goto EndTest;
+                yield return null;
+              }
+            }
+            break;
+          }
+          case UnitTest.TestType.GameLoaded:
+          {
+            if (!UnitTestAsyncHandler.GenerateMap(block))
+              goto EndTest;
+
+            while (Current.ProgramState != ProgramState.Playing ||
+              LongEventHandler.AnyEventNowOrWaiting)
+            {
+              if (StopRequested)
+                goto EndTest;
+              yield return null;
+            }
+            yield return new WaitForSecondsRealtime(1);
+            break;
+          }
+          case UnitTest.TestType.Disabled:
+          default:
+            throw new NotImplementedException();
+        }
+      }
+      ExecuteTests(block.type, block.UnitTests, results);
+    }
+
+    EndTest: ;
+    if (Current.ProgramState != ProgramState.Entry)
+    {
+      GenScene.GoToMainMenu();
+    }
+    LongEventHandler.ClearQueuedEvents();
+    results.Add("-------- End Unit Tests --------");
+    DumpResults(results);
+    UnityThread.ExecuteOnMainThread(Log.TryOpenLogWindow);
+  }
+
+  private static void TestPlanAsync()
   {
     using UnitTestEnabler ute = new();
 
@@ -199,9 +283,7 @@ public static class UnitTestManager
         yield return null;
       }
 
-      LongEventHandler.QueueLongEvent(
-        delegate { ExecuteTests(UnitTest.TestType.MainMenu, results); }, null, true,
-        TestExceptionHandler);
+      ExecuteTests(UnitTest.TestType.MainMenu, results);
 
       while (LongEventHandler.AnyEventNowOrWaiting)
       {
@@ -228,9 +310,7 @@ public static class UnitTestManager
         yield return null;
       }
 
-      LongEventHandler.QueueLongEvent(
-        delegate { ExecuteTests(UnitTest.TestType.GameLoaded, results); }, null, true,
-        TestExceptionHandler);
+      ExecuteTests(UnitTest.TestType.GameLoaded, results);
     }
 
     EndTest: ;
