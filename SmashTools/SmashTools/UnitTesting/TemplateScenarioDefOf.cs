@@ -1,10 +1,8 @@
 ﻿using RimWorld;
 
-namespace SmashTools.Debugging;
+namespace SmashTools.UnitTesting;
 
-#if DEBUG
 [DefOf]
-#endif
 internal class TemplateScenarioDefOf
 {
   public static ScenarioDef TestScenario;

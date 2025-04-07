@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using DevTools;
 using SmashTools.Performance;
 using AsyncPool =
-  SmashTools.Performance.AsyncPool<SmashTools.Debugging.UnitTestAsyncPool.TestObject>;
+  SmashTools.Performance.AsyncPool<SmashTools.UnitTesting.UnitTest_AsyncPool.TestObject>;
 
-namespace SmashTools.Debugging;
+namespace SmashTools.UnitTesting;
 
-internal class UnitTestAsyncPool : UnitTest
+internal class UnitTest_AsyncPool : UnitTest
 {
   public override string Name => "AsyncPool";
 

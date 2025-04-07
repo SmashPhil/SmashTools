@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using DevTools;
 using HarmonyLib;
 using JetBrains.Annotations;
+using UnityEngine.SceneManagement;
 using Verse;
 
 namespace SmashTools.Performance
@@ -179,6 +181,12 @@ namespace SmashTools.Performance
       }
 
       nextId = -1;
+    }
+
+    internal static void OnSceneChanged(Scene scene, LoadSceneMode mode)
+    {
+      Assert.IsTrue(mode == LoadSceneMode.Single);
+      ReleaseThreadsAndClearCache();
     }
 
     public static void ReleaseThreadsAndClearCache()

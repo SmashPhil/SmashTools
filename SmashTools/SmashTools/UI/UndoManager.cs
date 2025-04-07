@@ -1,59 +1,58 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using DevTools;
 
 namespace SmashTools
 {
-	public class UndoManager
-	{
-		private readonly Stack<UndoItem> undoStack = new Stack<UndoItem>();
+  public class UndoManager
+  {
+    private readonly Stack<UndoItem> undoStack = new Stack<UndoItem>();
 
-		public bool Disabled { get; internal set; }
+    public bool Disabled { get; internal set; }
 
-		public void StartOperation(Action action, Action undo)
-		{
-			undoStack.Push(new UndoItem(action, undo));
-		}
+    public void StartOperation(Action action, Action undo)
+    {
+      undoStack.Push(new UndoItem(action, undo));
+    }
 
-		public void UndoOperation()
-		{
-			Assert.IsTrue(undoStack.Count > 0);
-			UndoItem item = undoStack.Pop();
-			item.undo.Invoke();
-		}
+    public void UndoOperation()
+    {
+      Assert.IsTrue(undoStack.Count > 0);
+      UndoItem item = undoStack.Pop();
+      item.undo.Invoke();
+    }
 
-		public void Clear()
-		{
-			undoStack.Clear();
-		}
+    public void Clear()
+    {
+      undoStack.Clear();
+    }
 
-		private struct UndoItem
-		{
-			public Action action;
-			public Action undo;
+    private struct UndoItem
+    {
+      public Action action;
+      public Action undo;
 
-			public UndoItem(Action action, Action undo)
-			{
-				this.action = action;
-				this.undo = undo;
-			}
-		}
-	}
+      public UndoItem(Action action, Action undo)
+      {
+        this.action = action;
+        this.undo = undo;
+      }
+    }
+  }
 
-	public struct UndoDisable : IDisposable
-	{
-		private UndoManager manager;
+  public struct UndoDisable : IDisposable
+  {
+    private UndoManager manager;
 
-		public UndoDisable(UndoManager manager)
-		{
-			this.manager = manager;
-			manager.Disabled = true;
-		}
+    public UndoDisable(UndoManager manager)
+    {
+      this.manager = manager;
+      manager.Disabled = true;
+    }
 
-		public void Dispose()
-		{
-			manager.Disabled = false;
-		}
-	}
+    public void Dispose()
+    {
+      manager.Disabled = false;
+    }
+  }
 }

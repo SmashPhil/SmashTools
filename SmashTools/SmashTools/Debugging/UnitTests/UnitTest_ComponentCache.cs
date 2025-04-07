@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using LudeonTK;
-using SmashTools.Performance;
+﻿using System.Collections.Generic;
+using DevTools;
 using Verse;
 
-namespace SmashTools.Debugging;
+namespace SmashTools.UnitTesting;
 
-internal class UnitTestComponentCache : UnitTest
+internal class UnitTest_ComponentCache : UnitTest
 {
   public override string Name => "ComponentCache";
 

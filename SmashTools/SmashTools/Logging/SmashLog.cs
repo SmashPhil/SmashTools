@@ -1,28 +1,24 @@
 ﻿using System;
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using UnityEngine;
+using System.Text.RegularExpressions;
 using HarmonyLib;
+using UnityEngine;
 using Verse;
-using System.Diagnostics;
 
 namespace SmashTools
 {
   [StaticConstructorOnStartup]
   public static class SmashLog
   {
-    private static string RichTextRegex = @"(<b.*?\>|\<\/b\>)|(<i.*?\>|\<\/i\>)|(<color.*?\>|\<\/color\>)";
+    private static string RichTextRegex = @"(<i>)|(<\/i>)|(<b>)|(<\/b>)|(<color.*?>|<\/color>)";
+
     private static string RichTextRegexStartingBrackets = "";
     private static string RichTextRegexEndingBrackets = "";
 
-    internal static Dictionary<string, Color> bracketColor = new Dictionary<string, Color>();
-
-    private static HashSet<int> usedKeys = new HashSet<int>();
-
-    private static HashSet<string> suppressedCodes = new HashSet<string>();
+    private static readonly List<(string, Color)> bracketColor = [];
 
     static SmashLog()
     {
@@ -41,37 +37,6 @@ namespace SmashTools
       RegisterRichTextBracket("xml", new Color(0.25f, 0.75f, 0.95f));
     }
 
-    public static void ValidateMethodCalling(MethodInfo method)
-    {
-      ProjectSetup.Harmony.Patch(method,
-        prefix: new HarmonyMethod(typeof(SmashLog), nameof(SmashLog.StartingMethodCall)),
-        postfix: new HarmonyMethod(typeof(SmashLog), nameof(SmashLog.EndingMethodCall)));
-    }
-
-    private static void StartingMethodCall()
-    {
-      Log.Message($"Starting method call.\nStackTrace={StackTraceUtility.ExtractStackTrace()}");
-    }
-
-    private static void EndingMethodCall()
-    {
-      Log.Clear();
-      Log.Message($"Completed method call.\nStackTrace={StackTraceUtility.ExtractStackTrace()}\n");
-    }
-
-    public static void RegisterSuppressionCode(string code)
-    {
-      if (!suppressedCodes.Add(code))
-      {
-        Log.Error($"Unable to register {code} as a supression code. It is already being used and codes must be unique.");
-      }
-    }
-
-    public static bool Suppress(string code)
-    {
-      return !code.NullOrEmpty() && suppressedCodes.Contains(code);
-    }
-
     [Obsolete("Do not use this method outside of development.")]
     public static void QuickMessage(string text)
     {
@@ -84,91 +49,43 @@ namespace SmashTools
       Log.Message(ColorizeBrackets(text));
     }
 
-    public static void Warning(string text, string code = "")
+    public static void ErrorLabel(string label, string text)
     {
-      if (!Suppress(code))
-      {
-        Log.Warning(ColorizeBrackets(text));
-      }
+      Error($"{ColorizeBrackets($"<error>{label}</error>")} {ColorizeBrackets(text)}");
     }
 
-    public static void WarningLabel(string label, string text, string code = "")
+    public static void Error(string text)
     {
-      if (!Suppress(code))
+      try
       {
-        Log.Message($"{ColorizeBrackets($"<warning>{label}</warning>")} {ColorizeBrackets(text)}");
-      }
-    }
-
-    public static void WarningOnce(string text, int key, string code = "")
-    {
-      if (!Suppress(code))
-      {
-        if (usedKeys.Contains(key))
+        if (DebugSettings.pauseOnError && Current.ProgramState == ProgramState.Playing)
         {
-          return;
+          Find.TickManager.Pause();
         }
-        usedKeys.Add(key);
-        Warning(text);
-      }
-    }
-
-    public static void Error(string text, string code = "")
-    {
-      if (!Suppress(code))
-      {
-        Log.Error(ColorizeBrackets(text));
-      }
-    }
-
-    public static void ErrorLabel(string label, string text, string code = "")
-    {
-      if (!Suppress(code))
-      {
-        try
+        Log.Message(ColorizeBrackets(text));
+        if (!PlayDataLoader.Loaded || Prefs.DevMode)
         {
-          if (DebugSettings.pauseOnError && Current.ProgramState == ProgramState.Playing)
-          {
-            Find.TickManager.Pause();
-          }
-          Log.Message($"{ColorizeBrackets($"<error>{label}</error>")} {ColorizeBrackets(text)}");
-          if (!PlayDataLoader.Loaded || Prefs.DevMode)
-          {
-            Log.TryOpenLogWindow();
-          }
-        }
-        catch (Exception ex)
-        {
-          Log.Error($"An error occurred while logging an error with a label: {ex}");
+          Log.TryOpenLogWindow();
         }
       }
-    }
-
-    public static void ErrorOnce(string text, int key, string code = "")
-    {
-      if (!Suppress(code))
+      catch (Exception ex)
       {
-        Log.ErrorOnce(ColorizeBrackets(text), key);
+        Log.Error($"An error occurred while logging an error with a label: {ex}");
       }
     }
 
-    public static void Success(string text)
+    public static void ErrorOnce(string text, int key)
     {
-      Log.Message(ColorizeBrackets($"<success>{text}</success>"));
-    }
-
-    public static void SuccessLabel(string label, string text)
-    {
-      Log.Message($"{ColorizeBrackets($"<success>{label}</success>")} {ColorizeBrackets(text)}");
+      Log.ErrorOnce(ColorizeBrackets(text), key);
     }
 
     internal static string ColorizeBrackets(string text)
     {
-      foreach (var textEntry in bracketColor)
+      foreach ((string key, Color color) in bracketColor)
       {
-        text = Regex.Replace(text, $@"\<{textEntry.Key}.*?\>",
-          $"<color=#{ColorUtility.ToHtmlStringRGBA(textEntry.Value)}>", RegexOptions.Singleline);
-        text = Regex.Replace(text, $@"\<\/{textEntry.Key}\>", "</color>", RegexOptions.Singleline);
+        text = Regex.Replace(text, $@"\<{key}.*?\>",
+          $"<color=#{ColorUtility.ToHtmlStringRGBA(color)}>", RegexOptions.Singleline);
+        text = Regex.Replace(text, $@"\<\/{key}\>", "</color>", RegexOptions.Singleline);
       }
       return text;
     }
@@ -186,15 +103,15 @@ namespace SmashTools
       }
       RichTextRegexStartingBrackets += @$"(<{textLabel}.*?\>)";
       RichTextRegexEndingBrackets += $@"(\<\/{textLabel}\>)";
-      bracketColor.Add(textLabel, color);
+      bracketColor.Add((textLabel, color));
     }
 
-    public static void TestAllBrackets()
+    internal static void TestAllBrackets()
     {
       string buildText = "Testing all brackets: ";
-      foreach (string bracket in bracketColor.Keys)
+      foreach ((string key, _) in bracketColor)
       {
-        buildText += $"<{bracket}>{bracket}</{bracket}> ";
+        buildText += $"<{key}>{key}</{key}> ";
       }
       Message(buildText);
     }
@@ -202,24 +119,24 @@ namespace SmashTools
     public static IEnumerable<CodeInstruction> RemoveRichTextFromDebugLogTranspiler(
       IEnumerable<CodeInstruction> instructions)
     {
-      MethodInfo debugLogMethod = AccessTools.Method(typeof(UnityEngine.Debug),
-        nameof(UnityEngine.Debug.Log), parameters: [typeof(object)]);
+      MethodInfo debugLogMethod = AccessTools.Method(typeof(Debug),
+        nameof(Debug.Log), parameters: [typeof(object)]);
       return RemoveBracketsForMethodCall(instructions, debugLogMethod);
     }
 
     public static IEnumerable<CodeInstruction> RemoveRichTextFromDebugLogWarningTranspiler(
       IEnumerable<CodeInstruction> instructions)
     {
-      MethodInfo debugLogMethod = AccessTools.Method(typeof(UnityEngine.Debug),
-        nameof(UnityEngine.Debug.LogWarning), parameters: [typeof(object)]);
+      MethodInfo debugLogMethod = AccessTools.Method(typeof(Debug),
+        nameof(Debug.LogWarning), parameters: [typeof(object)]);
       return RemoveBracketsForMethodCall(instructions, debugLogMethod);
     }
 
     public static IEnumerable<CodeInstruction> RemoveRichTextFromDebugLogErrorTranspiler(
       IEnumerable<CodeInstruction> instructions)
     {
-      MethodInfo debugLogMethod = AccessTools.Method(typeof(UnityEngine.Debug),
-        nameof(UnityEngine.Debug.LogError), parameters: [typeof(object)]);
+      MethodInfo debugLogMethod = AccessTools.Method(typeof(Debug),
+        nameof(Debug.LogError), parameters: [typeof(object)]);
       return RemoveBracketsForMethodCall(instructions, debugLogMethod);
     }
 
@@ -245,7 +162,8 @@ namespace SmashTools
       }
     }
 
-    private static IEnumerable<CodeInstruction> RemoveBracketsForMethodCall(IEnumerable<CodeInstruction> instructions,
+    private static IEnumerable<CodeInstruction> RemoveBracketsForMethodCall(
+      IEnumerable<CodeInstruction> instructions,
       MethodInfo method)
     {
       List<CodeInstruction> instructionList = instructions.ToList();
@@ -255,7 +173,8 @@ namespace SmashTools
 
         if (instruction.Calls(method))
         {
-          yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(typeof(SmashLog),
+          yield return new CodeInstruction(opcode: OpCodes.Call, operand: AccessTools.Method(
+            typeof(SmashLog),
             nameof(LogTextWithoutRichText)));
         }
 
@@ -265,16 +184,10 @@ namespace SmashTools
 
     private static string LogTextWithoutRichText(string text)
     {
+      const int MSTimeout = 50;
+
       try
       {
-        // Timeout at 20fps limit, though for just the Debug.Log cleanup it should never reach this point.
-        // so Release builds should leave it at a relatively brisk 5ms timeout. We need the extra 45 for message
-        // details cleanup in Debug builds.
-#if DEBUG
-        const int MSTimeout = 50;
-#else
-        const int MSTimeout = 5;
-#endif
         string textNoBrackets = Regex.Replace(text, RichTextRegex, "", RegexOptions.Singleline,
           TimeSpan.FromMilliseconds(MSTimeout));
         return textNoBrackets;

@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
+using DevTools;
 using UnityEngine;
-using Verse;
 
 namespace SmashTools
 {
@@ -10,15 +9,8 @@ namespace SmashTools
   {
     public static Rect[] SplitVertically(this Rect rect, int splits, float buffer = 0)
     {
-      if (splits < 0)
-      {
+      if (splits <= 1)
         throw new InvalidOperationException();
-      }
-
-      if (splits == 1)
-      {
-        return [rect];
-      }
 
       float width = rect.width / splits - buffer * splits;
       Rect[] rects = new Rect[splits];
@@ -31,19 +23,13 @@ namespace SmashTools
       return rects;
     }
 
-    public static Rect[] SplitVertically(this Rect rect, int splits, float[] widthPercents,
-      float buffer = 0)
+    public static Rect[] SplitVertically(this Rect rect, float[] widthPercents,
+      float buffer)
     {
-      if (splits <= 0)
-      {
+      if (widthPercents.Length <= 1)
         throw new InvalidOperationException();
-      }
 
-      if (splits == 1)
-      {
-        return new Rect[] { rect };
-      }
-
+      int splits = widthPercents.Length;
       Assert.IsTrue(splits == widthPercents.Length, "Number of splits doesn't match widths array.");
       Assert.IsTrue(Mathf.Approximately(widthPercents.Sum(), 1),
         "Total width percentage doesn't equal 100%");
@@ -54,7 +40,7 @@ namespace SmashTools
       for (int i = 0; i < splits; i++)
       {
         float width = widthPercents[i] * availableWidth;
-        Rect splitRect = new Rect(rect.x + i * (width + buffer), rect.y, width, rect.height);
+        Rect splitRect = new(rect.x + i * (width + buffer), rect.y, width, rect.height);
         rects[i] = splitRect;
       }
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using SmashTools.Debugging;
+using SmashTools.UnitTesting;
 using Verse;
 
 namespace SmashTools

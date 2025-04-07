@@ -9,10 +9,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SmashTools</RootNamespace>
     <AssemblyName>SmashTools</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <LangVersion>preview</LangVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -44,10 +45,15 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony">
-      <Version>2.3.3</Version>
+      <Version>2.3.5</Version>
     </PackageReference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DevTools, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\1.5\Assemblies\DevTools.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
@@ -120,6 +126,7 @@
     <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
     <Compile Include="Attributes\TweakFieldAttribute.cs" />
     <Compile Include="Attributes\StartupActionAttribute.cs" />
+    <Compile Include="Performance\Benchmarking\Benchmark_GenTypes.cs" />
     <Compile Include="Collections\CircularArray.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
     <Compile Include="Collections\DropOutStack.cs" />
@@ -142,20 +149,24 @@
     <Compile Include="Debugging\MainMenuKeyBindHandler.cs" />
     <Compile Include="Debugging\QuickStartMenu.cs" />
     <Compile Include="Debugging\StartupAction\StartupTest.cs" />
-    <Compile Include="Debugging\UnitTests\GenerationTemplate.cs" />
-    <Compile Include="Debugging\UnitTests\MapGeneratorDefOf.cs" />
-    <Compile Include="Debugging\UnitTests\TemplateScenarioDefOf.cs" />
-    <Compile Include="Debugging\UnitTests\TestPlanDef.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestAsyncHandler.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestComponentCache.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestDedicatedThread.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestAsyncPool.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestObjectPool.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestCellRectUtils.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestManager.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestAnimationCurve.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTestAnimDynamicMethod.cs" />
+    <Compile Include="UnitTesting\ExecutionPriority.cs" />
+    <Compile Include="UnitTesting\GenerationTemplate.cs" />
+    <Compile Include="UnitTesting\MapGeneratorDefOf.cs" />
+    <Compile Include="UnitTesting\TemplateScenarioDefOf.cs" />
+    <Compile Include="UnitTesting\TestBatch.cs" />
+    <Compile Include="UnitTesting\UTResult.cs" />
+    <Compile Include="UnitTesting\TestSuiteDef.cs" />
+    <Compile Include="UnitTesting\TestType.cs" />
+    <Compile Include="UnitTesting\UnitTest.cs" />
+    <Compile Include="UnitTesting\UnitTestAsyncHandler.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_ComponentCache.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_DedicatedThread.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_AsyncPool.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_ObjectPool.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_CellRectUtils.cs" />
+    <Compile Include="UnitTesting\UnitTestManager.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_AnimationCurve.cs" />
+    <Compile Include="Debugging\UnitTests\UnitTest_AnimDynamicMethod.cs" />
     <Compile Include="Enums\MathOp.cs" />
     <Compile Include="Enums\UISettingsType.cs" />
     <Compile Include="Events\EventDisabler.cs" />
@@ -178,8 +189,6 @@
     <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
     <Compile Include="Interfaces\ITweakFields.cs" />
     <Compile Include="Interfaces\IXmlExport.cs" />
-    <Compile Include="Logging\Assert.cs" />
-    <Compile Include="Logging\Debug.cs" />
     <Compile Include="Logging\SmashLog.cs" />
     <Compile Include="Logging\Trace.cs" />
     <Compile Include="MapGeneration\GenSteps\GenStep_RocksNearEdge.cs" />
@@ -189,6 +198,7 @@
     <Compile Include="Pathfinding\AStar.cs" />
     <Compile Include="Pathfinding\BFS.cs" />
     <Compile Include="Pathfinding\Dijkstra.cs" />
+    <Compile Include="Performance\Benchmarking\Benchmark_CellRectUtils.cs" />
     <Compile Include="Performance\Caching\MapComponentCache.cs" />
     <Compile Include="Performance\Coroutines\WaitForTicks.cs" />
     <Compile Include="Performance\Multithreading\AsyncAction.cs" />
@@ -198,7 +208,6 @@
     <Compile Include="Performance\Multithreading\ListSnapshot.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
     <Compile Include="Performance\Multithreading\UnityThread.cs" />
-    <Compile Include="Performance\Profiling\Benchmark.cs" />
     <Compile Include="Performance\Profiling\ObjectCounter.cs" />
     <Compile Include="Performance\Profiling\ObjectCountWatcher.cs" />
     <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
@@ -225,9 +234,9 @@
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationEditor.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_DefDropdown.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_MethodSelector.cs" />
+    <Compile Include="UI\Windows\Dialog_ActionList.cs" />
     <Compile Include="UI\Windows\Dialog_CameraView.cs" />
-    <Compile Include="UI\Windows\StackTracePopup.cs" />
-    <Compile Include="UI\Windows\ModalWindow.cs" />
+    <Compile Include="UI\Windows\Dialog_TestExplorer.cs" />
     <Compile Include="UI\Windows\Performance\Dialog_DedicatedThreadActivity.cs" />
     <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
     <Compile Include="UI\Windows\Dialog_ItemDropdown.cs" />
@@ -268,7 +277,7 @@
     <Compile Include="Utility\Extensions\Game\Ext_Pawn.cs" />
     <Compile Include="Utility\Extensions\System\Ext_Math.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Rect.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_RWTypes.cs" />
+    <Compile Include="Utility\Extensions\Game\Ext_Types.cs" />
     <Compile Include="Utility\Extensions\System\Ext_String.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Texture.cs" />
     <Compile Include="Utility\Extensions\Collections\Ext_ThingOwner.cs" />

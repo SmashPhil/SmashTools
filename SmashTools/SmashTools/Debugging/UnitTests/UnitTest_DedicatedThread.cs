@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using DevTools;
 using SmashTools.Performance;
 
-namespace SmashTools.Debugging
+namespace SmashTools.UnitTesting
 {
-  internal class UnitTestDedicatedThread : UnitTest
+  internal class UnitTest_DedicatedThread : UnitTest
   {
     private const int ThreadJoinTimeout = 5000;
     private const int WaitTime = 1000;
