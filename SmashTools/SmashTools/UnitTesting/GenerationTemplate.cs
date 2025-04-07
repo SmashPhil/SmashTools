@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using DevTools;
 using HarmonyLib;
 using JetBrains.Annotations;
 using RimWorld;
@@ -8,7 +9,7 @@ using RimWorld.Planet;
 using Verse;
 using FieldInfo = System.Reflection.FieldInfo;
 
-namespace SmashTools.Debugging;
+namespace SmashTools.UnitTesting;
 
 public class GenerationTemplate
 {

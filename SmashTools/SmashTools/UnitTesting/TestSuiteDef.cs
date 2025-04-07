@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using Verse;
 
-namespace SmashTools.Debugging;
+namespace SmashTools.UnitTesting;
 
 [UsedImplicitly(ImplicitUseTargetFlags.Members)]
 public class TestBlock
 {
-  public UnitTest.TestType type;
+  public TestType type;
   public List<Type> tests;
   public GenerationTemplate template;
 
@@ -27,7 +27,7 @@ public class TestBlock
 }
 
 [UsedImplicitly(ImplicitUseTargetFlags.Members)]
-public class TestPlanDef : Def
+public class TestSuiteDef : Def
 {
   public List<TestBlock> plan;
 
@@ -55,7 +55,7 @@ public class TestPlanDef : Def
     }
     else
     {
-      UnitTest.TestType type = UnitTest.TestType.Disabled;
+      TestType type = TestType.Disabled;
       foreach (TestBlock block in plan)
       {
         if (block.type == type)
@@ -64,14 +64,14 @@ public class TestPlanDef : Def
         }
 
         type = block.type;
-        if (type == UnitTest.TestType.Disabled)
+        if (type == TestType.Disabled)
         {
           yield return "Disabled test in test plan.";
         }
 
-        if (block.template != null && block.type != UnitTest.TestType.GameLoaded)
+        if (block.template != null && block.type != TestType.Playing)
         {
-          yield return "MapTemplate defined with TestType that is not set to GameLoaded.";
+          yield return "MapTemplate defined with TestType that is not set to Playing.";
         }
       }
     }

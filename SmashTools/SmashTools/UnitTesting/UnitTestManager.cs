@@ -5,46 +5,58 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using DevTools;
+using JetBrains.Annotations;
 using RimWorld;
 using RimWorld.Planet;
 using SmashTools.Performance;
 using UnityEngine;
 using Verse;
 using Verse.Profile;
+using Verse.Sound;
+using Result = SmashTools.UnitTesting.UTResult.Result;
 
-namespace SmashTools.Debugging;
+namespace SmashTools.UnitTesting;
 
+/// <summary>
+/// Test Manager for running unit tests in RimWorld. Tests can be ran in isolation or be executed
+/// as part of a test suite. This manager will handle switching between scenes and consolidating
+/// test results in an explorer widget, allowing you to view each test class and its results.
+/// <para/>
+/// Due to Unity being single threaded, tests are run synchronously. This will block the
+/// main thread and cause the application to hang for the duration of test execution. Because
+/// RimWorld is so tightly coupled it's impossible to predict where it might call to Unity's API.
+/// </summary>
 public static class UnitTestManager
 {
-  private static readonly Vector2 StatusRectSize = new(240f, 75f);
-
   private static bool runningUnitTests;
-  private static readonly Dictionary<UnitTest.TestType, List<UnitTest>> unitTests = [];
-  private static readonly List<string> results = [];
+  private static readonly Dictionary<TestType, List<UnitTest>> unitTests = [];
 
+  /// <summary>
+  /// Event for UnitTest state changes.
+  /// <para/>
+  /// This event will fire when unit testing begins, and again when it finishes.
+  /// </summary>
   public static event Action<bool> OnUnitTestStateChange;
 
   static UnitTestManager()
   {
-    ConcurrentDictionary<UnitTest.TestType, ConcurrentBag<UnitTest>> tests = [];
-    foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
+    ConcurrentDictionary<TestType, ConcurrentBag<UnitTest>> tests = [];
+    foreach (TestType testType in Enum.GetValues(typeof(TestType)))
     {
-      if (!tests.TryAdd(testType, new ConcurrentBag<UnitTest>()))
-      {
-        Assert.Fail();
-      }
+      tests.TryAdd(testType, []);
     }
 
-    Parallel.ForEach(GenTypes.AllTypes, type =>
+    foreach (Type type in typeof(UnitTest).AllSubclassesNonAbstract())
     {
-      if (type.IsSubclassOf(typeof(UnitTest)) && !type.IsAbstract)
+      if (!type.IsAbstract)
       {
         UnitTest unitTest = (UnitTest)Activator.CreateInstance(type);
         tests[unitTest.ExecuteOn].Add(unitTest);
       }
-    });
-    foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
+    }
+
+    foreach (TestType testType in Enum.GetValues(typeof(TestType)))
     {
       unitTests.Add(testType,
         [.. tests[testType].OrderByDescending(test => (int)test.Priority)]);
@@ -54,13 +66,11 @@ public static class UnitTestManager
 #endif
   }
 
-  private static Dictionary<UnitTest.TestType, bool> TestTypes { get; } = [];
+  private static Dictionary<TestType, bool> TestTypes { get; } = [];
 
-  private static TestPlanDef TestPlan { get; set; }
+  private static TestSuiteDef TestPlan { get; set; }
 
   private static UnitTest IsolatedTest { get; set; }
-
-  public static List<UnitTest> AllUnitTests => unitTests.Values.SelectMany(t => t).ToList();
 
   internal static bool StopRequested { get; private set; }
 
@@ -76,33 +86,82 @@ public static class UnitTestManager
     }
   }
 
+  private static void ShowResults(List<TestBatch> results)
+  {
+    if (results.NullOrEmpty())
+    {
+      Log.Error("No test results to show.");
+      return;
+    }
+    Find.WindowStack.Add(new Dialog_TestExplorer(results));
+  }
+
+  public static void ShowMenu()
+  {
+    SoundDefOf.Click.PlayOneShotOnCamera();
+    List<Toggle> toggles = [];
+
+    foreach (UnitTest test in unitTests.Values.SelectMany(list => list)
+     .OrderBy(test => test.ExecuteOn)
+     .ThenBy(test => test.Name))
+    {
+      TestType testType = test.ExecuteOn;
+      if (testType == TestType.Disabled) continue;
+
+      Toggle toggle = new(test.Name, TestTypeLabel(testType), () => false,
+        _ => { },
+        onToggle: delegate
+        {
+          Run(test);
+          Find.WindowStack.WindowOfType<Dialog_ActionList>()?.Close();
+        });
+      toggles.Add(toggle);
+    }
+
+    foreach (TestSuiteDef testPlanDef in DefDatabase<TestSuiteDef>.AllDefsListForReading)
+    {
+      Toggle toggle = new(testPlanDef.LabelCap, "Test Plan", () => false, _ => { },
+        onToggle: delegate
+        {
+          RunPlan(testPlanDef);
+          Find.WindowStack.WindowOfType<Dialog_ActionList>()?.Close();
+        });
+      toggles.Add(toggle);
+    }
+
+    Find.WindowStack.Add(new Dialog_ActionList("Unit Tests", toggles));
+  }
+
+  [UsedImplicitly]
   public static void Run(UnitTest unitTest)
   {
-    if (unitTest.ExecuteOn == UnitTest.TestType.Disabled) return;
+    if (unitTest.ExecuteOn == TestType.Disabled)
+      return;
 
     IsolatedTest = unitTest;
     ExecuteUnitTests(unitTest.ExecuteOn);
   }
 
-  public static void RunPlan(TestPlanDef planDef)
+  [UsedImplicitly]
+  public static void RunPlan(TestSuiteDef suiteDef)
   {
-    ExecuteUnitTests(planDef);
+    ExecuteUnitTests(suiteDef);
   }
 
-  private static void EnableForTests(params UnitTest.TestType[] types)
+  private static void EnableForTests(params TestType[] types)
   {
     TestTypes.Clear();
-    foreach (UnitTest.TestType testType in Enum.GetValues(typeof(UnitTest.TestType)))
+    foreach (TestType testType in Enum.GetValues(typeof(TestType)))
     {
       TestTypes[testType] = types.Contains(testType);
     }
   }
 
   /// <remarks>Not including any test types will default to running all available tests.</remarks>
-  private static void ExecuteUnitTests(params UnitTest.TestType[] testTypes)
+  private static void ExecuteUnitTests(params TestType[] testTypes)
   {
     if (testTypes.NullOrEmpty())
-      testTypes = [UnitTest.TestType.MainMenu, UnitTest.TestType.GameLoaded];
+      testTypes = [TestType.MainMenu, TestType.Playing];
 
     EnableForTests(testTypes);
 
@@ -112,9 +171,9 @@ public static class UnitTestManager
     });
   }
 
-  private static void ExecuteUnitTests(TestPlanDef testPlanDef)
+  private static void ExecuteUnitTests(TestSuiteDef suiteDef)
   {
-    TestPlan = testPlanDef;
+    TestPlan = suiteDef;
 #if RUN_ASYNC
     LongEventHandler.QueueLongEvent(TestPlanAsync, null, true, TestExceptionHandler,
       showExtraUIInfo: false);
@@ -133,16 +192,13 @@ public static class UnitTestManager
     // Force enable MonoBehaviour so we can process MainThread invokes immediately.
     using UnityThread.SpinHandle handle = new();
 
-    results.Clear();
-    results.Add("---------- Unit Tests ----------");
-
-    UnitTest.TestType currentTestType = UnitTest.TestType.Disabled;
-
+    List<TestBatch> results = [];
+    TestType currentTestType = TestType.Disabled;
     foreach (TestBlock block in TestPlan.plan)
     {
       if (StopRequested)
         goto EndTest;
-      if (block.type == UnitTest.TestType.Disabled)
+      if (block.type == TestType.Disabled)
         continue;
 
       if (currentTestType != block.type)
@@ -151,7 +207,7 @@ public static class UnitTestManager
         currentTestType = block.type;
         switch (currentTestType)
         {
-          case UnitTest.TestType.MainMenu:
+          case TestType.MainMenu:
           {
             if (Current.ProgramState != ProgramState.Entry)
             {
@@ -166,7 +222,7 @@ public static class UnitTestManager
             }
             break;
           }
-          case UnitTest.TestType.GameLoaded:
+          case TestType.Playing:
           {
             if (!UnitTestAsyncHandler.GenerateMap(block))
               goto EndTest;
@@ -181,7 +237,7 @@ public static class UnitTestManager
             yield return new WaitForSecondsRealtime(1);
             break;
           }
-          case UnitTest.TestType.Disabled:
+          case TestType.Disabled:
           default:
             throw new NotImplementedException();
         }
@@ -193,11 +249,16 @@ public static class UnitTestManager
     if (Current.ProgramState != ProgramState.Entry)
     {
       GenScene.GoToMainMenu();
+      while (Current.ProgramState != ProgramState.Entry ||
+        LongEventHandler.AnyEventNowOrWaiting)
+      {
+        if (StopRequested)
+          goto EndTest;
+        yield return null;
+      }
     }
     LongEventHandler.ClearQueuedEvents();
-    results.Add("-------- End Unit Tests --------");
-    DumpResults(results);
-    UnityThread.ExecuteOnMainThread(Log.TryOpenLogWindow);
+    ShowResults(results);
   }
 
   private static void TestPlanAsync()
@@ -207,16 +268,13 @@ public static class UnitTestManager
     // Force enable MonoBehaviour so we can process MainThread invokes immediately.
     using UnityThread.SpinHandle handle = new();
 
-    results.Clear();
-    results.Add("---------- Unit Tests ----------");
-
-    UnitTest.TestType currentTestType = UnitTest.TestType.Disabled;
-
+    List<TestBatch> results = [];
+    TestType currentTestType = TestType.Disabled;
     foreach (TestBlock block in TestPlan.plan)
     {
       if (StopRequested)
         goto EndTest;
-      if (block.type == UnitTest.TestType.Disabled)
+      if (block.type == TestType.Disabled)
         continue;
 
       if (currentTestType != block.type)
@@ -225,7 +283,7 @@ public static class UnitTestManager
         currentTestType = block.type;
         switch (currentTestType)
         {
-          case UnitTest.TestType.MainMenu:
+          case TestType.MainMenu:
           {
             if (Current.ProgramState != ProgramState.Entry)
             {
@@ -233,13 +291,13 @@ public static class UnitTestManager
             }
             break;
           }
-          case UnitTest.TestType.GameLoaded:
+          case TestType.Playing:
           {
             if (!UnitTestAsyncHandler.GenerateMap(block))
               goto EndTest;
             break;
           }
-          case UnitTest.TestType.Disabled:
+          case TestType.Disabled:
           default:
             throw new NotImplementedException();
         }
@@ -253,23 +311,20 @@ public static class UnitTestManager
       GenScene.GoToMainMenu();
     }
     LongEventHandler.ClearQueuedEvents();
-    results.Add("-------- End Unit Tests --------");
-    DumpResults(results);
-    UnityThread.ExecuteOnMainThread(Log.TryOpenLogWindow);
+    ShowResults(results);
   }
 
   private static IEnumerator UnitTestRoutine()
   {
     Assert.IsTrue(!TestTypes.NullOrEmpty() &&
-      TestTypes.Count == Enum.GetValues(typeof(UnitTest.TestType)).Length);
+      TestTypes.Count == Enum.GetValues(typeof(TestType)).Length);
 
     bool testFromMainMenu = GenScene.InEntryScene;
 
     using UnitTestEnabler utb = new();
 
-    results.Clear();
-    results.Add($"---------- Unit Tests ----------");
-    if (TestTypes[UnitTest.TestType.MainMenu])
+    List<TestBatch> results = [];
+    if (TestTypes[TestType.MainMenu])
     {
       if (Current.ProgramState != ProgramState.Entry)
       {
@@ -283,7 +338,7 @@ public static class UnitTestManager
         yield return null;
       }
 
-      ExecuteTests(UnitTest.TestType.MainMenu, results);
+      ExecuteTests(TestType.MainMenu, results);
 
       while (LongEventHandler.AnyEventNowOrWaiting)
       {
@@ -294,7 +349,7 @@ public static class UnitTestManager
       if (StopRequested) goto EndTest;
     }
 
-    if (TestTypes[UnitTest.TestType.GameLoaded])
+    if (TestTypes[TestType.Playing])
     {
       LongEventHandler.QueueLongEvent(delegate
       {
@@ -310,7 +365,7 @@ public static class UnitTestManager
         yield return null;
       }
 
-      ExecuteTests(UnitTest.TestType.GameLoaded, results);
+      ExecuteTests(TestType.Playing, results);
     }
 
     EndTest: ;
@@ -326,10 +381,7 @@ public static class UnitTestManager
         yield return null;
       }
     }
-
-    results.Add($"-------- End Unit Tests --------");
-    DumpResults(results);
-    Log.TryOpenLogWindow();
+    ShowResults(results);
   }
 
   private static void TestExceptionHandler(Exception ex)
@@ -343,78 +395,92 @@ public static class UnitTestManager
   /// <summary>
   /// Executes test suite associated with <paramref name="type"/>
   /// </summary>
-  private static void ExecuteTests(UnitTest.TestType type, List<string> output)
+  private static void ExecuteTests(TestType type, List<TestBatch> output)
   {
     ExecuteTests(type, unitTests[type], output);
   }
 
-  private static void ExecuteTests(UnitTest.TestType type, List<UnitTest> tests,
-    List<string> output)
+  private static void ExecuteTests(TestType type, List<UnitTest> tests,
+    List<TestBatch> output)
   {
-    List<string> subResults = [];
     foreach (UnitTest unitTest in tests)
     {
-      if (StopRequested) return;
-      if (IsolatedTest != null && IsolatedTest != unitTest) continue;
+      if (StopRequested)
+        return;
+      if (IsolatedTest != null && IsolatedTest != unitTest)
+        continue;
 
-      Log.Message($"Running {unitTest.Name}...");
       Assert.IsTrue(unitTest.ExecuteOn == type,
         $"Executing unit test {unitTest.Name} on wrong TestType ({unitTest.ExecuteOn} on {type})");
 
+      TestBatch batch = new(unitTest);
+      using Assert.ThrowOnAssertEnabler te = new();
+      // Set Up
       try
       {
-        bool success = true;
-        LongEventHandler.SetCurrentEventText($"Running {unitTest.Name}");
-        foreach (UTResult summary in unitTest.Execute())
-        {
-          if (summary.Results.NullOrEmpty())
-          {
-            success = false;
-            output.Add($"<warning>{unitTest.Name} returned test with no results.</warning>");
-            continue;
-          }
-
-          foreach ((string name, UTResult.Result result) in summary.Results)
-          {
-            string message = result switch
-            {
-              UTResult.Result.Failed  => $"    {name} <error>Failed</error>",
-              UTResult.Result.Passed  => $"    {name} <success>Passed</success>",
-              UTResult.Result.Skipped => $"    {name} Skipped",
-              _                       => throw new NotImplementedException(),
-            };
-
-            // Dump all results for this unit test if any sub-test fails
-            success &= result != UTResult.Result.Failed;
-            subResults.Add(message);
-          }
-        }
-
-        if (success)
-        {
-          output.Add($"[{unitTest.Name}] <success>{subResults.Count} Succeeded</success>");
-        }
-        else
-        {
-          output.Add($"[{unitTest.Name}] <error>Failed</error>");
-          output.AddRange(subResults);
-        }
+        unitTest.SetUp();
+      }
+      catch (AssertFailException ex)
+      {
+        batch.FailWithMessage($"[SetUp] <error>Assertion failed!</error>\n{ex}");
+        continue;
       }
       catch (Exception ex)
       {
-        output.Add($"[{unitTest.Name}] <error>Exception thrown!</error>\n{ex}");
+        batch.FailWithMessage($"[SetUp] <error>Exception thrown!</error>\n{ex}");
+        continue;
       }
 
-      subResults.Clear();
+      // Execute
+      try
+      {
+        foreach (UTResult resultGroup in unitTest.Execute())
+        {
+          if (resultGroup.Tests.NullOrEmpty())
+          {
+            batch.Add(UTResult.For($"{unitTest.Name} returned test with no results.",
+              Result.Skipped));
+            continue;
+          }
+
+          batch.Add(resultGroup);
+        }
+      }
+      catch (AssertFailException ex)
+      {
+        batch.FailWithMessage($"<error>Assertion failed!</error>\n{ex}");
+      }
+      catch (Exception ex)
+      {
+        batch.FailWithMessage($"<error>Exception thrown!</error>\n{ex}");
+      }
+
+      // Clean Up
+      try
+      {
+        unitTest.CleanUp();
+      }
+      catch (AssertFailException ex)
+      {
+        batch.FailWithMessage($"<error>Assertion failed!</error>\n{ex}");
+      }
+      catch (Exception ex)
+      {
+        batch.FailWithMessage($"<error>Exception thrown!</error>\n{ex}");
+      }
+      output.Add(batch);
     }
   }
 
-  private static void DumpResults(List<string> resultsToDump)
+  private static string TestTypeLabel(TestType testType)
   {
-    foreach (string result in resultsToDump)
+    return testType switch
     {
-      SmashLog.Message(result);
-    }
+      TestType.Disabled => "Disabled",
+      TestType.MainMenu => "Main Menu",
+      TestType.Playing  => "Playing",
+      _                 => throw new NotImplementedException(),
+    };
   }
 
   /// <summary>

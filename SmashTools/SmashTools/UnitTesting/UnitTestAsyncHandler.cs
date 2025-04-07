@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using DevTools;
 using HarmonyLib;
 using RimWorld;
 using RimWorld.Planet;
@@ -10,7 +11,7 @@ using UnityEngine.SceneManagement;
 using Verse;
 using Verse.Profile;
 
-namespace SmashTools.Debugging;
+namespace SmashTools.UnitTesting;
 
 /*
  * RimWorld handles async scene loading by queueing a long event and checking the levelToLoad key

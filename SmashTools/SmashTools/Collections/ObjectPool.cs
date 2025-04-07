@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
+using DevTools;
 
 namespace SmashTools
 {
@@ -13,7 +9,7 @@ namespace SmashTools
     // Raw stack implementation for fast retrieval and insertion
     // with no auto-resizing.
     private readonly T[] pool;
-    private int head = 0;
+    private int head;
 
     /// <summary>
     /// Creates fixed size object pool

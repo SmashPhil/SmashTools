@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using HarmonyLib;
 using LudeonTK;
 using RimWorld;
-using SmashTools.Animations;
-using SmashTools.Debugging;
 using SmashTools.Performance;
+using SmashTools.UnitTesting;
 using SmashTools.Xml;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -39,6 +37,9 @@ namespace SmashTools
           nameof(XmlParseHelper.ReadCustomAttributes)));
 
       // Logging
+#if !RELEASE
+      // Just removing brackets from stacktrace for clarity. Let's not force other modders to deal
+      // with the performance hit of constant regex filtering in release builds.
       Harmony.Patch(
         original: AccessTools.Method(typeof(Log), nameof(Log.Message),
           parameters: [typeof(string)]),
@@ -50,10 +51,6 @@ namespace SmashTools
       Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Error)),
         transpiler: new HarmonyMethod(typeof(SmashLog),
           nameof(SmashLog.RemoveRichTextFromDebugLogErrorTranspiler)));
-
-#if DEBUG
-      // Just removing brackets from stacktrace window for clarity. Let's not force other modders
-      // to deal with the performance hit of constant regex filtering.
       Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
         transpiler: new HarmonyMethod(typeof(SmashLog),
           nameof(SmashLog.RemoveRichTextMessageDetailsTranspiler)));
@@ -136,7 +133,7 @@ namespace SmashTools
           nameof(HighPriorityInputs.WindowAddedToStack)));
       Harmony.Patch(
         original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.TryRemove),
-          parameters: new Type[] { typeof(Window), typeof(bool) }),
+          parameters: [typeof(Window), typeof(bool)]),
         postfix: new HarmonyMethod(typeof(HighPriorityInputs),
           nameof(HighPriorityInputs.WindowRemovedFromStack)));
       Harmony.Patch(
@@ -155,7 +152,7 @@ namespace SmashTools
       // Mod Init
       StaticConstructorOnModInit();
 
-      SceneManager.sceneLoaded += (scene, mode) => ThreadManager.ReleaseThreadsAndClearCache();
+      SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
       GameEvent.onWorldUnloading += ThreadManager.ReleaseThreadsAndClearCache;
 
 #if DEBUG
@@ -167,10 +164,9 @@ namespace SmashTools
 
     private static void RegisterParseableStructs()
     {
-      ParseHelper.Parsers<Rot8>.Register(new Func<string, Rot8>(Rot8.FromString));
-      ParseHelper.Parsers<Quadrant>.Register(new Func<string, Quadrant>(Quadrant.FromString));
-      ParseHelper.Parsers<RimWorldTime>.Register(
-        new Func<string, RimWorldTime>(RimWorldTime.FromString));
+      ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
+      ParseHelper.Parsers<Quadrant>.Register(Quadrant.FromString);
+      ParseHelper.Parsers<RimWorldTime>.Register(RimWorldTime.FromString);
     }
 
     /// <summary>
@@ -195,7 +191,7 @@ namespace SmashTools
       }
     }
 
-    private static void DrawDebugWindowButton(WidgetRow ___widgetRow, ref float ___widgetRowFinalX)
+    private static void DrawDebugWindowButton(WidgetRow ___widgetRow, out float ___widgetRowFinalX)
     {
       if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu,
         "Open Startup Actions menu.\n\n This lets you initiate certain static methods on startup for quick testing."))

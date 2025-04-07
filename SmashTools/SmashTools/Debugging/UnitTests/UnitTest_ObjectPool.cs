@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using LudeonTK;
+using DevTools;
 using SmashTools.Performance;
-using Verse;
 
-namespace SmashTools.Debugging
+namespace SmashTools.UnitTesting
 {
-  internal class UnitTestObjectPool : UnitTest
+  internal class UnitTest_ObjectPool : UnitTest
   {
     public override string Name => "ObjectPool";
 
@@ -91,10 +90,7 @@ namespace SmashTools.Debugging
       // object is fetched from pool by setting IsReset to false.
       public bool InPool
       {
-        get
-        {
-          return inPool;
-        }
+        get { return inPool; }
         set
         {
           if (inPool == value) return;
