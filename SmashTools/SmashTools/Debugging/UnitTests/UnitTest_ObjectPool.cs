@@ -1,109 +1,104 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using DevTools;
+using DevTools.UnitTesting;
 using SmashTools.Performance;
 
-namespace SmashTools.UnitTesting
+namespace SmashTools.UnitTesting;
+
+[UnitTest(TestType.MainMenu)]
+internal class UnitTest_ObjectPool
 {
-  internal class UnitTest_ObjectPool : UnitTest
+  [Test]
+  private void SynchronousObjectPool()
   {
-    public override string Name => "ObjectPool";
+    const int PreWarmCount = 5;
 
-    public override TestType ExecuteOn => TestType.MainMenu;
+    ObjectPool<TestObject> pool = new(10);
+    Assert.IsTrue(pool.Count == 0);
 
-    public override IEnumerable<UTResult> Execute()
+    // PreWarm
     {
-      const int PreWarmCount = 5;
+      using ObjectCountWatcher<TestObject> ocw = new();
 
-      UTResult result = new();
-
-      ObjectPool<TestObject> pool = new(10);
-      Assert.IsTrue(pool.Count == 0);
-
-      // PreWarm
-      {
-        using ObjectCountWatcher<TestObject> ocw = new();
-
-        pool.PreWarm(PreWarmCount);
-        result.Add("ObjectPool (PreWarm Init)", pool.Count == PreWarmCount);
-        result.Add("ObjectPool (PreWarm InPool)", pool.All(obj => obj.InPool));
-        result.Add("ObjectPool (PreWarm Reset)", pool.All(obj => obj.IsReset));
-        result.Add("ObjectPool (New Objects)", ocw.Count == PreWarmCount);
-      }
-
-      // Create new object before we start watching object count, in practice
-      // this object would've already been in use before being returned to pool.
-      TestObject testObject = new();
-
-      // Return
-      {
-        using ObjectCountWatcher<TestObject> ocw = new();
-
-        pool.Return(testObject);
-        result.Add("ObjectPool (Return InPool)", testObject.InPool);
-        result.Add("ObjectPool (Return Reset)", testObject.IsReset);
-        result.Add("ObjectPool (Return Head++)", pool.Count == (PreWarmCount + 1));
-        result.Add("ObjectPool (Return New Objects)", ocw.Count == 0);
-      }
-
-      // Get
-      {
-        using ObjectCountWatcher<TestObject> ocw = new();
-
-        TestObject fetchedObject = pool.Get();
-        Assert.IsFalse(testObject.IsReset);
-        result.Add("ObjectPool (Get Head)", testObject == fetchedObject);
-        result.Add("ObjectPool (Get InPool)", !testObject.InPool);
-        result.Add("ObjectPool (Get Head--)", pool.Count == PreWarmCount);
-        result.Add("ObjectPool (Get New Objects)", ocw.Count == 0);
-      }
-
-      // Dump
-      {
-        using ObjectCountWatcher<TestObject> ocw = new();
-        pool.Dump();
-        result.Add("ObjectPool (Dump Head)", pool.Count == 0);
-        result.Add("ObjectPool (Dump New Objects)", ocw.Count == 0);
-      }
-
-      // Get (Create New)
-      {
-        using ObjectCountWatcher<TestObject> ocw = new();
-        _ = pool.Get();
-        result.Add("ObjectPool (Get New Objects)", ocw.Count == 1);
-      }
-      yield return result;
+      pool.PreWarm(PreWarmCount);
+      Expect.IsTrue("PreWarm Init", pool.Count == PreWarmCount);
+      Expect.IsTrue("PreWarm InPool)", pool.All(obj => obj.InPool));
+      Expect.IsTrue("PreWarm Reset", pool.All(obj => obj.IsReset));
+      Expect.IsTrue("New Objects", ocw.Count == PreWarmCount);
     }
 
-    private class TestObject : IPoolable
+    // Create new object before we start watching object count, in practice
+    // this object would've already been in use before being returned to pool.
+    TestObject testObject = new();
+
+    // Return
     {
-      private bool inPool;
+      using ObjectCountWatcher<TestObject> ocw = new();
 
-      public TestObject()
+      pool.Return(testObject);
+      Expect.IsTrue("Return InPool", testObject.InPool);
+      Expect.IsTrue("Return Reset", testObject.IsReset);
+      Expect.IsTrue("Return Head++", pool.Count == (PreWarmCount + 1));
+      Expect.IsTrue("Return New Objects", ocw.Count == 0);
+    }
+
+    // Get
+    {
+      using ObjectCountWatcher<TestObject> ocw = new();
+
+      TestObject fetchedObject = pool.Get();
+      Assert.IsFalse(testObject.IsReset);
+      Expect.IsTrue("Get Head", testObject == fetchedObject);
+      Expect.IsFalse("Get InPool", testObject.InPool);
+      Expect.IsTrue("Get Head--", pool.Count == PreWarmCount);
+      Expect.IsTrue("Get New Objects", ocw.Count == 0);
+    }
+
+    // Dump
+    {
+      using ObjectCountWatcher<TestObject> ocw = new();
+      pool.Dump();
+      Expect.IsTrue("Dump Head", pool.Count == 0);
+      Expect.IsTrue("Dump New Objects", ocw.Count == 0);
+    }
+
+    // Get (Create New)
+    {
+      using ObjectCountWatcher<TestObject> ocw = new();
+      _ = pool.Get();
+      Expect.IsTrue("Get New Objects", ocw.Count == 1);
+    }
+  }
+
+  private class TestObject : IPoolable
+  {
+    private bool inPool;
+
+    public TestObject()
+    {
+      ObjectCounter.Increment<TestObject>();
+    }
+
+    public bool IsReset { get; private set; }
+
+    // Need backing field so we can simulate changing values when
+    // object is fetched from pool by setting IsReset to false.
+    public bool InPool
+    {
+      get { return inPool; }
+      set
       {
-        ObjectCounter.Increment<TestObject>();
+        if (inPool == value) return;
+
+        inPool = value;
+        if (!inPool) IsReset = false;
       }
+    }
 
-      public bool IsReset { get; private set; }
-
-      // Need backing field so we can simulate changing values when
-      // object is fetched from pool by setting IsReset to false.
-      public bool InPool
-      {
-        get { return inPool; }
-        set
-        {
-          if (inPool == value) return;
-
-          inPool = value;
-          if (!inPool) IsReset = false;
-        }
-      }
-
-      void IPoolable.Reset()
-      {
-        IsReset = true;
-      }
+    void IPoolable.Reset()
+    {
+      IsReset = true;
     }
   }
 }

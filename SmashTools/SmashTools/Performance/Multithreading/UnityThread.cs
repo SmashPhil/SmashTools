@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using DevTools;
-using SmashTools.UnitTesting;
 using UnityEngine;
 using Verse;
 
@@ -31,7 +30,7 @@ public class UnityThread : MonoBehaviour
     {
       action.Invoke();
     }
-    else if (!UnitTestManager.RunningUnitTests && !keepEnabled)
+    else if (!keepEnabled)
     {
       // If there's nothing in the queue, we don't need to keep polling. Enqueueing will re-enable
       // the game object to resume execution.

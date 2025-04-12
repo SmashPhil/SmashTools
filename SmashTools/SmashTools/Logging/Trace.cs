@@ -1,9 +1,13 @@
 ﻿using System.Diagnostics;
 using DevTools;
+using UnityEngine;
+using Verse;
 
 namespace SmashTools
 {
-  // Reimplementation of System.Diagnostics.Trace with IMGUI popup and RimWorld logger
+  /// <summary>
+  /// Reimplementation of System.Diagnostics.Trace with IMGUI popup and RimWorld logger
+  /// </summary>
   public static class Trace
   {
     [Conditional("TRACE")]

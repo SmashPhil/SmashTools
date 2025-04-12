@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using DevTools.UnitTesting;
 using SmashTools.UnitTesting;
 using Verse;
 
@@ -169,7 +170,12 @@ namespace SmashTools
 
     private static void ExecuteTesting(GameState gameState)
     {
-      if (Enabled && !UnitTestManager.RunningUnitTests)
+#if DEV_TOOLS
+      if (UnitTestManager.RunningUnitTests)
+        return;
+#endif
+
+      if (Enabled)
       {
         foreach (Action action in postLoadActions[gameState])
         {

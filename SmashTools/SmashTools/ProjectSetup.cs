@@ -107,14 +107,10 @@ namespace SmashTools
         prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
           nameof(PawnOverlayRenderer.LayingFacing)));
 
-      // Unit Tests
 #if DEBUG
       Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
         postfix: new HarmonyMethod(typeof(ProjectSetup),
           nameof(DrawDebugWindowButton)));
-      Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
-        prefix: new HarmonyMethod(typeof(UnitTestManager),
-          nameof(UnitTestManager.InitNewGame)));
 
       // Input handling (DEBUG)
       Harmony.Patch(
