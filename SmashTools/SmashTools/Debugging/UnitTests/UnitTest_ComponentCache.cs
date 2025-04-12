@@ -1,24 +1,20 @@
 ﻿using System.Collections.Generic;
 using DevTools;
+using DevTools.UnitTesting;
 using Verse;
 
 namespace SmashTools.UnitTesting;
 
-internal class UnitTest_ComponentCache : UnitTest
+[UnitTest(TestType.MainMenu)]
+internal class UnitTest_ComponentCache
 {
-  public override string Name => "ComponentCache";
-
-  public override TestType ExecuteOn => TestType.MainMenu;
-
-  public override IEnumerable<UTResult> Execute()
+  [Test]
+  private void Clear()
   {
-    UTResult result = new();
     Assert.IsTrue(Current.ProgramState == ProgramState.Entry);
 
-    result.Add("ComponentCache (GameComps)", ComponentCache.gameComps.Count == 0);
-    result.Add("ComponentCache (WorldComps)", ComponentCache.worldComps.Count == 0);
-    result.Add("ComponentCache (MapComps)", MapComponentCache.CountAll() == 0);
-
-    yield return result;
+    Expect.IsTrue("GameComps", ComponentCache.gameComps.Count == 0);
+    Expect.IsTrue("WorldComps", ComponentCache.worldComps.Count == 0);
+    Expect.IsTrue("MapComps", MapComponentCache.CountAll() == 0);
   }
 }

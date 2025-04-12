@@ -5,7 +5,7 @@ using Verse;
 
 namespace SmashTools.UnitTesting;
 
-[UnitTest(DevTools.UnitTesting.TestType.MainMenu)]
+[UnitTest(TestType.MainMenu)]
 internal class UnitTest_CellRectUtils
 {
   [Test]
