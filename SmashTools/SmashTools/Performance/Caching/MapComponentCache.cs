@@ -41,7 +41,7 @@ namespace SmashTools
       }
     }
 
-    internal static int CountAll()
+    public static int CountAll()
     {
       int count = 0;
       foreach (Type type in priorityComponentTypes)

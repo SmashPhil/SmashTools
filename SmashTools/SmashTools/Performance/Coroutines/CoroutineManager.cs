@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Threading;
 using JetBrains.Annotations;
 using UnityEngine;
 using Verse;
@@ -13,7 +12,7 @@ namespace SmashTools;
 /// </summary>
 /// <remarks>Can split up loops of logic across multiple frames or queue up actions from other threads to be executed on the MainThread</remarks>
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-[StaticConstructorOnModInit]
+[StaticConstructorOnStartup]
 public class CoroutineManager : MonoBehaviour
 {
   // Execution time to maintain max 1 fps impact converted from ms to seconds

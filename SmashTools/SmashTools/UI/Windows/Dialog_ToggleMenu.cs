@@ -42,9 +42,7 @@ namespace SmashTools
 
       if (toggle.Disabled)
         GUIState.Disable();
-
       lister.CheckboxLabeled(toggle.DisplayName, ref checkOn);
-
       GUIState.Enable();
 
       toggle.Active = checkOn;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
-using DevTools;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace SmashTools
 {
@@ -30,8 +30,8 @@ namespace SmashTools
         throw new InvalidOperationException();
 
       int splits = widthPercents.Length;
-      Assert.IsTrue(splits == widthPercents.Length, "Number of splits doesn't match widths array.");
-      Assert.IsTrue(Mathf.Approximately(widthPercents.Sum(), 1),
+      Assert.AreEqual(splits, widthPercents.Length, "Number of splits doesn't match widths array.");
+      Assert.AreApproximatelyEqual(widthPercents.Sum(), 1,
         "Total width percentage doesn't equal 100%");
 
       float totalBuffer = (splits - 1) * buffer;

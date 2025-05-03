@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using DevTools;
 using SmashTools.Xml;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Verse;
 
 namespace SmashTools.Animations
@@ -134,7 +134,7 @@ namespace SmashTools.Animations
         {
           break;
         }
-        Assert.IsTrue(!points.OutOfBounds(i + 1));
+        Assert.IsFalse(points.OutOfBounds(i + 1));
         prev = points[i];
         next = points[i + 1];
       }

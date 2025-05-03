@@ -1,19 +1,25 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using DevTools;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Verse;
 
 namespace SmashTools.Performance;
 
-[StaticConstructorOnModInit]
+[StaticConstructorOnStartup]
 public class UnityThread : MonoBehaviour
 {
-  private readonly ConcurrentQueue<ConcurrentAction> queue = [];
+  private static SynchronizationContext mainContext;
 
-  private bool keepEnabled;
+  private readonly List<OnUpdate> onUpdateMethods = [];
+
+  /// <returns>
+  /// <see langword="true"/> if <see cref="OnUpdate"/> should remain in queue for the next frame.
+  /// <see langword="false"/> if it should be dequeued immediately.
+  /// </returns>
+  public delegate bool OnUpdate();
 
   static UnityThread()
   {
@@ -24,94 +30,87 @@ public class UnityThread : MonoBehaviour
 
   [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members",
     Justification = "Unity API")]
+  private void Awake()
+  {
+    mainContext = SynchronizationContext.Current;
+  }
+
+  [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members",
+    Justification = "Unity API")]
   private void Update()
   {
-    if (queue.TryDequeue(out ConcurrentAction action))
+    for (int i = onUpdateMethods.Count - 1; i >= 0; i--)
     {
-      action.Invoke();
-    }
-    else if (!keepEnabled)
-    {
-      // If there's nothing in the queue, we don't need to keep polling. Enqueueing will re-enable
-      // the game object to resume execution.
-      gameObject.SetActive(false);
+      if (!onUpdateMethods[i]())
+        onUpdateMethods.RemoveAt(i);
     }
   }
 
-  private void TryResumeExecution()
+  public static void StartUpdate(OnUpdate onUpdate)
   {
-    if (!queue.IsEmpty)
-      gameObject.SetActive(true);
+    if (!UnityData.IsInMainThread)
+    {
+      Trace.Fail(
+        "Trying to add update method to queue from another thread. This can only be done from the main thread.");
+      return;
+    }
+    Instance.onUpdateMethods.Add(onUpdate);
   }
 
-  internal static void SpinUp()
-  {
-    Instance.keepEnabled = true;
-    Instance.TryResumeExecution();
-  }
-
-  internal static void Release()
-  {
-    Instance.keepEnabled = false;
-  }
-
-  public static ConcurrentAction ExecuteOnMainThread(params Action[] invokeList)
+  public static void ExecuteOnMainThread(params Action[] invokeList)
   {
     if (invokeList.NullOrEmpty())
       throw new ArgumentNullException(nameof(invokeList));
 
-    ConcurrentAction action = new(invokeList);
-    Instance.queue.Enqueue(action);
-    Instance.TryResumeExecution();
-    return action;
+    if (UnityData.IsInMainThread)
+    {
+      foreach (Action action in invokeList)
+        action();
+      return;
+    }
+    ConcurrentAction concurrentAction = new(invokeList);
+    mainContext.Post(concurrentAction.InvokeAndDispose, null);
   }
 
   /// <param name="waitTimeout">Milliseconds to wait before timout out wait handle.</param>
   /// <param name="invokeList">Actions to execute on the main thread.</param>
   public static void ExecuteOnMainThreadAndWait(int waitTimeout = 5000, params Action[] invokeList)
   {
-    ConcurrentAction action = ExecuteOnMainThread(invokeList);
-    bool waited = action.Wait(waitTimeout);
+    if (invokeList.NullOrEmpty())
+      throw new ArgumentNullException(nameof(invokeList));
+
+    if (UnityData.IsInMainThread)
+    {
+      foreach (Action action in invokeList)
+        action();
+      return;
+    }
+    using ConcurrentAction concurrentAction = new(invokeList);
+    bool waited = concurrentAction.Wait(waitTimeout);
     Assert.IsTrue(waited, "WaitHandle timed out.");
   }
 
   private static UnityThread InjectToScene()
   {
-    GameObject gameObject = new GameObject("UnityThread");
+    GameObject gameObject = new("UnityThread");
     UnityThread manager = gameObject.AddComponent<UnityThread>();
     DontDestroyOnLoad(gameObject);
     return manager;
   }
 
-  public readonly struct SpinHandle : IDisposable
-  {
-    private static int requesters;
-
-    public SpinHandle()
-    {
-      Interlocked.Increment(ref requesters);
-      Instance.keepEnabled = true;
-    }
-
-    void IDisposable.Dispose()
-    {
-      Interlocked.Decrement(ref requesters);
-      if (requesters == 0)
-        Instance.keepEnabled = false;
-    }
-  }
-
-  public class ConcurrentAction : IDisposable
+  private class ConcurrentAction : IDisposable
   {
     private readonly Action[] actions;
     private readonly ManualResetEventSlim waitHandle = new();
+
+    private bool waitedOn;
 
     public ConcurrentAction(Action[] actions)
     {
       this.actions = actions;
     }
 
-    public void Invoke()
+    public void Invoke(object state)
     {
       Assert.IsTrue(UnityData.IsInMainThread);
       foreach (Action action in actions)
@@ -121,13 +120,32 @@ public class UnityThread : MonoBehaviour
       waitHandle.Set();
     }
 
+    /// <summary>
+    /// Only used for 'fire and forget' method invokes, there should be no
+    /// threads or processes waiting on this waitHandle
+    /// </summary>
+    /// <param name="state"></param>
+    public void InvokeAndDispose(object state)
+    {
+      Assert.IsFalse(waitedOn);
+      Assert.IsTrue(UnityData.IsInMainThread);
+      foreach (Action action in actions)
+      {
+        action();
+      }
+      waitHandle.Dispose();
+    }
+
     public bool Wait(int waitTimeout)
     {
       Assert.IsFalse(UnityData.IsInMainThread);
-      return waitHandle.Wait(waitTimeout);
+      waitedOn = true;
+      bool waited = waitHandle.Wait(waitTimeout);
+      Dispose();
+      return waited;
     }
 
-    void IDisposable.Dispose()
+    public void Dispose()
     {
       waitHandle.Dispose();
     }

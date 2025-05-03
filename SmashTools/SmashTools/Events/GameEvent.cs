@@ -1,50 +1,55 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SmashTools;
 
 public static class GameEvent
 {
   // New game is being initialized.
-  public static event Action onNewGame;
+  public static event Action OnNewGame;
 
   // Existing save file is being loaded.
-  public static event Action onLoadGame;
+  public static event Action OnLoadGame;
 
   // MainMenu scene has been loaded.
-  public static event Action onMainMenu;
+  public static event Action OnMainMenu;
 
   // World and all maps are about to be unloaded.
-  public static event Action onWorldUnloading;
+  public static event Action OnWorldUnloading;
 
   // World and all maps have finished being removed.
-  public static event Action onWorldRemoved;
+  public static event Action OnWorldRemoved;
 
-  internal static void OnNewGame()
+  // DefDatabase implied defs are currently in the pre-resolve stage.
+  // Now is the time to add any implied defs from mods.
+  public static event Action<bool> OnGenerateImpliedDefs;
+
+  internal static void RaiseOnNewGame()
   {
-    onNewGame?.Invoke();
+    OnNewGame?.Invoke();
   }
 
-  internal static void OnLoadGame()
+  internal static void RaiseOnLoadGame()
   {
-    onLoadGame?.Invoke();
+    OnLoadGame?.Invoke();
   }
 
-  internal static void OnMainMenu()
+  internal static void RaiseOnMainMenu()
   {
-    onMainMenu?.Invoke();
+    OnMainMenu?.Invoke();
   }
 
-  internal static void OnWorldUnloading()
+  internal static void RaiseOnWorldUnloading()
   {
-    onWorldUnloading?.Invoke();
+    OnWorldUnloading?.Invoke();
   }
 
-  internal static void OnWorldRemoved()
+  internal static void RaiseOnWorldRemoved()
   {
-    onWorldRemoved?.Invoke();
+    OnWorldRemoved?.Invoke();
+  }
+
+  internal static void RaiseOnGenerateImpliedDefs(bool hotReload)
+  {
+    OnGenerateImpliedDefs?.Invoke(hotReload);
   }
 }

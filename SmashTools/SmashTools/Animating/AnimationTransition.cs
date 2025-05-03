@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using DevTools;
 using SmashTools.Xml;
+using UnityEngine.Assertions;
 using Verse;
 
 namespace SmashTools.Animations
@@ -58,12 +58,7 @@ namespace SmashTools.Animations
       {
         AnimationParameterDef paramDef =
           DefDatabase<AnimationParameterDef>.AllDefsListForReading.FirstOrDefault();
-        if (paramDef == null)
-        {
-          Assert.Fail();
-          Log.Error($"No controller parameters or parameter defs to assign.");
-          return;
-        }
+        Assert.IsNotNull(paramDef);
         condition.Parameter = new AnimationParameter(paramDef);
       }
       conditions.Add(condition);

@@ -2,8 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
-using DevTools;
-using JetBrains.Annotations;
 using Verse;
 
 namespace SmashTools.Performance;
@@ -36,11 +34,11 @@ public class DedicatedThread
     thread.Start();
   }
 
-  internal int QueueCount => queue.Count;
+  public int QueueCount => queue.Count;
 
   public bool Terminated => waitHandle.SafeWaitHandle.IsClosed;
 
-  internal bool IsBlocked => !waitHandle.WaitOne(0);
+  public bool IsBlocked => !waitHandle.WaitOne(0);
 
   /// <summary>
   /// Halt new actions from being enqueued and block thread execution.
@@ -85,15 +83,13 @@ public class DedicatedThread
   /// Enqueue item to action queue without unblocking thread worker.
   /// </summary>
   /// <remarks>Should not be used outside of debugging contexts.</remarks>
-  internal void EnqueueSilently(AsyncAction action)
+  public void EnqueueSilently(AsyncAction action)
   {
     queue.Enqueue(action);
   }
 
   private void UnpauseConsumer()
   {
-    if (queue.Count == 0) return;
-
     if (!waitHandle.Set())
       Trace.Fail("Unable to resume thread with item added to queue.");
   }
@@ -101,7 +97,6 @@ public class DedicatedThread
   /// <summary>
   /// Thread will finish executing the rest of the queue and then terminate
   /// </summary>
-  [UsedImplicitly]
   public void Stop()
   {
     shouldExit = true;
@@ -123,40 +118,45 @@ public class DedicatedThread
 
   private void Execute()
   {
-    while (!shouldExit)
+    try
     {
-      bool signalReceived = waitHandle.WaitOne();
-      waitHandle.Reset();
-
-      // Should always be resuming from a blocked state at this point in time. The idea is to
-      // achieve BlockingCollection-like behavior that waits for an item to enqueue before
-      // resuming execution, rather than polling constantly like an idiot.
-      Assert.IsTrue(signalReceived);
-
-      while (queue.Count > 0 && !cts.IsCancellationRequested && !IsSuspended)
+      while (!shouldExit)
       {
-        if (!queue.TryDequeue(out AsyncAction asyncAction) || !asyncAction.IsValid)
-          continue;
+        waitHandle.WaitOne();
+        waitHandle.Reset();
 
-        try
+        while (queue.Count > 0 && !cts.IsCancellationRequested && !IsSuspended)
         {
-          asyncAction.Invoke();
-        }
-        catch (Exception ex)
-        {
-          Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread " +
-            $"#{id:D3}.\nException={ex}");
-          asyncAction.ExceptionThrown(ex);
-        }
-        finally
-        {
-          asyncAction.ReturnToPool();
+          if (!queue.TryDequeue(out AsyncAction asyncAction))
+            continue;
+
+          try
+          {
+            if (asyncAction.IsValid)
+              asyncAction.Invoke();
+          }
+          catch (Exception ex)
+          {
+            Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread " +
+              $"#{id:D3}.\nException={ex}");
+            asyncAction.ExceptionThrown(ex);
+          }
+          finally
+          {
+            asyncAction.ReturnToPool();
+          }
         }
       }
     }
-
-    // Release all resources currently waiting on this event handle
-    waitHandle.Close();
+    catch (Exception ex)
+    {
+      Log.Error($"Exception thrown from thread={thread.ManagedThreadId}.\n{ex}");
+    }
+    finally
+    {
+      // Release all resources currently waiting on this event handle
+      waitHandle.Close();
+    }
   }
 
   public enum ThreadType

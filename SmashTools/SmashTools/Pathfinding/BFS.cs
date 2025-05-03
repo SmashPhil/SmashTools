@@ -16,7 +16,7 @@ namespace SmashTools.Pathfinding
 
     public bool IsRunning { get; private set; }
 
-    public bool LogRetraceAttempts { get; set; } = false;
+    public bool LogRetraceAttempts { get; set; }
 
     /// <summary>
     /// Halt and clear the BFS traverser
