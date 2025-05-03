@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using DevTools;
 using HarmonyLib;
 using SmashTools.Xml;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Verse;
 
 namespace SmashTools.Animations
@@ -89,9 +89,9 @@ namespace SmashTools.Animations
 
     public bool IsValid => curve != null;
 
-    internal GetValue GetProperty => getValue;
+    public GetValue GetProperty => getValue;
 
-    internal SetValue SetProperty => setValue;
+    public SetValue SetProperty => setValue;
 
     public FieldInfo FieldInfo { get; private set; }
 

@@ -1,52 +1,50 @@
 ﻿using System.Diagnostics;
-using DevTools;
 using UnityEngine;
 using Verse;
 
-namespace SmashTools
+namespace SmashTools;
+
+/// <summary>
+/// Log wrapper class for extracting strack trace info before sending to log
+/// </summary>
+public static class Trace
 {
-  /// <summary>
-  /// Reimplementation of System.Diagnostics.Trace with IMGUI popup and RimWorld logger
-  /// </summary>
-  public static class Trace
+  [Conditional("TRACE")]
+  public static void IsTrue(bool condition, string message = null)
   {
-    [Conditional("TRACE")]
-    public static void IsTrue(bool condition, string message = null)
-    {
-      if (condition) return;
-      Fail(message);
-    }
+    if (condition)
+      return;
+    Fail(message);
+  }
 
-    [Conditional("TRACE")]
-    public static void IsFalse(bool condition, string message = null)
-    {
-      if (!condition) return;
-      Fail(message);
-    }
+  [Conditional("TRACE")]
+  public static void IsFalse(bool condition, string message = null)
+  {
+    if (!condition)
+      return;
+    Fail(message);
+  }
 
-    [Conditional("TRACE")]
-    public static void IsNull<T>(T obj, string message = null) where T : class
-    {
-      if (obj == null) return;
-      Fail(message);
-    }
+  [Conditional("TRACE")]
+  public static void IsNull<T>(T obj, string message = null) where T : class
+  {
+    if (obj == null)
+      return;
+    Fail(message);
+  }
 
-    [Conditional("TRACE")]
-    public static void IsNotNull<T>(T obj, string message = null) where T : class
-    {
-      if (obj != null) return;
-      Fail(message);
-    }
+  [Conditional("TRACE")]
+  public static void IsNotNull<T>(T obj, string message = null) where T : class
+  {
+    if (obj != null)
+      return;
+    Fail(message);
+  }
 
-    [Conditional("TRACE")]
-    public static void Fail(string message = null)
-    {
-#if DEBUG
-      Assert.Fail(message);
-#else
-      Log.Error(
-        $"{message ?? "Assertion Failed"}\nStackTrace:\n{StackTraceUtility.ExtractStackTrace()}");
-#endif
-    }
+  [Conditional("TRACE")]
+  public static void Fail(string message = null)
+  {
+    Log.Error(
+      $"{message ?? "Assertion Failed"}\nStackTrace:\n{StackTraceUtility.ExtractStackTrace()}");
   }
 }

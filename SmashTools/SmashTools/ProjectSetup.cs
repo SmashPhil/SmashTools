@@ -3,8 +3,8 @@ using System.Runtime.CompilerServices;
 using HarmonyLib;
 using LudeonTK;
 using RimWorld;
+using SmashTools.Debugging;
 using SmashTools.Performance;
-using SmashTools.UnitTesting;
 using SmashTools.Xml;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -35,6 +35,11 @@ namespace SmashTools
       Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlToObject), "GetFieldInfoForType"),
         postfix: new HarmonyMethod(typeof(XmlParseHelper),
           nameof(XmlParseHelper.ReadCustomAttributes)));
+      Harmony.Patch(
+        original: AccessTools.Method(typeof(DefGenerator),
+          nameof(DefGenerator.GenerateImpliedDefs_PreResolve)),
+        prefix: new HarmonyMethod(typeof(GameEvent),
+          nameof(GameEvent.RaiseOnGenerateImpliedDefs)));
 
       // Logging
 #if !RELEASE
@@ -81,22 +86,22 @@ namespace SmashTools
         original: AccessTools.Method(typeof(MemoryUtility),
           nameof(MemoryUtility.ClearAllMapsAndWorld)),
         prefix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.OnWorldUnloading)),
+          nameof(GameEvent.RaiseOnWorldUnloading)),
         postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.OnWorldRemoved)));
+          nameof(GameEvent.RaiseOnWorldRemoved)));
       Harmony.Patch(
         original: AccessTools.Method(typeof(GameComponentUtility),
           nameof(GameComponentUtility.StartedNewGame)),
         postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.OnNewGame)));
+          nameof(GameEvent.RaiseOnNewGame)));
       Harmony.Patch(
         original: AccessTools.Method(typeof(GameComponentUtility),
           nameof(GameComponentUtility.LoadedGame)),
         postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.OnLoadGame)));
+          nameof(GameEvent.RaiseOnLoadGame)));
       Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
         postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.OnMainMenu)));
+          nameof(GameEvent.RaiseOnMainMenu)));
 
       // IThingHolderPawnOverlayer
       Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
@@ -149,12 +154,12 @@ namespace SmashTools
       StaticConstructorOnModInit();
 
       SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
-      GameEvent.onWorldUnloading += ThreadManager.ReleaseThreadsAndClearCache;
+      GameEvent.OnWorldUnloading += ThreadManager.ReleaseThreadsAndClearCache;
 
 #if DEBUG
-      GameEvent.onNewGame += StartupTest.ExecuteNewGameTesting;
-      GameEvent.onLoadGame += StartupTest.ExecutePostLoadTesting;
-      GameEvent.onMainMenu += StartupTest.ExecuteOnStartupTesting;
+      GameEvent.OnNewGame += StartupTest.ExecuteNewGameTesting;
+      GameEvent.OnLoadGame += StartupTest.ExecutePostLoadTesting;
+      GameEvent.OnMainMenu += StartupTest.ExecuteOnStartupTesting;
 #endif
     }
 

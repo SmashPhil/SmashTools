@@ -1,126 +1,112 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Verse;
 
-namespace SmashTools.Pathfinding
+namespace SmashTools.Pathfinding;
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public class Dijkstra<T>
 {
-	public class Dijkstra<T>
-	{
-		private readonly PriorityQueue<T, int> openQueue = new PriorityQueue<T, int>();
-		private readonly Dictionary<T, Node> nodes = new Dictionary<T, Node>();
+  private readonly PriorityQueue<T, int> openQueue = new();
+  private readonly Dictionary<T, Node> nodes = [];
 
-		private readonly Func<T, bool> canEnter;
-		private readonly Func<T, IEnumerable<T>> neighbors;
-		private readonly Func<T, T, int> cost;
+  private readonly Func<T, bool> canEnter;
+  private readonly Func<T, IEnumerable<T>> neighbors;
+  private readonly Func<T, T, int> cost;
 
-		public Dijkstra(IPathfinder<T> pathfinder)
-		{
-			cost = pathfinder.Cost;
-			canEnter = pathfinder.CanEnter;
-			neighbors = pathfinder.Neighbors;
-		}
+  public Dijkstra(IPathfinder<T> pathfinder)
+  {
+    cost = pathfinder.Cost;
+    canEnter = pathfinder.CanEnter;
+    neighbors = pathfinder.Neighbors;
+  }
 
-		public Dijkstra(Func<T, T, int> cost, Func<T, List<T>> neighbors, Func<T, bool> canEnter = null)
-		{
-			this.cost = cost;
-			this.neighbors = neighbors;
-			this.canEnter = canEnter;
-		}
+  public Dijkstra(Func<T, T, int> cost, Func<T, List<T>> neighbors, Func<T, bool> canEnter = null)
+  {
+    this.cost = cost;
+    this.neighbors = neighbors;
+    this.canEnter = canEnter;
+  }
 
-		public bool IsRunning { get; private set; }
+  public bool IsRunning { get; private set; }
 
-		public bool LogRetraceAttempts { get; set; } = false;
+  public void Run(T start, T destination, List<T> path)
+  {
+    IsRunning = true;
+    try
+    {
+      openQueue.Clear();
+      openQueue.Enqueue(start, 0);
+      while (openQueue.Count > 0)
+      {
+        if (!openQueue.TryDequeue(out T current, out _))
+          break;
 
-		public List<T> Run(T start, T destination)
-		{
-			IsRunning = true;
-			try
-			{
-				openQueue.Clear();
-				openQueue.Enqueue(start, 0);
+        if (current.Equals(destination))
+        {
+          SolvePath(start, destination, path);
+          return;
+        }
 
-				while (openQueue.Count > 0)
-				{
-					if (!openQueue.TryDequeue(out T current, out int priority))
-					{
-						goto PathNotFound;
-					}
-					if (current.Equals(destination))
-					{
-						return SolvePath(start, destination); //SOLVE PATH
-					}
-					foreach (T neighbor in neighbors(current))
-					{
-						if (canEnter != null && !canEnter(neighbor))
-						{
-							continue;
-						}
-						if (!CreateNode(current, neighbor, out Node node))
-						{
-							continue;
-						}
-						nodes[neighbor] = node;
-						openQueue.Enqueue(neighbor, node.cost + node.heuristicCost); //0 cost heuristic for Dijkstra
-					}
-				}
-			PathNotFound:;
-				Log.Error($"Unable to find path from {start} to {destination}.");
-				return null;
-			}
-			finally
-			{
-				IsRunning = false;
-			}
-		}
+        foreach (T neighbor in neighbors(current))
+        {
+          if (canEnter != null && !canEnter(neighbor))
+            continue;
 
-		protected virtual bool CreateNode(T current, T neighbor, out Node node)
-		{
-			if (nodes.TryGetValue(neighbor, out node) && node.closed)
-			{
-				if (LogRetraceAttempts) SmashLog.Error($"Attempting to open closed node {neighbor}. Skipping to avoid infinite loop.");
-				return false;
-			}
-			node = new Node()
-			{
-				parent = current,
-				cost = cost(current, neighbor),
-				heuristicCost = 0,
-				closed = true
-			};
-			return true;
-		}
+          if (!CreateNode(current, neighbor, out Node node))
+            continue;
 
-		protected List<T> SolvePath(T start, T destination)
-		{
-			List<T> result = new List<T>();
+          nodes[neighbor] = node;
+          // 0 cost heuristic for Dijkstra, but AStar<> uses this under the hood
+          openQueue.Enqueue(neighbor, node.cost + node.heuristicCost);
+        }
+      }
+      Log.Error($"Unable to find path from {start} to {destination}.");
+    }
+    finally
+    {
+      IsRunning = false;
+    }
+  }
 
-			T current = destination;
-			Node node = nodes[current];
-			while (!start.Equals(current))
-			{
-				result.Add(current);
-				current = node.parent;
-				node = nodes[current];
-			}
-			result.Add(start);
-			result.Reverse();
+  protected virtual bool CreateNode(T current, T neighbor, out Node node)
+  {
+    if (nodes.TryGetValue(neighbor, out node) && node.closed)
+      return false;
+    node = new Node
+    {
+      parent = current,
+      cost = cost(current, neighbor),
+      heuristicCost = 0,
+      closed = true
+    };
+    return true;
+  }
 
-			if (!result[0].Equals(start))
-			{
-				SmashLog.Error($"BFS was unable to solve path from {start} to {destination}.");
-			}
-			return result;
-		}
+  protected void SolvePath(T start, T destination, List<T> path)
+  {
+    T current = destination;
+    Node node = nodes[current];
+    while (!start.Equals(current))
+    {
+      path.Add(current);
+      current = node.parent;
+      node = nodes[current];
+    }
+    path.Add(start);
 
-		protected struct Node
-		{
-			public T parent;
-			public int cost;
-			public int heuristicCost; //strictly for A* implementation, is not considered by Dijkstra
-			public bool closed;
-		}
-	}
+    if (!path[path.Count - 1].Equals(start))
+      SmashLog.Error($"BFS was unable to solve path from {start} to {destination}.");
+  }
+
+  protected struct Node
+  {
+    public T parent;
+    public int cost;
+    public bool closed;
+
+    // strictly for A* implementation, is not considered by Dijkstra
+    public int heuristicCost;
+  }
 }

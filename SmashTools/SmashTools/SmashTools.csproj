@@ -19,8 +19,8 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\..\..\1.5\Assemblies\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;DEV_TOOLS</DefineConstants>
+    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>CS0649</NoWarn>
@@ -29,7 +29,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\..\1.5\Assemblies\</OutputPath>
+    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
     <DefineConstants>TRACE;RELEASE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -37,9 +37,9 @@
     <NoWarn>CS0649</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Unstable|AnyCPU' ">
-    <OutputPath>..\..\..\1.5\Assemblies\</OutputPath>
+    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
     <Optimize>true</Optimize>
-    <DefineConstants>TRACE;UNSTABLE;DEV_TOOLS;</DefineConstants>
+    <DefineConstants>TRACE;UNSTABLE;</DefineConstants>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <LangVersion>8.0</LangVersion>
@@ -48,17 +48,23 @@
     <NoWarn>CS0649</NoWarn>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnitTest|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>CS0649</NoWarn>
+    <DebugType>portable</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>preview</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Lib.Harmony">
-      <Version>2.3.5</Version>
+      <Version>2.3.3</Version>
     </PackageReference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="DevTools, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\1.5\Assemblies\DevTools.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
@@ -121,7 +127,6 @@
     <Compile Include="Attributes\AnimationPropertyAttribute.cs" />
     <Compile Include="Attributes\GraphEditableAttribute.cs" />
     <Compile Include="Attributes\HeaderTitleAttribute.cs" />
-    <Compile Include="Attributes\LoadedEarlyAttribute.cs" />
     <Compile Include="Attributes\MustImplementAttribute.cs" />
     <Compile Include="Attributes\NoProfilingAttribute.cs" />
     <Compile Include="Attributes\NumericBoxValuesAttribute.cs" />
@@ -131,13 +136,13 @@
     <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
     <Compile Include="Attributes\TweakFieldAttribute.cs" />
     <Compile Include="Attributes\StartupActionAttribute.cs" />
-    <Compile Include="Performance\Benchmarking\Benchmark_TypeByName.cs" />
-    <Compile Include="Performance\Benchmarking\Benchmark_GenTypes.cs" />
     <Compile Include="Collections\CircularArray.cs" />
     <Compile Include="Collections\ConcurrentSet.cs" />
     <Compile Include="Collections\DropOutStack.cs" />
     <Compile Include="Collections\ImmutableArray.cs" />
-    <Compile Include="Collections\ObjectPool.cs" />
+    <Compile Include="Debugging\AssertHandler.cs" />
+    <Compile Include="Debugging\StartupAction\StartupTest.cs" />
+    <Compile Include="Performance\Caching\ObjectPool.cs" />
     <Compile Include="Collections\SimpleDictionary.cs" />
     <Compile Include="Collections\RotatingList.cs" />
     <Compile Include="Collections\SelfOrderingList.cs" />
@@ -154,13 +159,6 @@
     <Compile Include="Debugging\GameState.cs" />
     <Compile Include="Debugging\MainMenuKeyBindHandler.cs" />
     <Compile Include="Debugging\QuickStartMenu.cs" />
-    <Compile Include="Debugging\StartupAction\StartupTest.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_ComponentCache.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_DedicatedThread.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_AsyncPool.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_ObjectPool.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_CellRectUtils.cs" />
-    <Compile Include="Debugging\UnitTests\UnitTest_AnimDynamicMethod.cs" />
     <Compile Include="Enums\MathOp.cs" />
     <Compile Include="Enums\UISettingsType.cs" />
     <Compile Include="Events\EventDisabler.cs" />
@@ -192,12 +190,12 @@
     <Compile Include="Pathfinding\AStar.cs" />
     <Compile Include="Pathfinding\BFS.cs" />
     <Compile Include="Pathfinding\Dijkstra.cs" />
-    <Compile Include="Performance\Benchmarking\Benchmark_CellRectUtils.cs" />
     <Compile Include="Performance\Caching\MapComponentCache.cs" />
+    <Compile Include="Performance\Caching\UnityObjectPool.cs" />
     <Compile Include="Performance\Coroutines\WaitForTicks.cs" />
     <Compile Include="Performance\Multithreading\AsyncAction.cs" />
     <Compile Include="Performance\Multithreading\AsyncLongOperationAction.cs" />
-    <Compile Include="Performance\Multithreading\AsyncPool.cs" />
+    <Compile Include="Performance\Caching\AsyncPool.cs" />
     <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
     <Compile Include="Performance\Multithreading\ListSnapshot.cs" />
     <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
@@ -209,7 +207,14 @@
     <Compile Include="Performance\Multithreading\ThreadManager.cs" />
     <Compile Include="ProjectStartup.cs" />
     <Compile Include="Rendering\CameraView.cs" />
+    <Compile Include="Rendering\Gui\RenderTextureIdler.cs" />
+    <Compile Include="Rendering\IParallelRenderer.cs" />
     <Compile Include="Rendering\PawnOverlayRenderer.cs" />
+    <Compile Include="Rendering\Gui\RenderData.cs" />
+    <Compile Include="Rendering\Gui\RenderTextureBuffer.cs" />
+    <Compile Include="Rendering\Gui\TextureDrawer.cs" />
+    <Compile Include="Rendering\Gui\RenderTextureDrawer.cs" />
+    <Compile Include="Rendering\Transform.cs" />
     <Compile Include="Rendering\TransformData.cs" />
     <Compile Include="Saving\ClassLoader.cs" />
     <Compile Include="Saving\Scribe\Scribe_Array.cs" />
@@ -293,8 +298,10 @@
     <Compile Include="UI\UIElements.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_Unity.cs" />
     <Compile Include="Utility\Extensions\Game\Ext_World.cs" />
+    <Compile Include="Utility\QuickIter.cs" />
     <Compile Include="Utility\GUIState.cs" />
     <Compile Include="Utility\LongEventText.cs" />
+    <Compile Include="Rendering\Gui\RenderTextureUtil.cs" />
     <Compile Include="Utility\Utilities.cs" />
     <Compile Include="Utility\ModVersion.cs" />
     <Compile Include="Xml\DelayedCrossRefResolver.cs" />

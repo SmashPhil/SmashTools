@@ -1,42 +1,56 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
+using SmashTools.Performance;
+using UnityEngine.Assertions;
 using Verse;
-using Verse.AI;
-using RimWorld;
-using UnityEngine;
-using System.Linq;
 
-namespace SmashTools
+namespace SmashTools;
+
+public static class TaskManager
 {
-  public static class TaskManager
+  public static async void RunAsync(Action action, Action<Exception> exceptionHandler)
   {
-    public static async void RunAsync(Action action, Action<Exception> exceptionHandler)
+    try
     {
-      try
+      await Task.Run(action).ConfigureAwait(false);
+    }
+    catch (Exception ex)
+    {
+      exceptionHandler(ex);
+    }
+  }
+
+  public static async void RunAsync(Action action, bool reportFailure = true)
+  {
+    try
+    {
+      await Task.Run(action).ConfigureAwait(false);
+    }
+    catch (Exception ex)
+    {
+      if (reportFailure)
       {
-        await Task.Run(action).ConfigureAwait(false);
-      }
-      catch (Exception ex)
-      {
-        exceptionHandler(ex);
+        Log.Error($"AsyncTask {action.Method.Name} threw exception while running.\n{ex}");
       }
     }
+  }
 
-    public static async void RunAsync(Action action, bool reportFailure = true)
+  /// <summary>
+  /// Run async action through a task as opposed to enqueueing on the dedicated thread.
+  /// </summary>
+  public static async void RunAsync(AsyncAction action, bool reportFailure = true)
+  {
+    try
     {
-      try
+      Assert.IsTrue(action.IsValid);
+      await Task.Run(action.Invoke).ConfigureAwait(false);
+    }
+    catch (Exception ex)
+    {
+      if (reportFailure)
       {
-        await Task.Run(action).ConfigureAwait(false);
-      }
-      catch (Exception ex)
-      {
-        if (reportFailure)
-        {
-          Log.Error($"AsyncTask {action.Method.Name} threw exception while running.\n{ex}");
-        }
+        Log.Error($"AsyncTask {action.GetType()} threw exception while running.\n{ex}");
+        action.ExceptionThrown(ex);
       }
     }
   }

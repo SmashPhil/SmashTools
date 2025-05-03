@@ -379,12 +379,11 @@ namespace SmashTools
       return false;
     }
 
-    public static void SliderLabeled(Rect rect, string label, string tooltip, string endSymbol,
+    public static bool SliderLabeled(Rect rect, string label, string tooltip, string endSymbol,
       ref float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2,
       float endValue = -1f, string maxValueDisplay = "")
     {
-      var font = Text.Font;
-      Text.Font = GameFont.Tiny;
+      using TextBlock fontBlock = new(GameFont.Tiny);
       Rect fullRect = rect;
       rect.y += rect.height / 2;
       rect.height /= 2;
@@ -404,13 +403,14 @@ namespace SmashTools
       {
         TooltipHandler.TipRegion(fullRect, tooltip);
       }
+      float valueBefore = value;
       value = Widgets.HorizontalSlider(rect, value, min, max, middleAlignment: false, label: null,
         leftAlignedLabel: label, rightAlignedLabel: format);
       if (endValue > 0 && value >= max)
       {
         value = endValue;
       }
-      Text.Font = font;
+      return !Mathf.Approximately(value, valueBefore);
     }
 
     public static void DrawLineHorizontal(float x, float y, float length, Color color)
@@ -559,12 +559,8 @@ namespace SmashTools
     /// <summary>
     /// Draw <paramref name="texture"/> with <paramref name="material"/> rotated by <paramref name="angle"/>
     /// </summary>
-    /// <param name="rect"></param>
-    /// <param name="texture"></param>
-    /// <param name="material"></param>
-    /// <param name="angle"></param>
-    /// <param name="texCoords"></param>
-    public static void DrawTextureWithMaterialOnGUI(Rect rect, Texture texture, Material material,
+    public static void DrawTextureWithMaterialOnGUI(Rect rect, Texture texture,
+      Material material,
       float angle, Rect texCoords = default)
     {
       Matrix4x4 matrix = GUI.matrix;

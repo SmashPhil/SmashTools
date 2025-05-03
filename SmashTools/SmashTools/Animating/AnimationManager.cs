@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using DevTools;
+using UnityEngine.Assertions;
 using Verse;
 using PropertyObjectMap = System.Collections.Generic.Dictionary
 <SmashTools.Animations.AnimationState,

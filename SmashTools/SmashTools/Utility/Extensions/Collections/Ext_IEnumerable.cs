@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using UnityEngine;
 using Verse;
 using RimWorld;
@@ -19,7 +20,7 @@ namespace SmashTools
       Predicate<T> predicate = null)
     {
       if (enumerable.Where(item => predicate is null || predicate(item))
-         .TryRandomElement(out T result))
+       .TryRandomElement(out T result))
       {
         return result;
       }
@@ -38,7 +39,7 @@ namespace SmashTools
       Predicate<T> predicate = null, T fallback = default(T))
     {
       if (enumerable.Where(item => predicate is null || predicate(item))
-         .TryRandomElement(out T result))
+       .TryRandomElement(out T result))
       {
         return result;
       }
@@ -50,15 +51,12 @@ namespace SmashTools
     /// .Any extension method but takes into account null collections do not contain the object. 
     /// Does not throw error on null collections which is more applicable to this project.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="list"></param>
-    /// <param name="predicate"></param>
-    /// <returns></returns>
+    [ContractAnnotation("enumerable:null => false;")]
     public static bool NotNullAndAny<T>(this IEnumerable<T> enumerable,
       Predicate<T> predicate = null)
     {
       return enumerable != null &&
-             (predicate is null ? enumerable.Any() : enumerable.Any(e => predicate(e)));
+        (predicate is null ? enumerable.Any() : enumerable.Any(e => predicate(e)));
     }
 
     public static bool NullOrEmpty<T>(this IEnumerable<T> enumerable)
