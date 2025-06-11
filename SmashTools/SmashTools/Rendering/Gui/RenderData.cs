@@ -7,7 +7,7 @@ namespace SmashTools.Rendering;
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public readonly struct RenderData : IComparable<RenderData>
 {
-  internal readonly Rect rect;
+  public readonly Rect rect;
   internal readonly Texture mainTex;
   internal readonly Material material;
   internal readonly MaterialPropertyBlock propertyBlock;
@@ -15,12 +15,20 @@ public readonly struct RenderData : IComparable<RenderData>
   internal readonly float angle;
 
   public RenderData(Rect rect, Texture mainTex, Material material,
-    MaterialPropertyBlock propertyBlock, float layer, float angle)
+    MaterialPropertyBlock propertyBlock)
   {
     this.rect = rect;
     this.mainTex = mainTex;
     this.material = material;
     this.propertyBlock = propertyBlock;
+    this.layer = 0;
+    this.angle = 0;
+  }
+
+  public RenderData(Rect rect, Texture mainTex, Material material,
+    MaterialPropertyBlock propertyBlock, float layer, float angle) : this(rect, mainTex, material,
+    propertyBlock)
+  {
     this.layer = layer;
     this.angle = angle;
   }

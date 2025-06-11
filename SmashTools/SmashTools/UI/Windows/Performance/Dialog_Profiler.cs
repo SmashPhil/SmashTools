@@ -287,7 +287,7 @@ namespace SmashTools.Performance
       }
 
       Widgets.DrawLineHorizontal(rect.x, rect.yMax, rect.width,
-        UIElements.MenuSectionBGBorderColor);
+        UIElements.menuSectionBGBorderColor);
     }
 
     private bool DragGraphFrame(Rect rect)

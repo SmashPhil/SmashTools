@@ -5,8 +5,8 @@ using Verse;
 
 namespace SmashTools.Rendering;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public record struct TransformData
+[PublicAPI]
+public readonly record struct TransformData
 {
   public readonly Vector3 position;
   public readonly Rot8 orientation;

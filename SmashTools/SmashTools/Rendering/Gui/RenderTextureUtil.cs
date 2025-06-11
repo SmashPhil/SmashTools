@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SmashTools.Rendering;
@@ -11,6 +7,11 @@ public static class RenderTextureUtil
 {
   public static RenderTexture CreateRenderTexture(int width, int height)
   {
+    // Unity just logs an error if you try to do this, but for clarity w/ RimWorld log window and
+    // unit testing, we throw instead.
+    if (width <= 0 || height <= 0)
+      throw new ArgumentException("RenderTexture size must have dimensions greater than 0.");
+
     RenderTexture rt = new(width, height, 0, RenderTextureFormat.ARGBFloat.OrNextSupportedFormat());
     rt.Create();
     return rt;

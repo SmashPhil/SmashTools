@@ -1,18 +1,15 @@
 ﻿using SmashTools.Animations;
-using SmashTools.Debugging;
 using SmashTools.Xml;
 using Verse;
 
-namespace SmashTools
+namespace SmashTools;
+
+[StaticConstructorOnStartup]
+public static class ProjectStartup
 {
-  [StaticConstructorOnStartup]
-  public static class ProjectStartup
+  static ProjectStartup()
   {
-    static ProjectStartup()
-    {
-      AssertHandler.Enable();
-      DelayedCrossRefResolver.ResolveAll();
-      AnimationLoader.ResolveAllReferences();
-    }
+    DelayedCrossRefResolver.ResolveAll();
+    AnimationLoader.ResolveAllReferences();
   }
 }

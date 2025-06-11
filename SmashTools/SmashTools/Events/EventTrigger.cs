@@ -1,116 +1,116 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 
-namespace SmashTools
+namespace SmashTools;
+
+[PublicAPI]
+public class EventTrigger
 {
-  public class EventTrigger
+  private readonly List<Trigger> persistents = [];
+  private readonly List<Trigger> singles = [];
+
+  public bool Enabled { get; set; } = true;
+
+  public void Add(string key, Action action)
   {
-    private readonly List<Trigger> persistents = [];
-    private readonly List<Trigger> singles = [];
+    persistents.Add(new Trigger(key, action));
+  }
 
-    public bool Enabled { get; set; } = true;
+  public void AddSingle(string key, Action action)
+  {
+    singles.Add(new Trigger(key, action));
+  }
 
-    public void Add(string key, Action action)
+  public int Remove(string key)
+  {
+    int count = 0;
+    for (int i = persistents.Count - 1; i >= 0; i--)
     {
-      persistents.Add(new Trigger(key, action));
-    }
-
-    public void AddSingle(string key, Action action)
-    {
-      singles.Add(new Trigger(key, action));
-    }
-
-    public int Remove(string key)
-    {
-      int count = 0;
-      for (int i = persistents.Count - 1; i >= 0; i--)
+      Trigger trigger = persistents[i];
+      if (trigger.key == key)
       {
-        Trigger trigger = persistents[i];
-        if (trigger.key == key)
-        {
-          persistents.RemoveAt(i);
-          count++;
-        }
+        persistents.RemoveAt(i);
+        count++;
       }
-
-      return count;
     }
 
-    public int Remove(Action action)
+    return count;
+  }
+
+  public int Remove(Action action)
+  {
+    int count = 0;
+    for (int i = persistents.Count - 1; i >= 0; i--)
     {
-      int count = 0;
-      for (int i = persistents.Count - 1; i >= 0; i--)
+      Trigger trigger = persistents[i];
+      if (trigger.action == action)
       {
-        Trigger trigger = persistents[i];
-        if (trigger.action == action)
-        {
-          persistents.RemoveAt(i);
-          count++;
-        }
+        persistents.RemoveAt(i);
+        count++;
       }
-
-      return count;
     }
+    return count;
+  }
 
-    public int RemoveSingle(string key)
+  public int RemoveSingle(string key)
+  {
+    int count = 0;
+    for (int i = singles.Count - 1; i >= 0; i--)
     {
-      int count = 0;
-      for (int i = singles.Count - 1; i >= 0; i--)
+      Trigger trigger = singles[i];
+      if (trigger.key == key)
       {
-        Trigger trigger = singles[i];
-        if (trigger.key == key)
-        {
-          singles.RemoveAt(i);
-          count++;
-        }
-      }
-
-      return count;
-    }
-
-    public int RemoveSingle(Action action)
-    {
-      int count = 0;
-      for (int i = singles.Count - 1; i >= 0; i--)
-      {
-        Trigger trigger = singles[i];
-        if (trigger.action == action)
-        {
-          singles.RemoveAt(i);
-          count++;
-        }
-      }
-
-      return count;
-    }
-
-    public void ClearAll()
-    {
-      singles.Clear();
-      persistents.Clear();
-    }
-
-    public void ExecuteEvents()
-    {
-      if (!Enabled) return;
-
-      foreach (Trigger trigger in persistents)
-      {
-        trigger.action();
-      }
-
-      for (int i = singles.Count - 1; i >= 0; i--)
-      {
-        Trigger trigger = singles[i];
-        trigger.action();
         singles.RemoveAt(i);
+        count++;
       }
     }
 
-    private readonly struct Trigger(string key, Action action)
+    return count;
+  }
+
+  public int RemoveSingle(Action action)
+  {
+    int count = 0;
+    for (int i = singles.Count - 1; i >= 0; i--)
     {
-      public readonly string key = key;
-      public readonly Action action = action;
+      Trigger trigger = singles[i];
+      if (trigger.action == action)
+      {
+        singles.RemoveAt(i);
+        count++;
+      }
     }
+
+    return count;
+  }
+
+  public void ClearAll()
+  {
+    singles.Clear();
+    persistents.Clear();
+  }
+
+  public void ExecuteEvents()
+  {
+    if (!Enabled) return;
+
+    foreach (Trigger trigger in persistents)
+    {
+      trigger.action();
+    }
+
+    for (int i = singles.Count - 1; i >= 0; i--)
+    {
+      Trigger trigger = singles[i];
+      trigger.action();
+      singles.RemoveAt(i);
+    }
+  }
+
+  private readonly struct Trigger(string key, Action action)
+  {
+    public readonly string key = key;
+    public readonly Action action = action;
   }
 }

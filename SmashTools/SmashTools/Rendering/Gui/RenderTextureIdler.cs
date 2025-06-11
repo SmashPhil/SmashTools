@@ -14,8 +14,8 @@ namespace SmashTools.Rendering;
 /// </summary>
 public class RenderTextureIdler : IDisposable
 {
-  private RenderTexture renderTexture;
-  private RenderTextureBuffer buffer;
+  private readonly RenderTexture renderTexture;
+  private readonly RenderTextureBuffer buffer;
 
   private readonly float expiryTime;
   private float timeSinceRead;
@@ -42,6 +42,11 @@ public class RenderTextureIdler : IDisposable
     this.buffer = buffer;
   }
 
+  /// <summary>
+  /// UnitTest hook for OnUpdate function reference.
+  /// </summary>
+  internal UnityThread.OnUpdate UpdateLoop => Update;
+
   public bool Disposed => renderTexture == null && buffer == null;
 
   public RenderTexture Read
@@ -53,10 +58,24 @@ public class RenderTextureIdler : IDisposable
     }
   }
 
+  public RenderTexture Write
+  {
+    get
+    {
+      timeSinceRead = 0;
+      return renderTexture ?? buffer.Write;
+    }
+  }
+
   public RenderTexture GetWrite()
   {
     timeSinceRead = 0;
     return renderTexture ?? buffer.GetWrite();
+  }
+
+  internal void SetTimeDirect(float timeSinceRead)
+  {
+    this.timeSinceRead = timeSinceRead;
   }
 
   private bool Update()
@@ -76,9 +95,8 @@ public class RenderTextureIdler : IDisposable
     {
       renderTexture.Release();
       Object.Destroy(renderTexture);
-      renderTexture = null;
     }
     buffer?.Dispose();
-    buffer = null;
+    GC.SuppressFinalize(this);
   }
 }

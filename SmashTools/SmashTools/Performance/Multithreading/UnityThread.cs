@@ -46,6 +46,25 @@ public class UnityThread : MonoBehaviour
     }
   }
 
+  /// <summary>
+  /// UnitTest hook for validating that the update list enqueued the delegate correctly.
+  /// </summary>
+  internal static bool InUpdateQueue(OnUpdate update)
+  {
+    return Instance.onUpdateMethods.Contains(update);
+  }
+
+  public static void RemoveUpdate(OnUpdate onUpdate)
+  {
+    if (!UnityData.IsInMainThread)
+    {
+      Trace.Fail(
+        "Trying to remove update method to queue from another thread. This can only be done from the main thread.");
+      return;
+    }
+    Instance.onUpdateMethods.Remove(onUpdate);
+  }
+
   public static void StartUpdate(OnUpdate onUpdate)
   {
     if (!UnityData.IsInMainThread)
@@ -78,6 +97,8 @@ public class UnityThread : MonoBehaviour
   {
     if (invokeList.NullOrEmpty())
       throw new ArgumentNullException(nameof(invokeList));
+    if (waitTimeout <= 0)
+      throw new ArgumentException("waitTimeout must be greater than 0.");
 
     if (UnityData.IsInMainThread)
     {
@@ -85,7 +106,8 @@ public class UnityThread : MonoBehaviour
         action();
       return;
     }
-    using ConcurrentAction concurrentAction = new(invokeList);
+    ConcurrentAction concurrentAction = new(invokeList);
+    mainContext.Post(concurrentAction.InvokeAndDispose, null);
     bool waited = concurrentAction.Wait(waitTimeout);
     Assert.IsTrue(waited, "WaitHandle timed out.");
   }
@@ -103,21 +125,9 @@ public class UnityThread : MonoBehaviour
     private readonly Action[] actions;
     private readonly ManualResetEventSlim waitHandle = new();
 
-    private bool waitedOn;
-
     public ConcurrentAction(Action[] actions)
     {
       this.actions = actions;
-    }
-
-    public void Invoke(object state)
-    {
-      Assert.IsTrue(UnityData.IsInMainThread);
-      foreach (Action action in actions)
-      {
-        action();
-      }
-      waitHandle.Set();
     }
 
     /// <summary>
@@ -127,27 +137,31 @@ public class UnityThread : MonoBehaviour
     /// <param name="state"></param>
     public void InvokeAndDispose(object state)
     {
-      Assert.IsFalse(waitedOn);
-      Assert.IsTrue(UnityData.IsInMainThread);
-      foreach (Action action in actions)
+      try
       {
-        action();
+        Assert.IsTrue(UnityData.IsInMainThread);
+        foreach (Action action in actions)
+        {
+          action();
+        }
       }
-      waitHandle.Dispose();
+      finally
+      {
+        Dispose();
+      }
     }
 
     public bool Wait(int waitTimeout)
     {
       Assert.IsFalse(UnityData.IsInMainThread);
-      waitedOn = true;
       bool waited = waitHandle.Wait(waitTimeout);
-      Dispose();
       return waited;
     }
 
     public void Dispose()
     {
       waitHandle.Dispose();
+      GC.SuppressFinalize(this);
     }
   }
 }

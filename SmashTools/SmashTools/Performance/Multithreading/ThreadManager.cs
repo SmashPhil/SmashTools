@@ -202,7 +202,7 @@ public static class ThreadManager
       ReleaseAndJoin(dedicatedThread);
     }
 
-    ComponentCache.ClearCache();
+    MapComponentCache.ClearAll();
   }
 
   public static void ReleaseAndJoin(DedicatedThread dedicatedThread)

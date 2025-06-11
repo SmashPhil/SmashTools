@@ -118,13 +118,22 @@ public static class XmlParseHelper
     registeredAttributes.Add(attribute, (action, nodeAllowed));
   }
 
-  /// <summary>
-  /// Parse <paramref name="debugXmlNode"/> and handle registered custom attributes
-  /// </summary>
-  internal static void ReadCustomAttributes(string token, XmlNode debugXmlNode, FieldInfo __result)
+  // TODO - supposedly Sam's changes will be merged back in soon
+  [Obsolete]
+  internal static void ReadCustomAttributes_TEMP(string token, XmlNode debugXmlNode,
+    FieldInfo __result)
   {
     XmlNode curNode = debugXmlNode.SelectSingleNode(token);
     ProcessXmlNode(curNode, __result);
+  }
+
+  /// <summary>
+  /// Parse XmlNode and handle registered custom attributes
+  /// </summary>
+  internal static void ReadCustomAttributes(Type typeBeingDeserialized, XmlNode fieldNode,
+    XmlNode xmlRootForDebug, FieldInfo __result)
+  {
+    ProcessXmlNode(fieldNode, __result);
   }
 
   /// <summary>
@@ -141,13 +150,6 @@ public static class XmlParseHelper
     try
     {
       if (node.NodeType != XmlNodeType.Element)
-        return;
-
-      Type typeInAnyAssembly = GenTypes.GetTypeInAnyAssembly(node.Name);
-      if (typeInAnyAssembly is null)
-        return;
-
-      if (!typeof(Def).IsAssignableFrom(typeInAnyAssembly))
         return;
 
       XmlAttributeCollection attributes = node.Attributes;

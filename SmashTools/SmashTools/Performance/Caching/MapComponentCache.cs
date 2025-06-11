@@ -3,87 +3,85 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Verse;
-using RimWorld;
 
-namespace SmashTools
+namespace SmashTools;
+
+[StaticConstructorOnStartup]
+public static class MapComponentCache
 {
-  [StaticConstructorOnStartup]
-  public static class MapComponentCache
+  private static readonly List<Type> priorityComponentTypes;
+
+  static MapComponentCache()
   {
-    private static readonly List<Type> priorityComponentTypes;
+    priorityComponentTypes = typeof(MapComponent).AllSubclassesNonAbstract().ToList();
+  }
 
-    static MapComponentCache()
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static T GetCachedMapComponent<T>(this Map map) where T : MapComponent
+  {
+    return MapComponentCache<T>.GetComponent(map);
+  }
+
+  internal static void ClearMap(Map map)
+  {
+    foreach (Type type in priorityComponentTypes)
     {
-      priorityComponentTypes = typeof(MapComponent).AllSubclassesNonAbstract().ToList();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T GetCachedMapComponent<T>(this Map map) where T : MapComponent
-    {
-      return MapComponentCache<T>.GetComponent(map);
-    }
-
-    internal static void ClearMap(Map map)
-    {
-      foreach (Type type in priorityComponentTypes)
-      {
-        GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-          nameof(MapComponentCache<MapComponent>.ClearMap), map);
-      }
-    }
-
-    internal static void ClearAll()
-    {
-      foreach (Type type in priorityComponentTypes)
-      {
-        GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-          nameof(MapComponentCache<MapComponent>.ClearAll));
-      }
-    }
-
-    public static int CountAll()
-    {
-      int count = 0;
-      foreach (Type type in priorityComponentTypes)
-      {
-        count += (int)GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-          nameof(MapComponentCache<MapComponent>.Count));
-      }
-
-      return count;
+      GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
+        nameof(MapComponentCache<MapComponent>.ClearMap), map);
     }
   }
 
-  public static class MapComponentCache<T> where T : MapComponent
+  internal static void ClearAll()
   {
-    private static T[] mapComps = new T[sbyte.MaxValue];
-
-    public static T GetComponent(Map map)
+    foreach (Type type in priorityComponentTypes)
     {
-      T component = mapComps[map.Index];
-      if (component == null)
-      {
-        component = map.GetComponent<T>();
-        mapComps[map.Index] = component;
-      }
+      GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
+        nameof(MapComponentCache<MapComponent>.ClearAll));
+    }
+  }
 
-      return component;
+  public static int CountAll()
+  {
+    int count = 0;
+    foreach (Type type in priorityComponentTypes)
+    {
+      count += (int)GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
+        nameof(MapComponentCache<MapComponent>.Count));
     }
 
-    public static void ClearMap(Map map)
+    return count;
+  }
+}
+
+public static class MapComponentCache<T> where T : MapComponent
+{
+  private static T[] mapComps = new T[sbyte.MaxValue];
+
+  public static T GetComponent(Map map)
+  {
+    T component = mapComps[map.Index];
+    if (component == null)
     {
-      // Free up cached component so it can be fetched when index is reused
-      mapComps[map.Index] = null;
+      component = map.GetComponent<T>();
+      mapComps[map.Index] = component;
     }
 
-    public static void ClearAll()
-    {
-      mapComps = new T[sbyte.MaxValue];
-    }
+    return component;
+  }
 
-    internal static int Count()
-    {
-      return mapComps.CountWhere(item => item is not null);
-    }
+  public static void ClearMap(Map map)
+  {
+    // Free up cached component so it can be fetched when index is reused
+    mapComps[map.Index] = null;
+  }
+
+  public static void ClearAll()
+  {
+    mapComps = new T[sbyte.MaxValue];
+  }
+
+  internal static int Count()
+  {
+    return mapComps.CountWhere(item => item is not null);
   }
 }
