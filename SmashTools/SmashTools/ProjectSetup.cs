@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Xml;
 using HarmonyLib;
 using LudeonTK;
 using RimWorld;
-using SmashTools.Debugging;
 using SmashTools.Performance;
 using SmashTools.Xml;
 using UnityEngine;
@@ -27,6 +27,12 @@ namespace SmashTools
 
       Harmony = new Harmony(HarmonyId);
 
+      // TODO - Fixing Sam's new xml parsing since it crashes. Remove when fixed
+      //Harmony.Patch(
+      //  original: AccessTools.Method(typeof(DirectXmlToObjectNew),
+      //    nameof(DirectXmlToObjectNew.DefFromNodeNew)),
+      //  prefix: new HarmonyMethod(typeof(ProjectSetup), nameof(TEMP_DefFromNodeReroute)));
+
       // Xml Parsing
       Harmony.Patch(
         original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
@@ -34,7 +40,12 @@ namespace SmashTools
           nameof(XmlParseHelper.ReadCustomAttributesOnDef)));
       Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlToObject), "GetFieldInfoForType"),
         postfix: new HarmonyMethod(typeof(XmlParseHelper),
-          nameof(XmlParseHelper.ReadCustomAttributes)));
+          nameof(XmlParseHelper.ReadCustomAttributes_TEMP)));
+      //Harmony.Patch(
+      //  original: AccessTools.Method(typeof(XmlToObjectUtils),
+      //    nameof(XmlToObjectUtils.DoFieldSearch)),
+      //  postfix: new HarmonyMethod(typeof(XmlParseHelper),
+      //    nameof(XmlParseHelper.ReadCustomAttributes)));
       Harmony.Patch(
         original: AccessTools.Method(typeof(DefGenerator),
           nameof(DefGenerator.GenerateImpliedDefs_PreResolve)),
@@ -71,17 +82,14 @@ namespace SmashTools
         prefix: new HarmonyMethod(typeof(DetachedMapComponent),
           nameof(DetachedMapComponent.ClearComponentsFromCache)));
       Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
-        prefix: new HarmonyMethod(typeof(ComponentCache),
-          nameof(ComponentCache.ClearCache)));
+        prefix: new HarmonyMethod(typeof(MapComponentCache),
+          nameof(MapComponentCache.ClearAll)));
       Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
-        postfix: new HarmonyMethod(typeof(ComponentCache),
-          nameof(ComponentCache.ClearMapComps), [typeof(Map)]));
+        postfix: new HarmonyMethod(typeof(MapComponentCache),
+          nameof(MapComponentCache.ClearMap), [typeof(Map)]));
       Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
-        prefix: new HarmonyMethod(typeof(ComponentCache),
-          nameof(ComponentCache.ClearCache)));
-      Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.FinalizeInit)),
-        postfix: new HarmonyMethod(typeof(ProjectSetup),
-          nameof(BackfillRegisteredAreas)));
+        prefix: new HarmonyMethod(typeof(MapComponentCache),
+          nameof(MapComponentCache.ClearAll)));
       Harmony.Patch(
         original: AccessTools.Method(typeof(MemoryUtility),
           nameof(MemoryUtility.ClearAllMapsAndWorld)),
@@ -163,6 +171,13 @@ namespace SmashTools
 #endif
     }
 
+    private static bool TEMP_DefFromNodeReroute(XmlNode node, LoadableXmlAsset loadingAsset,
+      out Def __result)
+    {
+      __result = DirectXmlLoader.DefFromNode(node, loadingAsset);
+      return false;
+    }
+
     private static void RegisterParseableStructs()
     {
       ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
@@ -214,11 +229,6 @@ namespace SmashTools
       }
 
       return true;
-    }
-
-    private static void BackfillRegisteredAreas(Map __instance)
-    {
-      __instance.TryAddAreas();
     }
   }
 }

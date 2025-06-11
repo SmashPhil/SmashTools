@@ -3,665 +3,658 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using Verse;
-using UnityEngine;
 using LudeonTK;
+using UnityEngine;
+using UnityEngine.Assertions;
+using Verse;
 
-namespace SmashTools
+namespace SmashTools;
+
+public class EditWindow_TweakFields : EditWindow
 {
-  public class EditWindow_TweakFields : EditWindow
+  private const float VectorLabelProportion = 0.5f;
+  private const float VectorSubLabelProportion = 0.15f;
+  private const float FloatRangeLabelProportion = 0.5f;
+  private const float FloatRangeSubLabelProportion = 0.25f;
+
+  private const float RowHeight = 24;
+  private const int ColumnCount = 2;
+
+  private readonly Thing thing;
+  private static List<TweakInfo> instanceTweaks;
+
+  private Vector2 scrollPosition;
+  private readonly Listing_SplitColumns listing = new();
+
+  private static readonly Dictionary<FieldInfo, UiSettings> registeredFields = [];
+
+  public override bool IsDebug => true;
+
+  public EditWindow_TweakFields(Thing thing)
   {
-    private const float VectorLabelProportion = 0.5f;
-    private const float VectorSubLabelProportion = 0.15f;
-    private const float FloatRangeLabelProportion = 0.5f;
-    private const float FloatRangeSubLabelProportion = 0.25f;
+    this.thing = thing;
+    optionalTitle = "TweakValues";
+    instanceTweaks = FindAllTweakablesRecursive(thing).OrderBy(info => info.ui.category)
+     .ThenBy(info => info.ui.subCategory).ThenBy(info => info.fieldInfo.DeclaringType?.Name)
+     .ThenBy(info => info.Name).ToList();
+  }
 
-    private const float RowHeight = 24;
-    private const int ColumnCount = 2;
+  public override Vector2 InitialSize => new(UI.screenWidth / 2f, UI.screenHeight * 0.9f);
 
-    private Thing thing;
-    private static List<TweakInfo> tweakValueFields;
+  private float CachedHeight { get; set; } = -1;
 
-    private Vector2 scrollPosition;
-    private Listing_SplitColumns listing = new Listing_SplitColumns();
+  public static void RegisterField(FieldInfo fieldInfo, string category, string subCategory,
+    UISettingsType settingsType)
+  {
+    if (registeredFields.ContainsKey(fieldInfo))
+      return;
 
-    private static readonly
-      Dictionary<FieldInfo, (string category, string subCategory, UISettingsType settingsType)>
-      registeredFields =
-        new Dictionary<FieldInfo, (string category, string subCategory, UISettingsType settingsType
-          )>();
+    registeredFields.Add(fieldInfo, new UiSettings(category, subCategory, settingsType));
+  }
 
-    public override bool IsDebug => true;
-
-    public EditWindow_TweakFields(Thing thing)
+  private static IEnumerable<TweakInfo> FindAllTweakablesRecursive(Thing thing)
+  {
+    foreach (TweakInfo info in FindAllTweakablesRecursive(thing.GetType(), thing, thing.Label,
+      string.Empty))
     {
-      this.thing = thing;
-      optionalTitle = "TweakValues";
-      tweakValueFields = FindAllTweakablesRecursive(thing).OrderBy(info => info.category)
-       .ThenBy(info => info.subCategory).ThenBy(info => info.fieldInfo.DeclaringType.Name)
-       .ThenBy(info => info.Name).ToList();
-      RecacheHeight();
+      yield return info;
     }
-
-    public override Vector2 InitialSize => new Vector2(UI.screenWidth / 2, UI.screenHeight * 0.9f);
-
-    private float CachedHeight { get; set; }
-
-    public static bool RegisterField(FieldInfo fieldInfo, string category, string subCategory,
-      UISettingsType settingsType)
+    foreach (TweakInfo info in FindAllTweakablesRecursive(thing.def.GetType(), thing.def,
+      thing.def.defName, string.Empty))
     {
-      if (registeredFields.ContainsKey(fieldInfo))
-      {
-        return false;
-      }
-      registeredFields.Add(fieldInfo, (category, subCategory, settingsType));
-      return true;
+      yield return info;
     }
-
-    private IEnumerable<TweakInfo> FindAllTweakablesRecursive(Thing thing)
+    if (!thing.def.comps.NullOrEmpty())
     {
-      foreach (var info in FindAllTweakablesRecursive(thing.def.GetType(), thing.def,
-        thing.def.defName, string.Empty))
+      foreach (CompProperties compProperties in thing.def.comps)
       {
-        yield return info;
-      }
-      if (!thing.def.comps.NullOrEmpty())
-      {
-        foreach (CompProperties compProperties in thing.def.comps)
+        foreach (TweakInfo info in FindAllTweakablesRecursive(compProperties.GetType(),
+          compProperties,
+          compProperties.GetType().Name, string.Empty))
         {
-          foreach (var info in FindAllTweakablesRecursive(compProperties.GetType(), compProperties,
-            compProperties.GetType().Name, string.Empty))
-          {
-            yield return info;
-          }
-        }
-      }
-      foreach (var info in FindAllTweakablesRecursive(thing.GetType(), thing, thing.Label,
-        string.Empty))
-      {
-        yield return info;
-      }
-      if (thing is ThingWithComps thingWithComps)
-      {
-        foreach (ThingComp thingComp in thingWithComps.AllComps)
-        {
-          foreach (var info in FindAllTweakablesRecursive(thingComp.GetType(), thingComp,
-            thingComp.GetType().Name, string.Empty))
-          {
-            yield return info;
-          }
+          yield return info;
         }
       }
     }
-
-    private IEnumerable<TweakInfo> FindAllTweakablesRecursive(Type type, object parent,
-      string category, string subCategory)
+    if (thing is ThingWithComps thingWithComps)
     {
-      foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic |
-        BindingFlags.Instance | BindingFlags.Static))
+      foreach (ThingComp thingComp in thingWithComps.AllComps)
       {
-        if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is TweakFieldAttribute ||
-          registeredFields.ContainsKey(fieldInfo))
+        foreach (TweakInfo info in FindAllTweakablesRecursive(thingComp.GetType(), thingComp,
+          thingComp.GetType().Name, string.Empty))
         {
-          if (fieldInfo.IsStatic)
+          yield return info;
+        }
+      }
+    }
+  }
+
+  private static IEnumerable<TweakInfo> FindAllTweakablesRecursive(Type type, object parent,
+    string category, string subCategory)
+  {
+    foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic |
+      BindingFlags.Instance | BindingFlags.Static))
+    {
+      if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is not null ||
+        registeredFields.ContainsKey(fieldInfo))
+      {
+        Assert.IsNotNull(fieldInfo.DeclaringType);
+        if (fieldInfo.IsStatic)
+        {
+          Log.Error(
+            $"Cannot use TweakFieldAttribute on static fields. Use vanilla's TweakValues for static fields instead. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
+          continue;
+        }
+        if (fieldInfo.IsLiteral)
+        {
+          Log.Error(
+            $"Cannot use TweakFieldAttribute on constants. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
+          continue;
+        }
+        if (fieldInfo.FieldType.IsClass)
+        {
+          if (fieldInfo.FieldType.IsIList())
           {
-            Log.Error(
-              $"Cannot use TweakFieldAttribute on static fields. Use vanilla's TweakValues for static fields instead. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
-            continue;
-          }
-          if (fieldInfo.IsLiteral)
-          {
-            Log.Error(
-              $"Cannot use TweakFieldAttribute on constants. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
-            continue;
-          }
-          if (fieldInfo.FieldType.IsClass)
-          {
-            if (fieldInfo.FieldType.IsIList())
+            if (!fieldInfo.FieldType.GetGenericArguments()[0].IsClass)
             {
-              if (!fieldInfo.FieldType.GetGenericArguments()[0].IsClass)
-              {
-                Log.Error(
-                  $"Cannot use TweakFieldAttribute on list of non-reference types. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
-                continue;
-              }
-              else
-              {
-                IList list = (IList)fieldInfo.GetValue(parent);
-                if (list != null)
-                {
-                  int index = 0;
-                  foreach (object item in list)
-                  {
-                    (string newCategory, string newSubCategory) =
-                      GetCategory(fieldInfo, item, category, subCategory);
-                    List<TweakInfo> infos =
-                      FindAllTweakablesRecursive(item.GetType(), item, newCategory, newSubCategory)
-                       .ToList();
-                    for (int i = 0; i < infos.Count; i++)
-                    {
-                      TweakInfo info = infos[i];
-                      if (list.Count > 1)
-                      {
-                        info.IndexInList = index;
-                      }
-                      yield return info;
-                    }
-                    index++;
-                  }
-                }
-              }
+              Log.Error(
+                $"Cannot use TweakFieldAttribute on list of non-reference types. Field={fieldInfo.DeclaringType.Name}.{fieldInfo.Name}");
+              continue;
             }
-            else
+            IList list = (IList)fieldInfo.GetValue(parent);
+            if (list != null)
             {
-              object instance = fieldInfo.GetValue(parent);
-              if (instance != null)
+              int index = 0;
+              foreach (object item in list)
               {
                 (string newCategory, string newSubCategory) =
-                  GetCategory(fieldInfo, instance, category, subCategory);
-                foreach (TweakInfo info in FindAllTweakablesRecursive(fieldInfo.FieldType, instance,
-                  newCategory, newSubCategory))
+                  GetCategory(fieldInfo, item, category, subCategory);
+                List<TweakInfo> infos =
+                  FindAllTweakablesRecursive(item.GetType(), item, newCategory, newSubCategory)
+                   .ToList();
+                foreach (TweakInfo info in infos)
                 {
+                  if (list.Count > 1)
+                  {
+                    info.IndexInList = index;
+                  }
                   yield return info;
                 }
+                index++;
               }
             }
           }
           else
           {
-            UISettingsType settingsType = UISettingsType.None;
-            if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is TweakFieldAttribute
-              tweakFieldAttribute)
+            object instance = fieldInfo.GetValue(parent);
+            if (instance != null)
             {
-              settingsType = tweakFieldAttribute.SettingsType;
+              (string newCategory, string newSubCategory) =
+                GetCategory(fieldInfo, instance, category, subCategory);
+              foreach (TweakInfo info in FindAllTweakablesRecursive(fieldInfo.FieldType, instance,
+                newCategory, newSubCategory))
+              {
+                yield return info;
+              }
             }
-            else if (registeredFields.TryGetValue(fieldInfo, out var info))
-            {
-              settingsType = info.settingsType;
-            }
-            yield return CreateInfo(fieldInfo, parent, category, subCategory, settingsType);
           }
+        }
+        else
+        {
+          UISettingsType settingsType = UISettingsType.None;
+          if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is { } tweakFieldAttribute)
+          {
+            settingsType = tweakFieldAttribute.SettingsType;
+          }
+          else if (registeredFields.TryGetValue(fieldInfo, out UiSettings info))
+          {
+            settingsType = info.settingsType;
+          }
+          yield return CreateInfo(fieldInfo, parent, category, subCategory, settingsType);
         }
       }
     }
+  }
 
-    private (string category, string subCategory) GetCategory(FieldInfo fieldInfo, object instance,
-      string category, string subCategory)
+  private static (string category, string subCategory) GetCategory(FieldInfo fieldInfo,
+    object instance,
+    string category, string subCategory)
+  {
+    if (instance is ITweakFields tweakFields)
     {
-      if (instance is ITweakFields tweakFields)
+      if (!tweakFields.Category.NullOrEmpty())
       {
-        if (!tweakFields.Category.NullOrEmpty())
-        {
-          category = tweakFields.Category;
-        }
-        if (!tweakFields.Label.NullOrEmpty())
-        {
-          subCategory = tweakFields.Label;
-        }
+        category = tweakFields.Category;
       }
-      else if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is TweakFieldAttribute
-        tweakFieldAttribute)
+      if (!tweakFields.Label.NullOrEmpty())
       {
-        if (!tweakFieldAttribute.Category.NullOrEmpty())
-        {
-          category = tweakFieldAttribute.Category;
-        }
-        if (!tweakFieldAttribute.SubCategory.NullOrEmpty())
-        {
-          subCategory = tweakFieldAttribute.SubCategory;
-        }
-      }
-      else if (registeredFields.TryGetValue(fieldInfo,
-        out (string category, string subCategory, UISettingsType settingsType) info))
-      {
-        if (!info.category.NullOrEmpty())
-        {
-          category = info.category;
-        }
-        if (!info.subCategory.NullOrEmpty())
-        {
-          subCategory = info.subCategory;
-        }
-      }
-      return (category, subCategory);
-    }
-
-    private TweakInfo CreateInfo(FieldInfo fieldInfo, object instance, string category,
-      string subCategory, UISettingsType settingsType)
-    {
-      TweakInfo info = new TweakInfo()
-      {
-        fieldInfo = fieldInfo,
-        instance = instance,
-        category = category,
-        subCategory = subCategory,
-        settingsType = settingsType,
-        initialValue = fieldInfo.GetValue(instance),
-      };
-      info.IndexInList = -1; //Default to -1, 0 and above indicate it's in a list
-      return info;
-    }
-
-    private void RecacheHeight()
-    {
-      CachedHeight = 0;
-
-      string currentCategory = string.Empty;
-      string currentSubCategory = string.Empty;
-
-      int rowCount = 0;
-      foreach (TweakInfo info in tweakValueFields)
-      {
-        if (info.category != currentCategory)
-        {
-          currentCategory = info.category;
-          if (!currentCategory.NullOrEmpty())
-          {
-            using var textFont = new TextBlock(GameFont.Medium);
-            float rowHeight = Text.LineHeight + 2; // add 2 for gap
-            CachedHeight += rowHeight;
-            rowCount = 0;
-          }
-        }
-        if (info.subCategory != currentSubCategory)
-        {
-          currentSubCategory = info.subCategory;
-          if (!currentSubCategory.NullOrEmpty())
-          {
-            using var textFont = new TextBlock(GameFont.Small);
-            float rowHeight = Text.LineHeight + 2; // add 2 for gap
-            CachedHeight += rowHeight;
-            rowCount = 0;
-          }
-        }
-        if (DrawField(info, out _))
-        {
-          rowCount++;
-          if (rowCount > ColumnCount) //Mark for new column
-          {
-            rowCount = 1;
-          }
-          if (rowCount == 1) //Only count for first item in row
-          {
-            CachedHeight += Listing_SplitColumns.GapHeight;
-          }
-        }
+        subCategory = tweakFields.Label;
       }
     }
-
-    public override void DoWindowContents(Rect inRect)
+    else if (fieldInfo.TryGetAttribute<TweakFieldAttribute>() is { } tweakFieldAttribute)
     {
-      using var textFont = new TextBlock(GameFont.Small);
-      Rect rect;
-      Rect outRect = rect = inRect.ContractedBy(4f);
-      rect.xMax -= 33f;
-      Rect viewRect = new Rect(0f, 0f, rect.width, CachedHeight).ContractedBy(4);
-      // Start ScrollView
-      listing.BeginScrollView(outRect, ref scrollPosition, ref viewRect, ColumnCount);
-      string currentCategory = string.Empty;
-      string currentSubCategory = string.Empty;
-      foreach (TweakInfo info in tweakValueFields)
+      if (!tweakFieldAttribute.Category.NullOrEmpty())
       {
-        if (info.category != currentCategory)
+        category = tweakFieldAttribute.Category;
+      }
+      if (!tweakFieldAttribute.SubCategory.NullOrEmpty())
+      {
+        subCategory = tweakFieldAttribute.SubCategory;
+      }
+    }
+    else if (registeredFields.TryGetValue(fieldInfo,
+      out UiSettings ui))
+    {
+      if (!ui.category.NullOrEmpty())
+      {
+        category = ui.category;
+      }
+      if (!ui.subCategory.NullOrEmpty())
+      {
+        subCategory = ui.subCategory;
+      }
+    }
+    return (category, subCategory);
+  }
+
+  private static TweakInfo CreateInfo(FieldInfo fieldInfo, object instance, string category,
+    string subCategory, UISettingsType settingsType)
+  {
+    TweakInfo info = new()
+    {
+      fieldInfo = fieldInfo,
+      instance = instance,
+      ui = new UiSettings(category, subCategory, settingsType),
+      IndexInList = -1 //Default to -1, 0 and above indicate it's in a list
+    };
+    return info;
+  }
+
+  private void RecacheHeight(float viewWidth)
+  {
+    CachedHeight = 0;
+
+    string currentCategory = string.Empty;
+    string currentSubCategory = string.Empty;
+
+    int rowCount = 0;
+    foreach (TweakInfo info in instanceTweaks)
+    {
+      if (info.ui.category != currentCategory)
+      {
+        currentCategory = info.ui.category;
+        if (!currentCategory.NullOrEmpty())
         {
-          currentCategory = info.category;
-          if (!currentCategory.NullOrEmpty())
-          {
-            listing.Header(currentCategory, ListingExtension.BannerColor, fontSize: GameFont.Medium,
-              anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
-          }
-        }
-        if (info.subCategory != currentSubCategory)
-        {
-          currentSubCategory = info.subCategory;
-          if (!currentSubCategory.NullOrEmpty())
-          {
-            listing.Header(currentSubCategory, ListingExtension.BannerColor,
-              fontSize: GameFont.Small,
-              anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
-          }
-        }
-        if (DrawField(info, out bool fieldChange) && fieldChange)
-        {
-          FieldChanged();
+          using TextBlock catBlock = new(GameFont.Medium);
+          float rowHeight = Text.CalcHeight(currentCategory, viewWidth) + 2; // add 2 for gap
+          CachedHeight += rowHeight;
+          rowCount = 0;
         }
       }
-
-      listing.EndScrollView(ref viewRect);
-      // End ScrollView
-    }
-
-    /// <summary>
-    /// Draw field for editing in the TweakValues menu
-    /// </summary>
-    /// <param name="info"></param>
-    /// <returns>True if value was changed this frame.</returns>
-    private bool DrawField(TweakInfo info, out bool fieldChanged)
-    {
-      fieldChanged = false;
-      UISettingsType settingsType = info.settingsType;
-      switch (info.settingsType)
+      if (info.ui.subCategory != currentSubCategory)
       {
-        case UISettingsType.None:
-          return false;
-        case UISettingsType.Checkbox:
-          if (info.TryGetValue(out bool checkOn))
+        currentSubCategory = info.ui.subCategory;
+        if (!currentSubCategory.NullOrEmpty())
+        {
+          using TextBlock subCatBlock = new(GameFont.Small);
+          float rowHeight = Text.CalcHeight(currentSubCategory, viewWidth) + 2;
+          CachedHeight += rowHeight;
+          rowCount = 0;
+        }
+      }
+      using TextBlock fieldFontBlock = new(GameFont.Tiny);
+      if (DrawField(info, out _))
+      {
+        rowCount++;
+        if (rowCount > ColumnCount) //Mark for new column
+          rowCount = 1;
+        if (rowCount == 1) //Only count for first item in row
+          CachedHeight += Listing_SplitColumns.GapHeight;
+      }
+    }
+  }
+
+  public override void DoWindowContents(Rect inRect)
+  {
+    using TextBlock textFont = new(GameFont.Small);
+    Rect rect;
+    Rect outRect = rect = inRect.ContractedBy(4f);
+    rect.xMax -= 33f;
+    float viewWidth = rect.width - 16;
+    if (CachedHeight < 0)
+      RecacheHeight(viewWidth);
+    Rect viewRect = new Rect(0f, 0f, viewWidth, CachedHeight).ContractedBy(4);
+    // Start ScrollView
+    Widgets.BeginScrollView(outRect, ref scrollPosition, viewRect);
+    listing.Begin(viewRect, ColumnCount);
+    string currentCategory = string.Empty;
+    string currentSubCategory = string.Empty;
+    foreach (TweakInfo info in instanceTweaks)
+    {
+      if (info.ui.category != currentCategory)
+      {
+        currentCategory = info.ui.category;
+        if (!currentCategory.NullOrEmpty())
+        {
+          listing.Header(currentCategory, ListingExtension.BannerColor, fontSize: GameFont.Medium,
+            anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
+        }
+      }
+      if (info.ui.subCategory != currentSubCategory)
+      {
+        currentSubCategory = info.ui.subCategory;
+        if (!currentSubCategory.NullOrEmpty())
+        {
+          listing.Header(currentSubCategory, ListingExtension.BannerColor,
+            fontSize: GameFont.Small,
+            anchor: TextAnchor.MiddleCenter, rowGap: RowHeight);
+        }
+      }
+      using TextBlock fontBlock = new(GameFont.Tiny);
+      if (DrawField(info, out bool fieldChange) && fieldChange)
+      {
+        FieldChanged();
+      }
+    }
+    listing.End();
+    Widgets.EndScrollView();
+    // End ScrollView
+
+    if (Mouse.IsOver(inRect) && Event.current.type == EventType.ScrollWheel)
+    {
+      Event.current.Use();
+    }
+  }
+
+  /// <summary>
+  /// Draw field for editing in the TweakValues menu
+  /// </summary>
+  private bool DrawField(TweakInfo info, out bool fieldChanged)
+  {
+    fieldChanged = false;
+    UISettingsType settingsType = info.ui.settingsType;
+    switch (info.ui.settingsType)
+    {
+      case UISettingsType.None:
+        return false;
+      case UISettingsType.Checkbox:
+        if (info.TryGetValue(out bool checkOn))
+        {
+          bool checkAfter = checkOn;
+          listing.CheckboxLabeled(info.Name, ref checkAfter, string.Empty, string.Empty, false,
+            lineHeight: RowHeight);
+          if (checkOn != checkAfter)
           {
-            bool checkAfter = checkOn;
-            listing.CheckboxLabeled(info.Name, ref checkAfter, string.Empty, string.Empty, false,
+            info.SetValue(checkAfter);
+            fieldChanged = true;
+          }
+          return true;
+        }
+        return false;
+      case UISettingsType.IntegerBox:
+      {
+        if (info.TryGetValue(out int value))
+        {
+          int newValue = value;
+          if (info.fieldInfo.TryGetAttribute(out NumericBoxValuesAttribute inputBox))
+          {
+            listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty,
+              min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue),
               lineHeight: RowHeight);
-            if (checkOn != checkAfter)
-            {
-              info.SetValue(checkAfter);
-              fieldChanged = true;
-            }
-            return true;
           }
-          return false;
-        case UISettingsType.IntegerBox:
-        {
-          if (info.TryGetValue(out int value))
+          else
           {
-            int newValue = value;
-            if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
-            {
-              listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty,
-                min: Mathf.RoundToInt(inputBox.MinValue), max: Mathf.RoundToInt(inputBox.MaxValue),
-                lineHeight: RowHeight);
-            }
-            else
-            {
-              listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty,
-                min: 0, max: int.MaxValue, lineHeight: RowHeight);
-            }
-            if (value != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
+            listing.IntegerBox(info.Name, ref newValue, string.Empty, string.Empty,
+              min: 0, max: int.MaxValue, lineHeight: RowHeight);
           }
-          return false;
+          if (value != newValue)
+          {
+            info.SetValue(newValue);
+            fieldChanged = true;
+          }
+          return true;
         }
-        case UISettingsType.FloatBox:
+        return false;
+      }
+      case UISettingsType.FloatBox:
+      {
+        if (info.TryGetValue(out Vector2 vector2))
         {
-          if (info.TryGetValue(out Vector2 vector2))
+          Vector2 newValue = vector2;
+          listing.Vector2Box(info.Name, ref newValue, labelProportion: VectorLabelProportion,
+            subLabelProportions: VectorSubLabelProportion, buffer: 5);
+          if (vector2 != newValue)
           {
-            Vector2 newValue = vector2;
-            listing.Vector2Box(info.Name, ref newValue, labelProportion: VectorLabelProportion,
-              subLabelProportions: VectorSubLabelProportion, buffer: 5);
-            if (vector2 != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
+            info.SetValue(newValue);
+            fieldChanged = true;
           }
-          else if (info.TryGetValue(out FloatRange floatRange))
-          {
-            FloatRange newValue = floatRange;
-            listing.FloatRangeBox(info.Name, ref newValue,
-              labelProportion: FloatRangeLabelProportion,
-              subLabelProportions: FloatRangeSubLabelProportion, buffer: 5);
-            if (floatRange != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
-          }
-          else if (info.TryGetValue(out Vector3 vector3))
-          {
-            Vector3 newValue = vector3;
-            listing.Vector3Box(info.Name, ref newValue, labelProportion: VectorLabelProportion,
-              subLabelProportions: VectorSubLabelProportion, buffer: 5);
-            if (vector3 != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
-          }
-          else if (info.TryGetValue(out float @float))
-          {
-            float newValue = @float;
-            if (info.fieldInfo.TryGetAttribute<NumericBoxValuesAttribute>(out var inputBox))
-            {
-              listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty,
-                min: inputBox.MinValue,
-                max: inputBox.MaxValue, lineHeight: RowHeight);
-            }
-            else
-            {
-              listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0,
-                max: float.MaxValue,
-                lineHeight: RowHeight);
-            }
-            if (@float != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
-          }
-          return false;
+          return true;
         }
-        case UISettingsType.ToggleLabel:
+        else if (info.TryGetValue(out FloatRange floatRange))
+        {
+          FloatRange newValue = floatRange;
+          listing.FloatRangeBox(info.Name, ref newValue,
+            labelProportion: FloatRangeLabelProportion,
+            subLabelProportions: FloatRangeSubLabelProportion, buffer: 5);
+          if (floatRange != newValue)
+          {
+            info.SetValue(newValue);
+            fieldChanged = true;
+          }
+          return true;
+        }
+        else if (info.TryGetValue(out Vector3 vector3))
+        {
+          Vector3 newValue = vector3;
+          listing.Vector3Box(info.Name, ref newValue, labelProportion: VectorLabelProportion,
+            subLabelProportions: VectorSubLabelProportion, buffer: 5);
+          if (vector3 != newValue)
+          {
+            info.SetValue(newValue);
+            fieldChanged = true;
+          }
+          return true;
+        }
+        else if (info.TryGetValue(out float value))
+        {
+          float newValue = value;
+          if (info.fieldInfo.TryGetAttribute(out NumericBoxValuesAttribute inputBox))
+          {
+            listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty,
+              min: inputBox.MinValue,
+              max: inputBox.MaxValue, lineHeight: RowHeight);
+          }
+          else
+          {
+            listing.FloatBox(info.Name, ref newValue, string.Empty, string.Empty, min: 0,
+              max: float.MaxValue,
+              lineHeight: RowHeight);
+          }
+          if (!Mathf.Approximately(value, newValue))
+          {
+            info.SetValue(newValue);
+            fieldChanged = true;
+          }
+          return true;
+        }
+        return false;
+      }
+      case UISettingsType.ToggleLabel:
 
-          Color color = Color.white;
-          Color highlightedColor = new Color(0.1f, 0.85f, 0.85f);
-          Color clickColor = new Color(highlightedColor.r - 0.15f, highlightedColor.g - 0.15f,
-            highlightedColor.b - 0.15f);
+        Color color = Color.white;
+        Color highlightedColor = new(0.1f, 0.85f, 0.85f);
+        Color clickColor = new(highlightedColor.r - 0.15f, highlightedColor.g - 0.15f,
+          highlightedColor.b - 0.15f);
 
-          if (info.TryGetValue(out Rot4 rot4))
-          {
-            if (listing.ClickableLabel(info.Name, rot4.ToStringWord(), highlightedColor, color,
-              clickColor: clickColor, lineHeight: RowHeight))
-            {
-              rot4.Rotate(RotationDirection.Clockwise);
-              info.SetValue(rot4);
-              fieldChanged = true;
-            }
-            return true;
-          }
-          else if (info.TryGetValue(out Rot8 rot8))
-          {
-            if (listing.ClickableLabel(info.Name, rot8.ToStringNamed(), highlightedColor, color,
-              clickColor: clickColor, lineHeight: RowHeight))
-            {
-              rot8.Rotate(RotationDirection.Clockwise);
-              info.SetValue(rot8);
-              fieldChanged = true;
-            }
-            return true;
-          }
-          return false;
-        case UISettingsType.SliderEnum:
+        if (info.TryGetValue(out Rot4 rot4))
         {
-          if (info.TryGetValue(out int value))
+          if (listing.ClickableLabel(info.Name, rot4.ToStringWord(), highlightedColor, color,
+            clickColor: clickColor, lineHeight: RowHeight))
           {
-            int newValue = value;
-            listing.EnumSliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
-              info.fieldInfo.FieldType);
-            if (value != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
+            rot4.Rotate(RotationDirection.Clockwise);
+            info.SetValue(rot4);
+            fieldChanged = true;
           }
+          return true;
         }
-          return false;
-        case UISettingsType.SliderInt:
+        if (info.TryGetValue(out Rot8 rot8))
         {
-          if (info.TryGetValue(out int value))
+          if (listing.ClickableLabel(info.Name, rot8.ToStringNamed(), highlightedColor, color,
+            clickColor: clickColor, lineHeight: RowHeight))
           {
-            int newValue = value;
-            if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
-            {
-              listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
-                slider.EndSymbol, Mathf.RoundToInt(slider.MinValue),
-                Mathf.RoundToInt(slider.MaxValue), endValue: (int)slider.EndValue,
-                maxValueDisplay: slider.MaxValueDisplay, minValueDisplay: slider.MinValueDisplay);
-            }
-            else
-            {
-              Log.WarningOnce(
-                $"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no " +
-                $"SliderValues attribute. Slider will use default values instead.",
-                info.fieldInfo.GetHashCode());
-              listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
-                string.Empty, 0, 100);
-            }
-            if (value != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
+            rot8.Rotate(RotationDirection.Clockwise);
+            info.SetValue(rot8);
+            fieldChanged = true;
           }
+          return true;
         }
-          return false;
-        case UISettingsType.SliderFloat:
+        return false;
+      case UISettingsType.SliderEnum:
+      {
+        if (info.TryGetValue(out int value))
         {
-          if (info.TryGetValue(out float value))
+          int newValue = value;
+          listing.EnumSliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
+            info.fieldInfo.FieldType);
+          if (value != newValue)
           {
-            float newValue = value;
-            if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
-            {
-              listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
-                slider.EndSymbol, slider.MinValue, slider.MaxValue,
-                decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue,
-                increment: slider.Increment);
-            }
-            else
-            {
-              Log.WarningOnce(
-                $"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no " +
-                $"SliderValues attribute. Slider will use default values instead.",
-                info.fieldInfo.GetHashCode());
-              listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
-                string.Empty, 0, 100);
-            }
-            if (value != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
+            info.SetValue(newValue);
+            fieldChanged = true;
           }
+          return true;
         }
-          return false;
-        case UISettingsType.SliderPercent:
+      }
+        return false;
+      case UISettingsType.SliderInt:
+      {
+        if (info.TryGetValue(out int value))
         {
-          if (info.TryGetValue(out float value))
+          int newValue = value;
+          if (info.fieldInfo.TryGetAttribute(out SliderValuesAttribute slider))
           {
-            float newValue = value;
-            if (info.fieldInfo.TryGetAttribute<SliderValuesAttribute>(out var slider))
-            {
-              listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty,
-                slider.EndSymbol, slider.MinValue, slider.MaxValue,
-                decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue);
-            }
-            else
-            {
-              Log.WarningOnce(
-                $"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no " +
-                $"SliderValues attribute. Slider will use default values instead.",
-                info.fieldInfo.GetHashCode());
-              listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty, "%",
-                0, 1, decimalPlaces: 0);
-            }
-            if (value != newValue)
-            {
-              info.SetValue(newValue);
-              fieldChanged = true;
-            }
-            return true;
+            listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
+              slider.EndSymbol, Mathf.RoundToInt(slider.MinValue),
+              Mathf.RoundToInt(slider.MaxValue), endValue: (int)slider.EndValue,
+              maxValueDisplay: slider.MaxValueDisplay, minValueDisplay: slider.MinValueDisplay);
           }
+          else
+          {
+            Log.WarningOnce(
+              $"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no " +
+              $"SliderValues attribute. Slider will use default values instead.",
+              info.fieldInfo.GetHashCode());
+            listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
+              string.Empty, 0, 100);
+          }
+          if (value != newValue)
+          {
+            info.SetValue(newValue);
+            fieldChanged = true;
+          }
+          return true;
         }
-          return false;
-        default:
-          Log.ErrorOnce(
-            $"{settingsType} has not yet been implemented for PostToSettings.DrawLister. Please notify SmashPhil.",
-            settingsType.ToString().GetHashCode());
-          return false;
+      }
+        return false;
+      case UISettingsType.SliderFloat:
+      {
+        if (info.TryGetValue(out float value))
+        {
+          float newValue = value;
+          if (info.fieldInfo.TryGetAttribute(out SliderValuesAttribute slider))
+          {
+            listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
+              slider.EndSymbol, slider.MinValue, slider.MaxValue,
+              decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue,
+              increment: slider.Increment);
+          }
+          else
+          {
+            Log.WarningOnce(
+              $"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no " +
+              $"SliderValues attribute. Slider will use default values instead.",
+              info.fieldInfo.GetHashCode());
+            listing.SliderLabeled(info.Name, ref newValue, string.Empty, string.Empty,
+              string.Empty, 0, 100);
+          }
+          if (!Mathf.Approximately(value, newValue))
+          {
+            info.SetValue(newValue);
+            fieldChanged = true;
+          }
+          return true;
+        }
+      }
+        return false;
+      case UISettingsType.SliderPercent:
+      {
+        if (info.TryGetValue(out float value))
+        {
+          float newValue = value;
+          if (info.fieldInfo.TryGetAttribute(out SliderValuesAttribute slider))
+          {
+            listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty,
+              slider.EndSymbol, slider.MinValue, slider.MaxValue,
+              decimalPlaces: slider.RoundDecimalPlaces, endValue: slider.EndValue);
+          }
+          else
+          {
+            Log.WarningOnce(
+              $"Slider declared {info.fieldInfo.DeclaringType}.{info.fieldInfo.Name} with no " +
+              $"SliderValues attribute. Slider will use default values instead.",
+              info.fieldInfo.GetHashCode());
+            listing.SliderPercentLabeled(info.Name, ref newValue, string.Empty, string.Empty, "%",
+              0, 1, decimalPlaces: 0);
+          }
+          if (!Mathf.Approximately(value, newValue))
+          {
+            info.SetValue(newValue);
+            fieldChanged = true;
+          }
+          return true;
+        }
+      }
+        return false;
+      default:
+        Log.ErrorOnce(
+          $"{settingsType} has not yet been implemented for PostToSettings.DrawLister. Please notify SmashPhil.",
+          settingsType.ToString().GetHashCode());
+        return false;
+    }
+  }
+
+  private static void FieldChanged()
+  {
+    foreach (TweakInfo info in instanceTweaks)
+    {
+      if (info.instance is ITweakFields tweakFields)
+      {
+        tweakFields.OnFieldChanged();
+      }
+    }
+  }
+
+  private class UiSettings(string category, string subCategory, UISettingsType settingsType)
+  {
+    public readonly string category = category;
+    public readonly string subCategory = subCategory;
+    public readonly UISettingsType settingsType = settingsType;
+  }
+
+  private class TweakInfo
+  {
+    public FieldInfo fieldInfo;
+    public object instance;
+
+    public UiSettings ui;
+
+    public string Name
+    {
+      get
+      {
+        if (IndexInList >= 0)
+        {
+          return $"{fieldInfo.Name}_{IndexInList + 1}"; //Xml indices are 1-based
+        }
+        return fieldInfo.Name;
       }
     }
 
-    private void FieldChanged()
+    public int IndexInList { get; internal set; }
+
+    public bool TryGetValue<T>(out T value) where T : struct
     {
-      foreach (TweakInfo info in tweakValueFields)
+      value = default;
+      if (typeof(T) != fieldInfo.FieldType &&
+        typeof(T) != Nullable.GetUnderlyingType(fieldInfo.FieldType))
       {
-        if (info.instance is ITweakFields tweakFields)
+        if (!fieldInfo.FieldType.IsEnum || typeof(T) != typeof(int))
         {
-          tweakFields.OnFieldChanged();
-        }
-      }
-    }
-
-    private struct TweakInfo
-    {
-      public FieldInfo fieldInfo;
-      public object instance;
-
-      public string category;
-      public string subCategory;
-
-      public UISettingsType settingsType;
-
-      public object initialValue;
-
-      public string Name
-      {
-        get
-        {
-          if (IndexInList >= 0)
-          {
-            return $"{fieldInfo.Name}_{IndexInList + 1}"; //Xml indices are 1-based
-          }
-          return fieldInfo.Name;
-        }
-      }
-
-      public int IndexInList { get; internal set; }
-
-      public bool TryGetValue<T>(out T value) where T : struct
-      {
-        value = default;
-        if (typeof(T) != fieldInfo.FieldType &&
-          typeof(T) != Nullable.GetUnderlyingType(fieldInfo.FieldType))
-        {
-          if (!fieldInfo.FieldType.IsEnum || typeof(T) != typeof(int))
-          {
-            return false;
-          }
-        }
-        object rawValue = fieldInfo.GetValue(instance);
-        if (Nullable.GetUnderlyingType(fieldInfo.FieldType) == typeof(T))
-        {
-          T? nullableValue = (T?)rawValue;
-          if (!nullableValue.HasValue)
-          {
-            return false;
-          }
-          rawValue = nullableValue.Value;
-        }
-        if (rawValue.GetType() != typeof(T) &&
-          (!fieldInfo.FieldType.IsEnum || typeof(T) != typeof(int)))
-        {
-          Log.Error($"Invalid Cast: {rawValue.GetType()} to {typeof(T)}");
           return false;
         }
-        value = (T)rawValue;
-        return true;
       }
-
-      public void SetValue<T>(T value)
+      object rawValue = fieldInfo.GetValue(instance);
+      if (Nullable.GetUnderlyingType(fieldInfo.FieldType) == typeof(T))
       {
-        fieldInfo.SetValue(instance, value);
+        T? nullableValue = (T?)rawValue;
+        if (!nullableValue.HasValue)
+        {
+          return false;
+        }
+        rawValue = nullableValue.Value;
       }
+      if (rawValue.GetType() != typeof(T) &&
+        (!fieldInfo.FieldType.IsEnum || typeof(T) != typeof(int)))
+      {
+        Log.Error($"Invalid Cast: {rawValue.GetType()} to {typeof(T)}");
+        return false;
+      }
+      value = (T)rawValue;
+      return true;
+    }
+
+    public void SetValue<T>(T value)
+    {
+      fieldInfo.SetValue(instance, value);
     }
   }
 }

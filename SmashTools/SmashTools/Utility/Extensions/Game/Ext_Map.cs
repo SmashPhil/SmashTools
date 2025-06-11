@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using HarmonyLib;
 using RimWorld;
 using SmashTools.Performance;
 using UnityEngine;
@@ -13,40 +14,27 @@ namespace SmashTools;
 
 public static class Ext_Map
 {
-  private static readonly HashSet<Type> areaTypes = [];
+  private static readonly AccessTools.FieldRef<AreaManager, List<Area>> areaListFieldRef;
 
-  public static void RegisterArea<T>() where T : Area
+  static Ext_Map()
   {
-    areaTypes.Add(typeof(T));
+    areaListFieldRef = AccessTools.FieldRefAccess<List<Area>>(typeof(AreaManager), "areas");
   }
 
-  public static void TryAddAreas(this Map map)
+  public static void EnsureAreaInitialized<T>(this Map map) where T : Area, new()
   {
     if (map.areaManager == null)
     {
       Log.Error("Trying to add registered area types before AreaManager has been initialized.");
       return;
     }
-
-    MethodInfo getAreaMethod = map.areaManager.GetType().GetMethod(nameof(map.areaManager.Get),
-      BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-    if (getAreaMethod == null)
+    Assert.IsNotNull(areaListFieldRef);
+    T area = map.areaManager.Get<T>();
+    if (area == null)
     {
-      Log.Error("Unable to register modded areas, could not locate getter method for AreaManager.");
-      return;
-    }
-    FieldInfo areaListField = map.areaManager.GetType().GetField("areas",
-      BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-    Assert.IsNotNull(areaListField);
-    List<Area> areas = (List<Area>)areaListField.GetValue(map.areaManager);
-    foreach (Type type in areaTypes)
-    {
-      Area area = (Area)getAreaMethod.MakeGenericMethod(type).Invoke(map.areaManager, null);
-      if (area == null) //Only add area if it hasn't been already, this is also done post-load
-      {
-        Area newArea = (Area)Activator.CreateInstance(type, map.areaManager);
-        areas.Add(newArea);
-      }
+      area = (T)Activator.CreateInstance(typeof(T), map.areaManager);
+      List<Area> areas = areaListFieldRef.Invoke(map.areaManager);
+      areas.Add(area);
     }
   }
 

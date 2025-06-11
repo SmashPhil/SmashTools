@@ -79,7 +79,7 @@ namespace SmashTools
       Log.ErrorOnce(ColorizeBrackets(text), key);
     }
 
-    internal static string ColorizeBrackets(string text)
+    public static string ColorizeBrackets(this string text)
     {
       foreach ((string key, Color color) in bracketColor)
       {

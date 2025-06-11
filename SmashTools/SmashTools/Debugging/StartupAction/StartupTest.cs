@@ -169,7 +169,7 @@ namespace SmashTools
     private static void ExecuteTesting(GameState gameState)
     {
 #if DEV_TOOLS
-      if (UnitTestManager.RunningUnitTests)
+      if (TestWatcher.RunningUnitTests)
         return;
 #endif
 

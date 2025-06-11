@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using Verse;
 
-namespace SmashTools.Pathfinding;
+namespace SmashTools.Algorithms;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class Dijkstra<T>

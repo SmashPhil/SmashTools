@@ -9,11 +9,11 @@ namespace SmashTools.Rendering;
 public static class RenderTextureDrawer
 {
   private static readonly List<RenderData> renderDatas = [];
-  private static readonly Mesh mesh;
+  //private static readonly Mesh mesh;
 
   private static RenderTexture renderTexture;
 
-  public static bool InUse => renderTexture != null;
+  public static bool InUse => renderTexture;
 
   static RenderTextureDrawer()
   {
@@ -56,7 +56,13 @@ public static class RenderTextureDrawer
     RenderTextureDrawer.renderTexture = null;
   }
 
-  public static void Draw(Rect rect, float scale = 1)
+  /// <summary>
+  /// Finalize RenderTexture rendering with added render datas.
+  /// </summary>
+  /// <param name="rect">Outer rect containing all of the graphics being drawn.</param>
+  /// <param name="scale">Zoom factor on all drawn graphics, scaled from the center of the rect.</param>
+  /// <param name="center">Set rect position of all render data to center of outer rect. Use for 'icon' images that need all offsets erased.</param>
+  public static void Draw(Rect rect, float scale = 1, bool center = false)
   {
     renderDatas.Sort();
 
@@ -69,7 +75,7 @@ public static class RenderTextureDrawer
       GL.Clear(true, true, Color.clear);
       foreach (RenderData renderData in renderDatas)
       {
-        DrawRenderData(rect, renderData, scale: scale);
+        DrawRenderData(rect, renderData, scale: scale, center: center);
       }
     }
     finally
@@ -79,14 +85,15 @@ public static class RenderTextureDrawer
     }
     return;
 
-    static void DrawRenderData(Rect rect, in RenderData renderData, float scale = 1)
+    static void DrawRenderData(Rect rect, in RenderData renderData, float scale, bool center)
     {
-      if (renderData.material != null && !renderData.material.SetPass(0))
+      if (renderData.material && !renderData.material.SetPass(0))
         return;
       GL.PushMatrix();
       try
       {
-        Rect normalizedRect = NormalizeRect(renderData.rect, rect);
+        Rect input = center ? renderData.rect with { center = rect.center } : renderData.rect;
+        Rect normalizedRect = NormalizeRect(input, rect);
         Vector3 size = normalizedRect.size * scale;
         Quaternion rotation = Quaternion.Euler(0f, 0f, renderData.angle);
         Matrix4x4 matrix = Matrix4x4.TRS(normalizedRect.center, rotation, size)

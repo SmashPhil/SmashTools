@@ -270,13 +270,11 @@ namespace SmashTools
 
     public static void Header(this Listing lister, string header, Color highlight,
       GameFont fontSize = GameFont.Medium, TextAnchor anchor = TextAnchor.MiddleLeft,
-      float rowGap = 16)
+      float rowGap = 22 /* Average size of GameFont.Small */)
     {
+      using TextBlock textBlock = new(fontSize);
       Listing_SplitColumns splitLister = lister as Listing_SplitColumns;
-
       splitLister?.NextRow(rowGap);
-
-      using var textBlock = new TextBlock(fontSize);
       Rect rect = lister.GetRect(Text.CalcHeight(header, lister.ColumnWidth));
       UIElements.Header(rect, header, highlight, fontSize: fontSize, anchor: anchor);
 

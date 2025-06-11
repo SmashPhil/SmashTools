@@ -11,7 +11,7 @@ namespace SmashTools.Animations
 	public class AnimationEvent : IXmlExport, ISelectableUI, IComparable<AnimationEvent>
 	{
 		public int frame;
-		public ResolvedMethod method;
+		public DynamicDelegate method;
 
 		int IComparable<AnimationEvent>.CompareTo(AnimationEvent other)
 		{

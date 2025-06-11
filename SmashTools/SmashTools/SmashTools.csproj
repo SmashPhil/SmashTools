@@ -1,321 +1,129 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SmashTools</RootNamespace>
-    <AssemblyName>SmashTools</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
-    <LangVersion>preview</LangVersion>
-    <TargetFrameworkProfile />
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>portable</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <NoWarn>CS0649</NoWarn>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
-    <DefineConstants>TRACE;RELEASE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>CS0649</NoWarn>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Unstable|AnyCPU' ">
-    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
-    <Optimize>true</Optimize>
-    <DefineConstants>TRACE;UNSTABLE;</DefineConstants>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>8.0</LangVersion>
-    <ErrorReport>prompt</ErrorReport>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>CS0649</NoWarn>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnitTest|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;</DefineConstants>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>CS0649</NoWarn>
-    <DebugType>portable</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>preview</LangVersion>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Lib.Harmony">
-      <Version>2.3.3</Version>
-    </PackageReference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.IMGUIModule">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.InputModule">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.InputModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.UIModule">
-      <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.UIModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Animating\AnimationClip.cs" />
-    <Compile Include="Animating\AnimationCondition.cs" />
-    <Compile Include="Animating\AnimationEvents.cs" />
-    <Compile Include="Animating\AnimationParameterDef.cs" />
-    <Compile Include="Animating\AnimationController.cs" />
-    <Compile Include="Animating\AnimationCurve.cs" />
-    <Compile Include="Animating\AnimationEvent.cs" />
-    <Compile Include="Animating\AnimationLayer.cs" />
-    <Compile Include="Animating\AnimationLoader.cs" />
-    <Compile Include="Animating\AnimationManager.cs" />
-    <Compile Include="Animating\AnimationParameter.cs" />
-    <Compile Include="Animating\AnimationProperty.cs" />
-    <Compile Include="Animating\AnimationPropertyParent.cs" />
-    <Compile Include="Animating\AnimationPropertyRegistry.cs" />
-    <Compile Include="Animating\AnimationState.cs" />
-    <Compile Include="Animating\AnimationTransition.cs" />
-    <Compile Include="Animating\KeyFrame.cs" />
-    <Compile Include="Animating\ObjectPath.cs" />
-    <Compile Include="Animating\Obsolete\AnimationDriver.cs" />
-    <Compile Include="Animating\Obsolete\AnimationEvent.cs" />
-    <Compile Include="Animating\Obsolete\AnimatorObject.cs" />
-    <Compile Include="Attributes\AnimationEventAttribute.cs" />
-    <Compile Include="Attributes\AnimationPropertyAttribute.cs" />
-    <Compile Include="Attributes\GraphEditableAttribute.cs" />
-    <Compile Include="Attributes\HeaderTitleAttribute.cs" />
-    <Compile Include="Attributes\MustImplementAttribute.cs" />
-    <Compile Include="Attributes\NoProfilingAttribute.cs" />
-    <Compile Include="Attributes\NumericBoxValuesAttribute.cs" />
-    <Compile Include="Attributes\ProfileAttribute.cs" />
-    <Compile Include="Attributes\SliderValuesAttribute.cs" />
-    <Compile Include="Attributes\StaticConstructorOnGameInitAttribute.cs" />
-    <Compile Include="Attributes\StaticConstructorOnModInitAttribute.cs" />
-    <Compile Include="Attributes\TweakFieldAttribute.cs" />
-    <Compile Include="Attributes\StartupActionAttribute.cs" />
-    <Compile Include="Collections\CircularArray.cs" />
-    <Compile Include="Collections\ConcurrentSet.cs" />
-    <Compile Include="Collections\DropOutStack.cs" />
-    <Compile Include="Collections\ImmutableArray.cs" />
-    <Compile Include="Debugging\AssertHandler.cs" />
-    <Compile Include="Debugging\StartupAction\StartupTest.cs" />
-    <Compile Include="Performance\Caching\ObjectPool.cs" />
-    <Compile Include="Collections\SimpleDictionary.cs" />
-    <Compile Include="Collections\RotatingList.cs" />
-    <Compile Include="Collections\SelfOrderingList.cs" />
-    <Compile Include="Animating\Obsolete\AnimationSimulator.cs" />
-    <Compile Include="DataTypes\Components\DetachedMapComponent.cs" />
-    <Compile Include="DataTypes\Graphing\BezierCurve.cs" />
-    <Compile Include="DataTypes\Graphing\LagrangeCurve.cs" />
-    <Compile Include="DataTypes\Graphing\LinearPool.cs" />
-    <Compile Include="DataTypes\Graphing\StaircaseCurve.cs" />
-    <Compile Include="DataTypes\Graphing\LinearCurve.cs" />
-    <Compile Include="DataTypes\ResolvedMethod.cs" />
-    <Compile Include="DataTypes\UIContainers\Toggle.cs" />
-    <Compile Include="Debugging\CameraAttacher.cs" />
-    <Compile Include="Debugging\GameState.cs" />
-    <Compile Include="Debugging\MainMenuKeyBindHandler.cs" />
-    <Compile Include="Debugging\QuickStartMenu.cs" />
-    <Compile Include="Enums\MathOp.cs" />
-    <Compile Include="Enums\UISettingsType.cs" />
-    <Compile Include="Events\EventDisabler.cs" />
-    <Compile Include="Events\EventManager.cs" />
-    <Compile Include="Events\EventTrigger.cs" />
-    <Compile Include="Events\GameEvent.cs" />
-    <Compile Include="Interfaces\Animations\IAnimationFile.cs" />
-    <Compile Include="Interfaces\Animations\IAnimationObject.cs" />
-    <Compile Include="Interfaces\IAnimationTarget.cs" />
-    <Compile Include="Debugging\CameraController.cs" />
-    <Compile Include="Interfaces\Animations\IAnimator.cs" />
-    <Compile Include="Interfaces\IDefaultValue.cs" />
-    <Compile Include="Interfaces\IDefIndex.cs" />
-    <Compile Include="Interfaces\IEventManager.cs" />
-    <Compile Include="Interfaces\IHighPriorityOnGUI.cs" />
-    <Compile Include="Interfaces\IInspectable.cs" />
-    <Compile Include="Interfaces\IPathfinder.cs" />
-    <Compile Include="Interfaces\IPoolable.cs" />
-    <Compile Include="Interfaces\ISelectableUI.cs" />
-    <Compile Include="Interfaces\IThingHolderPawnOverlayer.cs" />
-    <Compile Include="Interfaces\ITweakFields.cs" />
-    <Compile Include="Interfaces\IXmlExport.cs" />
-    <Compile Include="Logging\SmashLog.cs" />
-    <Compile Include="Logging\Trace.cs" />
-    <Compile Include="MapGeneration\GenSteps\GenStep_RocksNearEdge.cs" />
-    <Compile Include="Patching\ForceMethodImplementation.cs" />
-    <Compile Include="Patching\Harmony\Compatibility_RimHUD.cs" />
-    <Compile Include="Patching\PatchOperations\PatchOperationAddSafely.cs" />
-    <Compile Include="Pathfinding\AStar.cs" />
-    <Compile Include="Pathfinding\BFS.cs" />
-    <Compile Include="Pathfinding\Dijkstra.cs" />
-    <Compile Include="Performance\Caching\MapComponentCache.cs" />
-    <Compile Include="Performance\Caching\UnityObjectPool.cs" />
-    <Compile Include="Performance\Coroutines\WaitForTicks.cs" />
-    <Compile Include="Performance\Multithreading\AsyncAction.cs" />
-    <Compile Include="Performance\Multithreading\AsyncLongOperationAction.cs" />
-    <Compile Include="Performance\Caching\AsyncPool.cs" />
-    <Compile Include="Performance\Coroutines\CoroutineManager.cs" />
-    <Compile Include="Performance\Multithreading\ListSnapshot.cs" />
-    <Compile Include="Performance\Multithreading\DedicatedThread.cs" />
-    <Compile Include="Performance\Multithreading\UnityThread.cs" />
-    <Compile Include="Performance\Profiling\ObjectCounter.cs" />
-    <Compile Include="Performance\Profiling\ObjectCountWatcher.cs" />
-    <Compile Include="Performance\Profiling\ProfilerWatch.cs" />
-    <Compile Include="Performance\Multithreading\TaskManager.cs" />
-    <Compile Include="Performance\Multithreading\ThreadManager.cs" />
-    <Compile Include="ProjectStartup.cs" />
-    <Compile Include="Rendering\CameraView.cs" />
-    <Compile Include="Rendering\Gui\RenderTextureIdler.cs" />
-    <Compile Include="Rendering\IParallelRenderer.cs" />
-    <Compile Include="Rendering\PawnOverlayRenderer.cs" />
-    <Compile Include="Rendering\Gui\RenderData.cs" />
-    <Compile Include="Rendering\Gui\RenderTextureBuffer.cs" />
-    <Compile Include="Rendering\Gui\TextureDrawer.cs" />
-    <Compile Include="Rendering\Gui\RenderTextureDrawer.cs" />
-    <Compile Include="Rendering\Transform.cs" />
-    <Compile Include="Rendering\TransformData.cs" />
-    <Compile Include="Saving\ClassLoader.cs" />
-    <Compile Include="Saving\Scribe\Scribe_Array.cs" />
-    <Compile Include="SmashSettings.cs" />
-    <Compile Include="DataTypes\RimWorldTime.cs" />
-    <Compile Include="DataTypes\Rot8.cs" />
-    <Compile Include="UI\AnimationGraph.cs" />
-    <Compile Include="UI\HighPriorityInputs.cs" />
-    <Compile Include="UI\Misc\WidgetRowButBetter.cs" />
-    <Compile Include="UI\Graph.cs" />
-    <Compile Include="UI\Selector.cs" />
-    <Compile Include="UI\UndoManager.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\AnimationClipEditor.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\AnimationEditor.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\AnimationControllerEditor.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationEditor.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\Dialog_DefDropdown.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\Dialog_MethodSelector.cs" />
-    <Compile Include="UI\Windows\Dialog_ActionList.cs" />
-    <Compile Include="UI\Windows\Dialog_CameraView.cs" />
-    <Compile Include="UI\Windows\Performance\Dialog_DedicatedThreadActivity.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\Dialog_AnimationClipLister.cs" />
-    <Compile Include="UI\Windows\Dialog_ItemDropdown.cs" />
-    <Compile Include="UI\Windows\Dialog_FilePicker.cs" />
-    <Compile Include="UI\Windows\Dialog_Graph.cs" />
-    <Compile Include="UI\Windows\Dialog_GraphEditor.cs" />
-    <Compile Include="UI\Windows\Dialog_InspectWindow.cs" />
-    <Compile Include="UI\Windows\AnimationEditor\Dialog_PropertySelect.cs" />
-    <Compile Include="UI\Windows\Dialog_ToggleMenu.cs" />
-    <Compile Include="UI\Windows\Dialog_RadioButtonMenu.cs" />
-    <Compile Include="UI\Windows\EditWindow_TweakFields.cs" />
-    <Compile Include="UI\Windows\MovingWindow.cs" />
-    <Compile Include="UI\Windows\Performance\Dialog_Profiler.cs" />
-    <Compile Include="UI\Windows\SingleWindow.cs" />
-    <Compile Include="Animating\Obsolete\AnimationTargetHandler.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_Concurrency.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_LinkedList.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_Queue.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Comp.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_LongEventHandler.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Messages.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_CellRect.cs" />
-    <Compile Include="Utility\Extensions\ProjectExtensions\Ext_Animation.cs" />
-    <Compile Include="Utility\Extensions\ProjectExtensions\DefIndexManager.cs" />
-    <Compile Include="Utility\Extensions\ProjectExtensions\Ext_EventManager.cs" />
-    <Compile Include="Performance\Caching\ComponentCache.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_Array.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Color.cs" />
-    <Compile Include="Utility\Extensions\System\Ext_Conversion.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_IDictionary.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_IEnumerable.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_IList.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_LinearCurve.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Mods.cs" />
-    <Compile Include="Utility\Extensions\System\Ext_Numeric.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Map.cs" />
-    <Compile Include="Utility\Extensions\System\Ext_object.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Pawn.cs" />
-    <Compile Include="Utility\Extensions\System\Ext_Math.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Rect.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Types.cs" />
-    <Compile Include="Utility\Extensions\System\Ext_String.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Texture.cs" />
-    <Compile Include="Utility\Extensions\Collections\Ext_ThingOwner.cs" />
-    <Compile Include="Utility\Extensions\System\Ext_Type.cs" />
-    <Compile Include="Patching\Harmony\ConditionalPatch.cs" />
-    <Compile Include="Interfaces\INestedType.cs" />
-    <Compile Include="UI\Listers\ListingExtensions.cs" />
-    <Compile Include="UI\Listers\Listing_SplitColumns.cs" />
-    <Compile Include="Patching\Harmony\ConditionalPatches.cs" />
-    <Compile Include="ProjectSetup.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="DataTypes\Quadrant.cs" />
-    <Compile Include="Saving\Scribe\ObjectValueExtractor.cs" />
-    <Compile Include="Saving\SavedField.cs" />
-    <Compile Include="Saving\Scribe\ScribeWriter.cs" />
-    <Compile Include="Saving\Scribe\Scribe_NestedCollections.cs" />
-    <Compile Include="Saving\Scribe\Scribe_ObjectCollection.cs" />
-    <Compile Include="Saving\Scribe\Scribe_ObjectValue.cs" />
-    <Compile Include="UI\UIData.cs" />
-    <Compile Include="UI\UIElements.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_Unity.cs" />
-    <Compile Include="Utility\Extensions\Game\Ext_World.cs" />
-    <Compile Include="Utility\QuickIter.cs" />
-    <Compile Include="Utility\GUIState.cs" />
-    <Compile Include="Utility\LongEventText.cs" />
-    <Compile Include="Rendering\Gui\RenderTextureUtil.cs" />
-    <Compile Include="Utility\Utilities.cs" />
-    <Compile Include="Utility\ModVersion.cs" />
-    <Compile Include="Xml\DelayedCrossRefResolver.cs" />
-    <Compile Include="Xml\FilePaths.cs" />
-    <Compile Include="Xml\XmlExporter.cs" />
-    <Compile Include="Xml\XmlParseHelper.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
-  </PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <Authors>Smash Phil</Authors>
+        <Description>Developer tool SDK for RimWorld mods. Primarily used by Vehicle Framework.</Description>
+        <Product>SmashTools</Product>
+        <FileVersion>1.6.0</FileVersion>
+        <AssemblyVersion>1.6.0</AssemblyVersion>
+
+        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+        <Configurations>Debug;Release;Unstable;UnitTest;Benchmark;</Configurations>
+        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+        <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
+        <OutputType>Library</OutputType>
+        <AppDesignerFolder>Properties</AppDesignerFolder>
+        <RootNamespace>SmashTools</RootNamespace>
+        <AssemblyName>SmashTools</AssemblyName>
+        <TargetFramework>net48</TargetFramework>
+        <FileAlignment>512</FileAlignment>
+        <Deterministic>true</Deterministic>
+        <LangVersion>preview</LangVersion>
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <OutDir>..\..\..\1.6\Assemblies\</OutDir>
+    </PropertyGroup>
+
+    <!-- AssemblyInfo -->
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>DevTools_SmashTools</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
+
+    <!-- Configurations -->
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>portable</DebugType>
+        <Optimize>false</Optimize>
+        <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;</DefineConstants>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+        <NoWarn>CS0649</NoWarn>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <DefineConstants>TRACE;RELEASE</DefineConstants>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+        <NoWarn>CS0649</NoWarn>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Unstable|AnyCPU' ">
+        <Optimize>true</Optimize>
+        <DefineConstants>TRACE;UNSTABLE;</DefineConstants>
+        <DebugType>pdbonly</DebugType>
+        <LangVersion>8.0</LangVersion>
+        <ErrorReport>prompt</ErrorReport>
+        <NoWarn>CS0649</NoWarn>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnitTest|AnyCPU'">
+        <DebugSymbols>true</DebugSymbols>
+        <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;</DefineConstants>
+        <NoWarn>CS0649</NoWarn>
+        <DebugType>portable</DebugType>
+        <LangVersion>preview</LangVersion>
+        <ErrorReport>prompt</ErrorReport>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Benchmark|AnyCPU'">
+        <OutputPath>..\..\..\1.6\Assemblies\</OutputPath>
+        <DefineConstants>TRACE;RELEASE;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
+        <Optimize>true</Optimize>
+        <NoWarn>CS0649</NoWarn>
+        <DebugType>pdbonly</DebugType>
+        <LangVersion>preview</LangVersion>
+        <ErrorReport>prompt</ErrorReport>
+    </PropertyGroup>
+
+    <!-- Dependencies -->
+    <ItemGroup>
+        <PackageReference Include="Lib.Harmony" Version="2.3.3" ExcludeAssets="runtime" />
+        <Reference Include="Assembly-CSharp">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System">
+            <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\System.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Xml">
+            <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\System.Xml.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="System.Xml.Linq">
+            <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\System.Xml.Linq.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine.IMGUIModule">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine.InputLegacyModule">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine.InputModule">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine.TextRenderingModule">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="UnityEngine.UIModule">
+            <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Properties\" />
+    </ItemGroup>
 </Project>

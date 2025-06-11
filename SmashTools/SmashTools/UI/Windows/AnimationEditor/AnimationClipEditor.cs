@@ -785,7 +785,7 @@ namespace SmashTools.Animations
     {
       if (selector.GetSelected<AnimationEvent>().FirstOrDefault() is AnimationEvent animationEvent)
       {
-        animationEvent.method = new ResolvedMethod(method);
+        animationEvent.method = new DynamicDelegate(method);
       }
     }
 
@@ -1020,7 +1020,7 @@ namespace SmashTools.Animations
             ChangeMade();
           }
         }
-          break;
+        break;
         case AnimationProperty.PropertyType.Int:
         {
           int value = Mathf.RoundToInt(property.curve[Frame]);
@@ -1034,7 +1034,7 @@ namespace SmashTools.Animations
             ChangeMade();
           }
         }
-          break;
+        break;
         case AnimationProperty.PropertyType.Bool:
         {
           //bool value = Mathf.Approximately(propertyParent.Single.curve.Evaluate(frame / FrameCount), 1);
@@ -1042,7 +1042,7 @@ namespace SmashTools.Animations
           animation.RecacheFrameCount();
           ChangeMade();
         }
-          break;
+        break;
       }
       CheckTextFieldControlFocus(inputRect);
     }
@@ -1161,7 +1161,7 @@ namespace SmashTools.Animations
           {
           }
         }
-          break;
+        break;
         case EditTab.Curves:
         {
           Rect curveBackgroundRect = new Rect(frameViewRect.x, animationEventBarRect.yMax,
@@ -1190,7 +1190,7 @@ namespace SmashTools.Animations
           {
           }
         }
-          break;
+        break;
       }
       UIElements.EndScrollView(false);
 

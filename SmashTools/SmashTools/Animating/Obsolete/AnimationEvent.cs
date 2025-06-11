@@ -1,48 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using JetBrains.Annotations;
 using UnityEngine;
-using Verse;
 
-namespace SmashTools
+namespace SmashTools;
+
+[PublicAPI]
+public class AnimationEvent<T>
 {
-	public class AnimationEvent<T>
-	{
-		public float triggerAt = 0;
-		public ResolvedMethod<T> method;
-		public AnimationTrigger type = AnimationTrigger.EqualTo;
-		public AnimationFrequency frequency = AnimationFrequency.OneShot;
+  public float triggerAt;
+  public DynamicDelegate<T> method;
+  public AnimationTrigger type = AnimationTrigger.EqualTo;
+  public AnimationFrequency frequency = AnimationFrequency.OneShot;
 
-		public bool EventFrame(float t)
-		{
-			switch (type)
-			{
-				case AnimationTrigger.GreaterThan:
-					if (t >= triggerAt)
-					{
-						return true;
-					}
-					break;
-				case AnimationTrigger.EqualTo:
-					if (Mathf.Approximately(t, triggerAt))
-					{
-						return true;
-					}
-					break;
-			}
-			return false;
-		}
+  public bool EventFrame(float t)
+  {
+    return type switch
+    {
+      AnimationTrigger.GreaterThan => t >= triggerAt,
+      AnimationTrigger.EqualTo     => Mathf.Approximately(t, triggerAt),
+      _                            => false,
+    };
+  }
 
-		public enum AnimationTrigger
-		{
-			EqualTo,
-			GreaterThan,
-		}
+  public enum AnimationTrigger
+  {
+    EqualTo,
+    GreaterThan,
+  }
 
-		public enum AnimationFrequency
-		{
-			OneShot,
-			Continuous
-		}
-	}
+  public enum AnimationFrequency
+  {
+    OneShot,
+    Continuous
+  }
 }

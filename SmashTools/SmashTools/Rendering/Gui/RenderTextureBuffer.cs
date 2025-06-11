@@ -11,8 +11,8 @@ namespace SmashTools.Rendering;
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class RenderTextureBuffer : IDisposable
 {
-  private readonly RenderTexture rtA;
-  private readonly RenderTexture rtB;
+  private RenderTexture rtA;
+  private RenderTexture rtB;
 
   public RenderTextureBuffer(RenderTexture rtA, RenderTexture rtB)
   {
@@ -41,8 +41,8 @@ public class RenderTextureBuffer : IDisposable
   {
     rtA.Release();
     rtB.Release();
-
     Object.Destroy(rtA);
     Object.Destroy(rtB);
+    GC.SuppressFinalize(this);
   }
 }
