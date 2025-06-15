@@ -1,62 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
+using UnityEngine.Assertions;
 using Verse;
 
 namespace SmashTools;
 
-[StaticConstructorOnStartup]
-public static class MapComponentCache
-{
-  private static readonly List<Type> priorityComponentTypes;
-
-  static MapComponentCache()
-  {
-    priorityComponentTypes = typeof(MapComponent).AllSubclassesNonAbstract().ToList();
-  }
-
-  [MethodImpl(MethodImplOptions.AggressiveInlining)]
-  public static T GetCachedMapComponent<T>(this Map map) where T : MapComponent
-  {
-    return MapComponentCache<T>.GetComponent(map);
-  }
-
-  internal static void ClearMap(Map map)
-  {
-    foreach (Type type in priorityComponentTypes)
-    {
-      GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-        nameof(MapComponentCache<MapComponent>.ClearMap), map);
-    }
-  }
-
-  internal static void ClearAll()
-  {
-    foreach (Type type in priorityComponentTypes)
-    {
-      GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-        nameof(MapComponentCache<MapComponent>.ClearAll));
-    }
-  }
-
-  public static int CountAll()
-  {
-    int count = 0;
-    foreach (Type type in priorityComponentTypes)
-    {
-      count += (int)GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-        nameof(MapComponentCache<MapComponent>.Count));
-    }
-
-    return count;
-  }
-}
-
 public static class MapComponentCache<T> where T : MapComponent
 {
-  private static T[] mapComps = new T[sbyte.MaxValue];
+  private const int CompCacheSize = sbyte.MaxValue;
 
+  private static readonly T[] mapComps = new T[CompCacheSize];
+
+  // NOTE - Map::get_Index ends up iterating through the global map list to search for THIS specific
+  // map, but the player will usually have less than 3~4 maps open at a time. This is roughly the
+  // cutoff between an array lookup time taking more time than a dictionary. It's faster in almost
+  // all cases to fetch the index and then use that for an array lookup.
   public static T GetComponent(Map map)
   {
     T component = mapComps[map.Index];
@@ -65,19 +22,23 @@ public static class MapComponentCache<T> where T : MapComponent
       component = map.GetComponent<T>();
       mapComps[map.Index] = component;
     }
-
+    Assert.AreEqual(map, component.map);
     return component;
   }
 
   public static void ClearMap(Map map)
   {
-    // Free up cached component so it can be fetched when index is reused
     mapComps[map.Index] = null;
   }
 
   public static void ClearAll()
   {
-    mapComps = new T[sbyte.MaxValue];
+    Array.Clear(mapComps, 0, CompCacheSize);
+  }
+
+  internal static T GetComponent(int index)
+  {
+    return mapComps[index];
   }
 
   internal static int Count()

@@ -118,15 +118,6 @@ public static class XmlParseHelper
     registeredAttributes.Add(attribute, (action, nodeAllowed));
   }
 
-  // TODO - supposedly Sam's changes will be merged back in soon
-  [Obsolete]
-  internal static void ReadCustomAttributes_TEMP(string token, XmlNode debugXmlNode,
-    FieldInfo __result)
-  {
-    XmlNode curNode = debugXmlNode.SelectSingleNode(token);
-    ProcessXmlNode(curNode, __result);
-  }
-
   /// <summary>
   /// Parse XmlNode and handle registered custom attributes
   /// </summary>
