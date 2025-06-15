@@ -26,7 +26,7 @@ public static class ThreadManager
   private static readonly FieldInfo eventThreadField =
     AccessTools.Field(typeof(LongEventHandler), "eventThread");
 
-  private static int nextId = 0;
+  private static int nextId;
 
   private static readonly DedicatedThread[] threads =
     new DedicatedThread[MaxThreads + MaxPooledThreads];
@@ -87,7 +87,7 @@ public static class ThreadManager
   {
     if (nextId < 0)
     {
-      Log.Error($"Attempting to create more dedicated threads than allowed.");
+      Log.Error("Attempting to create more dedicated threads than allowed.");
       return null;
     }
 
@@ -98,7 +98,6 @@ public static class ThreadManager
       threads[nextId] = dedicatedThread;
       FindNextUsableId();
     }
-
     return dedicatedThread;
   }
 
@@ -154,7 +153,6 @@ public static class ThreadManager
         return true;
       }
     }
-
     return false;
   }
 
@@ -186,10 +184,11 @@ public static class ThreadManager
   internal static void OnSceneChanged(Scene scene, LoadSceneMode mode)
   {
     Assert.AreEqual(mode, LoadSceneMode.Single);
-    ReleaseThreadsAndClearCache();
+    ReleaseThreads();
+    ComponentCache.ClearAll();
   }
 
-  public static void ReleaseThreadsAndClearCache()
+  public static void ReleaseThreads()
   {
     using ListSnapshot<DedicatedThread> threadsSnapshot = ThreadsSnapshot;
 
@@ -201,8 +200,6 @@ public static class ThreadManager
     {
       ReleaseAndJoin(dedicatedThread);
     }
-
-    MapComponentCache.ClearAll();
   }
 
   public static void ReleaseAndJoin(DedicatedThread dedicatedThread)

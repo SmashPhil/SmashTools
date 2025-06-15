@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Xml;
 using HarmonyLib;
 using LudeonTK;
 using RimWorld;
@@ -27,25 +26,16 @@ namespace SmashTools
 
       Harmony = new Harmony(HarmonyId);
 
-      // TODO - Fixing Sam's new xml parsing since it crashes. Remove when fixed
-      //Harmony.Patch(
-      //  original: AccessTools.Method(typeof(DirectXmlToObjectNew),
-      //    nameof(DirectXmlToObjectNew.DefFromNodeNew)),
-      //  prefix: new HarmonyMethod(typeof(ProjectSetup), nameof(TEMP_DefFromNodeReroute)));
-
       // Xml Parsing
       Harmony.Patch(
         original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
         postfix: new HarmonyMethod(typeof(XmlParseHelper),
           nameof(XmlParseHelper.ReadCustomAttributesOnDef)));
-      Harmony.Patch(original: AccessTools.Method(typeof(DirectXmlToObject), "GetFieldInfoForType"),
+      Harmony.Patch(
+        original: AccessTools.Method(typeof(XmlToObjectUtils),
+          nameof(XmlToObjectUtils.DoFieldSearch)),
         postfix: new HarmonyMethod(typeof(XmlParseHelper),
-          nameof(XmlParseHelper.ReadCustomAttributes_TEMP)));
-      //Harmony.Patch(
-      //  original: AccessTools.Method(typeof(XmlToObjectUtils),
-      //    nameof(XmlToObjectUtils.DoFieldSearch)),
-      //  postfix: new HarmonyMethod(typeof(XmlParseHelper),
-      //    nameof(XmlParseHelper.ReadCustomAttributes)));
+          nameof(XmlParseHelper.ReadCustomAttributes)));
       Harmony.Patch(
         original: AccessTools.Method(typeof(DefGenerator),
           nameof(DefGenerator.GenerateImpliedDefs_PreResolve)),
@@ -72,24 +62,17 @@ namespace SmashTools
           nameof(SmashLog.RemoveRichTextMessageDetailsTranspiler)));
 #endif
 
-      // Game, World, and Map events
-      Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ConstructComponents)),
-        postfix: new HarmonyMethod(typeof(DetachedMapComponent),
-          nameof(DetachedMapComponent.InstantiateAllMapComponents)));
+      // Map Components
+      Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
+        postfix: new HarmonyMethod(typeof(ComponentCache),
+          nameof(ComponentCache.PreCache)));
       Harmony.Patch(
-        original: AccessTools.Method(typeof(MapComponentUtility),
-          nameof(MapComponentUtility.MapRemoved)),
-        prefix: new HarmonyMethod(typeof(DetachedMapComponent),
-          nameof(DetachedMapComponent.ClearComponentsFromCache)));
-      Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
-        prefix: new HarmonyMethod(typeof(MapComponentCache),
-          nameof(MapComponentCache.ClearAll)));
-      Harmony.Patch(original: AccessTools.Method(typeof(MapDeiniter), nameof(MapDeiniter.Deinit)),
-        postfix: new HarmonyMethod(typeof(MapComponentCache),
-          nameof(MapComponentCache.ClearMap), [typeof(Map)]));
-      Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.InitNewGame)),
-        prefix: new HarmonyMethod(typeof(MapComponentCache),
-          nameof(MapComponentCache.ClearAll)));
+        original: AccessTools.Method(typeof(MapDeiniter),
+          nameof(MapDeiniter.Deinit)),
+        postfix: new HarmonyMethod(typeof(ComponentCache),
+          nameof(ComponentCache.ClearMap), [typeof(Map)]));
+
+      // Game, World, and Map events
       Harmony.Patch(
         original: AccessTools.Method(typeof(MemoryUtility),
           nameof(MemoryUtility.ClearAllMapsAndWorld)),
@@ -162,20 +145,14 @@ namespace SmashTools
       StaticConstructorOnModInit();
 
       SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
-      GameEvent.OnWorldUnloading += ThreadManager.ReleaseThreadsAndClearCache;
+      GameEvent.OnWorldUnloading += ThreadManager.ReleaseThreads;
+      GameEvent.OnWorldUnloading += ComponentCache.ClearAll;
 
 #if DEBUG
       GameEvent.OnNewGame += StartupTest.ExecuteNewGameTesting;
       GameEvent.OnLoadGame += StartupTest.ExecutePostLoadTesting;
       GameEvent.OnMainMenu += StartupTest.ExecuteOnStartupTesting;
 #endif
-    }
-
-    private static bool TEMP_DefFromNodeReroute(XmlNode node, LoadableXmlAsset loadingAsset,
-      out Def __result)
-    {
-      __result = DirectXmlLoader.DefFromNode(node, loadingAsset);
-      return false;
     }
 
     private static void RegisterParseableStructs()

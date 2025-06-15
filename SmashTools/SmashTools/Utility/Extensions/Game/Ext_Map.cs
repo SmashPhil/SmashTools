@@ -261,26 +261,4 @@ public static class Ext_Map
       p is T t && (faction is null || p.Faction == faction) &&
       (validator is null || validator(t))).Cast<T>().ToList();
   }
-
-
-  /* ---- DetatchedMapComponent Extensions ---- */
-
-  public static T GetCachedMapComponent<T>(this Map map) where T : DetachedMapComponent
-  {
-    if (DetachedMapComponent.mapComps.TryGetValue(map, out var components))
-    {
-      foreach (DetachedMapComponent component in components)
-      {
-        if (component is T matchingComponent)
-        {
-          return matchingComponent;
-        }
-      }
-      return null;
-    }
-    Log.Error($"Unable to locate Map={map} in detached map cache.");
-    return null;
-  }
-
-  /* ----------------------------------------- */
 }
