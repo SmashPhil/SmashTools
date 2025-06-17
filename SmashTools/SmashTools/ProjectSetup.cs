@@ -10,202 +10,204 @@ using UnityEngine.SceneManagement;
 using Verse;
 using Verse.Profile;
 
-namespace SmashTools
+namespace SmashTools;
+
+public class ProjectSetup : Mod
 {
-  public class ProjectSetup : Mod
+  public const string ProjectLabel = "SmashTools";
+  public const string LogLabel = $"[{ProjectLabel}]";
+  public const string HarmonyId = "SmashPhil.SmashTools";
+
+  public static Harmony Harmony { get; private set; }
+
+  public ProjectSetup(ModContentPack content) : base(content)
   {
-    public const string ProjectLabel = "SmashTools";
-    public const string LogLabel = $"[{ProjectLabel}]";
-    public const string HarmonyId = "SmashPhil.SmashTools";
+    RegisterParseableStructs();
 
-    public static Harmony Harmony { get; private set; }
+    Harmony = new Harmony(HarmonyId);
 
-    public ProjectSetup(ModContentPack content) : base(content)
-    {
-      RegisterParseableStructs();
+    // Xml Parsing
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
+      postfix: new HarmonyMethod(typeof(XmlParseHelper),
+        nameof(XmlParseHelper.ReadCustomAttributesOnDef)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(XmlToObjectUtils),
+        nameof(XmlToObjectUtils.DoFieldSearch)),
+      postfix: new HarmonyMethod(typeof(XmlParseHelper),
+        nameof(XmlParseHelper.ReadCustomAttributes)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(DefGenerator),
+        nameof(DefGenerator.GenerateImpliedDefs_PreResolve)),
+      prefix: new HarmonyMethod(typeof(GameEvent),
+        nameof(GameEvent.RaiseOnGenerateImpliedDefs)));
 
-      Harmony = new Harmony(HarmonyId);
-
-      // Xml Parsing
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(DirectXmlLoader), nameof(DirectXmlLoader.DefFromNode)),
-        postfix: new HarmonyMethod(typeof(XmlParseHelper),
-          nameof(XmlParseHelper.ReadCustomAttributesOnDef)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(XmlToObjectUtils),
-          nameof(XmlToObjectUtils.DoFieldSearch)),
-        postfix: new HarmonyMethod(typeof(XmlParseHelper),
-          nameof(XmlParseHelper.ReadCustomAttributes)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(DefGenerator),
-          nameof(DefGenerator.GenerateImpliedDefs_PreResolve)),
-        prefix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.RaiseOnGenerateImpliedDefs)));
-
-      // Logging
+    // Logging
 #if !RELEASE
-      // Just removing brackets from stacktrace for clarity. Let's not force other modders to deal
-      // with the performance hit of constant regex filtering in release builds.
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(Log), nameof(Log.Message),
-          parameters: [typeof(string)]),
-        transpiler: new HarmonyMethod(typeof(SmashLog),
-          nameof(SmashLog.RemoveRichTextFromDebugLogTranspiler)));
-      Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Warning)),
-        transpiler: new HarmonyMethod(typeof(SmashLog),
-          nameof(SmashLog.RemoveRichTextFromDebugLogWarningTranspiler)));
-      Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Error)),
-        transpiler: new HarmonyMethod(typeof(SmashLog),
-          nameof(SmashLog.RemoveRichTextFromDebugLogErrorTranspiler)));
-      Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
-        transpiler: new HarmonyMethod(typeof(SmashLog),
-          nameof(SmashLog.RemoveRichTextMessageDetailsTranspiler)));
+    // Just removing brackets from stacktrace for clarity. Let's not force other modders to deal
+    // with the performance hit of constant regex filtering in release builds.
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(Log), nameof(Log.Message),
+        parameters: [typeof(string)]),
+      transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextFromDebugLogTranspiler)));
+    Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Warning)),
+      transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextFromDebugLogWarningTranspiler)));
+    Harmony.Patch(original: AccessTools.Method(typeof(Log), nameof(Log.Error)),
+      transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextFromDebugLogErrorTranspiler)));
+    Harmony.Patch(original: AccessTools.Method(typeof(EditWindow_Log), "DoMessageDetails"),
+      transpiler: new HarmonyMethod(typeof(SmashLog),
+        nameof(SmashLog.RemoveRichTextMessageDetailsTranspiler)));
 #endif
 
-      // Map Components
-      Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
-        postfix: new HarmonyMethod(typeof(ComponentCache),
-          nameof(ComponentCache.PreCache)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(MapDeiniter),
-          nameof(MapDeiniter.Deinit)),
-        postfix: new HarmonyMethod(typeof(ComponentCache),
-          nameof(ComponentCache.ClearMap), [typeof(Map)]));
+    // Map Components
+    Harmony.Patch(original: AccessTools.Method(typeof(Game), nameof(Game.AddMap)),
+      postfix: new HarmonyMethod(typeof(ComponentCache),
+        nameof(ComponentCache.PreCache)));
+    Harmony.Patch(original: AccessTools.Method(typeof(Map), nameof(Map.FinalizeLoading)),
+      prefix: new HarmonyMethod(typeof(ComponentCache),
+        nameof(ComponentCache.PreCacheInst)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(MapDeiniter),
+        nameof(MapDeiniter.Deinit)),
+      postfix: new HarmonyMethod(typeof(ComponentCache),
+        nameof(ComponentCache.ClearMap), [typeof(Map)]));
 
-      // Game, World, and Map events
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(MemoryUtility),
-          nameof(MemoryUtility.ClearAllMapsAndWorld)),
-        prefix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.RaiseOnWorldUnloading)),
-        postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.RaiseOnWorldRemoved)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(GameComponentUtility),
-          nameof(GameComponentUtility.StartedNewGame)),
-        postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.RaiseOnNewGame)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(GameComponentUtility),
-          nameof(GameComponentUtility.LoadedGame)),
-        postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.RaiseOnLoadGame)));
-      Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
-        postfix: new HarmonyMethod(typeof(GameEvent),
-          nameof(GameEvent.RaiseOnMainMenu)));
+    // Game, World, and Map events
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(MemoryUtility),
+        nameof(MemoryUtility.ClearAllMapsAndWorld)),
+      prefix: new HarmonyMethod(typeof(GameEvent),
+        nameof(GameEvent.RaiseOnWorldUnloading)),
+      postfix: new HarmonyMethod(typeof(GameEvent),
+        nameof(GameEvent.RaiseOnWorldRemoved)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(GameComponentUtility),
+        nameof(GameComponentUtility.StartedNewGame)),
+      postfix: new HarmonyMethod(typeof(GameEvent),
+        nameof(GameEvent.RaiseOnNewGame)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(GameComponentUtility),
+        nameof(GameComponentUtility.LoadedGame)),
+      postfix: new HarmonyMethod(typeof(GameEvent),
+        nameof(GameEvent.RaiseOnLoadGame)));
+    Harmony.Patch(original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.Init)),
+      postfix: new HarmonyMethod(typeof(GameEvent),
+        nameof(GameEvent.RaiseOnMainMenu)));
 
-      // IThingHolderPawnOverlayer
-      Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
-        transpiler: new HarmonyMethod(typeof(PawnOverlayRenderer),
-          nameof(PawnOverlayRenderer.ShowBodyTranspiler)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.LayingFacing)),
-        prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
-          nameof(PawnOverlayRenderer.LayingFacing)));
+    // IThingHolderPawnOverlayer
+    Harmony.Patch(original: AccessTools.Method(typeof(PawnRenderer), "GetBodyPos"),
+      transpiler: new HarmonyMethod(typeof(PawnOverlayRenderer),
+        nameof(PawnOverlayRenderer.ShowBodyTranspiler)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.LayingFacing)),
+      prefix: new HarmonyMethod(typeof(PawnOverlayRenderer),
+        nameof(PawnOverlayRenderer.LayingFacing)));
 
 #if DEBUG
-      Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
-        postfix: new HarmonyMethod(typeof(ProjectSetup),
-          nameof(DrawDebugWindowButton)));
+    Harmony.Patch(original: AccessTools.Method(typeof(DebugWindowsOpener), "DrawButtons"),
+      postfix: new HarmonyMethod(typeof(ProjectSetup),
+        nameof(DrawDebugWindowButton)));
 
-      // Input handling (DEBUG)
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI)),
-        prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
-          nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI)),
-        prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
-          nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
+    // Input handling (DEBUG)
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI)),
+      prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
+        nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI)),
+      prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
+        nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
 #endif
 
-      // Input handling
-      Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.Add)),
-        postfix: new HarmonyMethod(typeof(HighPriorityInputs),
-          nameof(HighPriorityInputs.WindowAddedToStack)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.TryRemove),
-          parameters: [typeof(Window), typeof(bool)]),
-        postfix: new HarmonyMethod(typeof(HighPriorityInputs),
-          nameof(HighPriorityInputs.WindowRemovedFromStack)));
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(WindowStack),
-          nameof(WindowStack.HandleEventsHighPriority)),
-        postfix: new HarmonyMethod(typeof(HighPriorityInputs),
-          nameof(HighPriorityInputs.HighPriorityOnGUI)));
+    // Input handling
+    Harmony.Patch(original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.Add)),
+      postfix: new HarmonyMethod(typeof(HighPriorityInputs),
+        nameof(HighPriorityInputs.WindowAddedToStack)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.TryRemove),
+        parameters: [typeof(Window), typeof(bool)]),
+      postfix: new HarmonyMethod(typeof(HighPriorityInputs),
+        nameof(HighPriorityInputs.WindowRemovedFromStack)));
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(WindowStack),
+        nameof(WindowStack.HandleEventsHighPriority)),
+      postfix: new HarmonyMethod(typeof(HighPriorityInputs),
+        nameof(HighPriorityInputs.HighPriorityOnGUI)));
 
-      // UI
-      Harmony.Patch(
-        original: AccessTools.Method(typeof(MainTabWindow_Inspect),
-          nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),
-        prefix: new HarmonyMethod(typeof(ProjectSetup),
-          nameof(InspectablePaneButtons)));
+    // UI
+    Harmony.Patch(
+      original: AccessTools.Method(typeof(MainTabWindow_Inspect),
+        nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),
+      prefix: new HarmonyMethod(typeof(ProjectSetup),
+        nameof(InspectablePaneButtons)));
 
-      // Mod Init
-      StaticConstructorOnModInit();
+    // Mod Init
+    StaticConstructorOnModInit();
 
-      SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
-      GameEvent.OnWorldUnloading += ThreadManager.ReleaseThreads;
-      GameEvent.OnWorldUnloading += ComponentCache.ClearAll;
+    SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
+    GameEvent.OnWorldUnloading += ThreadManager.ReleaseThreads;
+    GameEvent.OnWorldUnloading += ComponentCache.ClearAll;
 
 #if DEBUG
-      GameEvent.OnNewGame += StartupTest.ExecuteNewGameTesting;
-      GameEvent.OnLoadGame += StartupTest.ExecutePostLoadTesting;
-      GameEvent.OnMainMenu += StartupTest.ExecuteOnStartupTesting;
+    GameEvent.OnNewGame += StartupTest.ExecuteNewGameTesting;
+    GameEvent.OnLoadGame += StartupTest.ExecutePostLoadTesting;
+    GameEvent.OnMainMenu += StartupTest.ExecuteOnStartupTesting;
 #endif
-    }
+  }
 
-    private static void RegisterParseableStructs()
-    {
-      ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
-      ParseHelper.Parsers<Quadrant>.Register(Quadrant.FromString);
-      ParseHelper.Parsers<RimWorldTime>.Register(RimWorldTime.FromString);
-    }
+  private static void RegisterParseableStructs()
+  {
+    ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
+    ParseHelper.Parsers<Quadrant>.Register(Quadrant.FromString);
+    ParseHelper.Parsers<RimWorldTime>.Register(RimWorldTime.FromString);
+  }
 
-    /// <summary>
-    /// Call static constructors before Mod classes are instantiated
-    /// </summary>
-    /// <remarks>
-    /// Patch or run code without needing to initialize a Mod instance
-    /// </remarks>
-    private static void StaticConstructorOnModInit()
+  /// <summary>
+  /// Call static constructors before Mod classes are instantiated
+  /// </summary>
+  /// <remarks>
+  /// Patch or run code without needing to initialize a Mod instance
+  /// </remarks>
+  private static void StaticConstructorOnModInit()
+  {
+    foreach (Type type in GenTypes.AllTypesWithAttribute<StaticConstructorOnModInitAttribute>())
     {
-      foreach (Type type in GenTypes.AllTypesWithAttribute<StaticConstructorOnModInitAttribute>())
+      try
       {
-        try
-        {
-          RuntimeHelpers.RunClassConstructor(type.TypeHandle);
-        }
-        catch (Exception ex)
-        {
-          SmashLog.Error(
-            $"Exception thrown running constructor of type <type>{type}</type>. Ex=\"{ex}\"");
-        }
+        RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+      }
+      catch (Exception ex)
+      {
+        SmashLog.Error(
+          $"Exception thrown running constructor of type <type>{type}</type>. Ex=\"{ex}\"");
       }
     }
+  }
 
-    private static void DrawDebugWindowButton(WidgetRow ___widgetRow, out float ___widgetRowFinalX)
+  private static void DrawDebugWindowButton(WidgetRow ___widgetRow, out float ___widgetRowFinalX)
+  {
+    if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu,
+      "Open Startup Actions menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
     {
-      if (___widgetRow.ButtonIcon(TexButton.OpenDebugActionsMenu,
-        "Open Startup Actions menu.\n\n This lets you initiate certain static methods on startup for quick testing."))
-      {
-        StartupTest.OpenMenu();
-      }
-
-      ___widgetRowFinalX = ___widgetRow.FinalX;
+      StartupTest.OpenMenu();
     }
 
-    private static bool InspectablePaneButtons(Rect rect, ref float lineEndWidth)
-    {
-      if (Find.Selector.SingleSelectedThing is IInspectable inspectable)
-      {
-        lineEndWidth += 30;
-        Widgets.InfoCardButton(rect.width - lineEndWidth, 0f, Find.Selector.SingleSelectedThing);
-        lineEndWidth += inspectable.DoInspectPaneButtons(rect.width - lineEndWidth);
-        return false;
-      }
+    ___widgetRowFinalX = ___widgetRow.FinalX;
+  }
 
-      return true;
+  private static bool InspectablePaneButtons(Rect rect, ref float lineEndWidth)
+  {
+    if (Find.Selector.SingleSelectedThing is IInspectable inspectable)
+    {
+      lineEndWidth += 30;
+      Widgets.InfoCardButton(rect.width - lineEndWidth, 0f, Find.Selector.SingleSelectedThing);
+      lineEndWidth += inspectable.DoInspectPaneButtons(rect.width - lineEndWidth);
+      return false;
     }
+
+    return true;
   }
 }

@@ -35,6 +35,15 @@ public static class ComponentCache
     return DetachedMapComponentCache<T>.GetComponent(map);
   }
 
+  internal static void PreCacheInst(Map __instance)
+  {
+    foreach (Type type in detachedComponentTypes)
+    {
+      GenGeneric.InvokeStaticMethodOnGenericType(typeof(DetachedMapComponentCache<>), type,
+        nameof(DetachedMapComponentCache<DetachedMapComponent>.AddComponent), __instance);
+    }
+  }
+
   internal static void PreCache(Map map)
   {
     foreach (Type type in detachedComponentTypes)
