@@ -45,4 +45,16 @@ public class RenderTextureBuffer : IDisposable
     Object.Destroy(rtB);
     GC.SuppressFinalize(this);
   }
+
+  /// <summary>
+  /// Implicit boolean cast keeping in line with Unity's implicit boolean -&gt; null check.
+  /// </summary>
+  /// <param name="buffer"></param>
+  /// <returns>True if either render texture is not destroyed, false if both are destroyed.</returns>
+  public static implicit operator bool(RenderTextureBuffer buffer)
+  {
+    if (buffer == null)
+      return false;
+    return buffer.rtA || buffer.rtB;
+  }
 }
