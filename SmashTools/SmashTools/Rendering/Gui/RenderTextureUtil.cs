@@ -12,7 +12,11 @@ public static class RenderTextureUtil
     if (width <= 0 || height <= 0)
       throw new ArgumentException("RenderTexture size must have dimensions greater than 0.");
 
-    RenderTexture rt = new(width, height, 0, RenderTextureFormat.ARGBFloat.OrNextSupportedFormat());
+    RenderTexture rt = new(width, height, 0, RenderTextureFormat.ARGBFloat.OrNextSupportedFormat())
+    {
+      filterMode = FilterMode.Bilinear,
+      wrapMode = TextureWrapMode.Clamp
+    };
     rt.Create();
     return rt;
   }
@@ -23,28 +27,22 @@ public static class RenderTextureUtil
     if (SystemInfo.SupportsRenderTextureFormat(renderTextureFormat))
       return renderTextureFormat;
 
-    if (renderTextureFormat == RenderTextureFormat.R8 &&
-      SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RG16))
+    return renderTextureFormat switch
     {
-      return RenderTextureFormat.RG16;
-    }
-    if ((renderTextureFormat is RenderTextureFormat.R8 or RenderTextureFormat.RG16) &&
-      SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGB32))
-    {
-      return RenderTextureFormat.ARGB32;
-    }
-    if ((renderTextureFormat is RenderTextureFormat.R8 or RenderTextureFormat.RHalf
-        or RenderTextureFormat.RFloat) &&
-      SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RGFloat))
-    {
-      return RenderTextureFormat.RGFloat;
-    }
-    if ((renderTextureFormat is RenderTextureFormat.R8 or RenderTextureFormat.RHalf
-        or RenderTextureFormat.RFloat or RenderTextureFormat.RGFloat) &&
-      SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBFloat))
-    {
-      return RenderTextureFormat.ARGBFloat;
-    }
-    return renderTextureFormat;
+      RenderTextureFormat.R8
+        when SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RG16)
+        => RenderTextureFormat.RG16,
+      RenderTextureFormat.R8 or RenderTextureFormat.RG16
+        when SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGB32)
+        => RenderTextureFormat.ARGB32,
+      RenderTextureFormat.R8 or RenderTextureFormat.RHalf or RenderTextureFormat.RFloat
+        when SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RGFloat)
+        => RenderTextureFormat.RGFloat,
+      RenderTextureFormat.R8 or RenderTextureFormat.RHalf or RenderTextureFormat.RFloat
+        or RenderTextureFormat.RGFloat
+        when SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBFloat)
+        => RenderTextureFormat.ARGBFloat,
+      _ => renderTextureFormat
+    };
   }
 }

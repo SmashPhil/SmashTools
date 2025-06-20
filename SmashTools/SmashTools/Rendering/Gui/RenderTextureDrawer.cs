@@ -68,6 +68,7 @@ public static class RenderTextureDrawer
 
     Assert.IsNull(RenderTexture.active);
     RenderTexture.active = renderTexture;
+    GL.Viewport(new Rect(0, 0, renderTexture.width, renderTexture.height));
     GL.PushMatrix();
     try
     {

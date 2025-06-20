@@ -4,13 +4,14 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml;
+using JetBrains.Annotations;
 using SmashTools.Animations;
 using UnityEngine;
 using Verse;
 
 namespace SmashTools.Xml;
 
-[StaticConstructorOnModInit]
+[PublicAPI]
 public static class XmlParseHelper
 {
   private const string ValidAttributeRegex = "^([A-Za-z0-9]*$)";
@@ -22,8 +23,9 @@ public static class XmlParseHelper
 
   static XmlParseHelper()
   {
-    //ParseHelper.Parsers<ValueTuple<float, float>>.Register(ParseValueTuple2_float);
-    //ParseHelper.Parsers<ValueTuple<CurvePoint, CurvePoint>>.Register(ParseValueTuple2_CurvePoint);
+    ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
+    ParseHelper.Parsers<Quadrant>.Register(Quadrant.FromString);
+    ParseHelper.Parsers<RimWorldTime>.Register(RimWorldTime.FromString);
     ParseHelper.Parsers<KeyFrame>.Register(ParseKeyFrame);
     ParseHelper.Parsers<Guid>.Register(ParseGuid);
   }
@@ -176,28 +178,5 @@ public static class XmlParseHelper
       Log.Error(
         $"Exception thrown while trying to apply registered attributes to Def of type {node?.Name ?? "[Null]"}. Exception={ex}");
     }
-  }
-
-  /// <summary>
-  /// Traverse backwards from the <paramref name="curNode"/> until the defName node is found.
-  /// </summary>
-  /// <param name="curNode"></param>
-  /// <returns>Empty string if not found and the document element is reached</returns>
-  public static string BackSearchDefName(XmlNode curNode)
-  {
-    XmlNode defNode = curNode.SelectSingleNode("defName");
-    XmlNode parentNode = curNode;
-    while (defNode is null)
-    {
-      parentNode = parentNode.ParentNode;
-      if (parentNode is null)
-      {
-        return string.Empty;
-      }
-
-      defNode = parentNode.SelectSingleNode("defName");
-    }
-
-    return defNode.InnerText;
   }
 }

@@ -2,7 +2,7 @@
 using Verse;
 using HarmonyLib;
 
-namespace SmashTools;
+namespace SmashTools.Patching;
 
 public abstract class ConditionalPatch
 {

@@ -1,6 +1,7 @@
 ﻿using System;
 using HarmonyLib;
 using RimWorld;
+using SmashTools.Patching;
 using SmashTools.Rendering;
 using UnityEngine;
 using Verse;
@@ -240,10 +241,10 @@ namespace SmashTools
         Patched = true;
         try
         {
-          ProjectSetup.Harmony.Patch(
+          HarmonyPatcher.Harmony.Patch(
             original: AccessTools.PropertyGetter(typeof(MapDrawer), "ViewRect"),
             postfix: new HarmonyMethod(typeof(CameraView),
-              nameof(CameraView.CameraPreviewViewRect)));
+              nameof(CameraPreviewViewRect)));
         }
         catch (Exception ex)
         {

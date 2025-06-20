@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using HarmonyLib;
+using SmashTools.Patching;
 using Verse;
 
 namespace SmashTools;
 
-[StaticConstructorOnStartup]
+[StaticConstructorOnModInit]
 public static class ComponentCache
 {
   private static readonly List<Type> priorityComponentTypes;
@@ -21,7 +23,6 @@ public static class ComponentCache
   internal static int PriorityComponentTypeCount => priorityComponentTypes.Count;
 
   internal static int DetachedComponentTypeCount => detachedComponentTypes.Count;
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static T GetCachedMapComponent<T>(this Map map) where T : MapComponent

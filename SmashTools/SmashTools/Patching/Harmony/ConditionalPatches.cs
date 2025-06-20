@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using HarmonyLib;
 using JetBrains.Annotations;
 using Verse;
 
-namespace SmashTools;
+namespace SmashTools.Patching;
 
 [PublicAPI]
-[StaticConstructorOnStartup]
 public static class ConditionalPatches
 {
   private static readonly Dictionary<Type, ConditionalPatch.Results> patches = [];
@@ -15,10 +13,8 @@ public static class ConditionalPatches
   /// <summary>
   /// Apply all conditional patches for a mod
   /// </summary>
-  static ConditionalPatches()
+  internal static void RunAll()
   {
-    Harmony harmony = ProjectSetup.Harmony;
-
     List<Type> conditionalPatchTypes = typeof(ConditionalPatch).AllSubclassesNonAbstract();
     foreach (Type type in conditionalPatchTypes)
     {
@@ -34,7 +30,7 @@ public static class ConditionalPatches
         {
           result.FriendlyName = modMetaData.Name;
 
-          patch.PatchAll(modMetaData, harmony);
+          patch.PatchAll(modMetaData, HarmonyPatcher.Harmony);
 
           result.Active = true;
 
