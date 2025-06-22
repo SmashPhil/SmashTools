@@ -1,9 +1,11 @@
 ﻿using System;
 using Verse;
 using HarmonyLib;
+using JetBrains.Annotations;
 
 namespace SmashTools.Patching;
 
+[PublicAPI]
 public abstract class ConditionalPatch
 {
   /// <summary>
@@ -24,13 +26,12 @@ public abstract class ConditionalPatch
   /// </summary>
   public abstract string PackageId { get; }
 
-  public struct Results
+  [PublicAPI]
+  public class Result
   {
     public string PackageId { get; set; }
     public string FriendlyName { get; set; }
     public bool Active { get; set; }
     public Exception ExceptionThrown { get; set; }
-
-    public static Results Invalid => new Results();
   }
 }

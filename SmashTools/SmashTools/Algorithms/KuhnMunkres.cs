@@ -73,7 +73,6 @@ public sealed class KuhnMunkres
     parentWorkerByCommittedJob.Populate(-1);
     committedWorkers[i] = true;
 
-    // Init slack
     for (int j = 0; j < n; j++)
     {
       minSlackValueByJob[j] = costMatrix[i, j] - labelByWorker[i] - labelByJob[j];

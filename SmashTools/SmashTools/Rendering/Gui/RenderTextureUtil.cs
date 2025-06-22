@@ -14,7 +14,7 @@ public static class RenderTextureUtil
 
     RenderTexture rt = new(width, height, 0, RenderTextureFormat.ARGBFloat.OrNextSupportedFormat())
     {
-      filterMode = FilterMode.Bilinear,
+      filterMode = FilterMode.Point,
       wrapMode = TextureWrapMode.Clamp
     };
     rt.Create();

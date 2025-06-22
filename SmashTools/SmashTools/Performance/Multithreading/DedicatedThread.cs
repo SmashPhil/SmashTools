@@ -14,7 +14,7 @@ public class DedicatedThread
 
   private bool isSuspended;
   private bool shouldExit;
-  private readonly ManualResetEvent waitHandle;
+  private readonly ManualResetEventSlim waitHandle;
   private readonly ConcurrentQueue<AsyncAction> queue;
   private readonly CancellationTokenSource cts;
 
@@ -24,7 +24,7 @@ public class DedicatedThread
     this.type = type;
     cts = new CancellationTokenSource();
 
-    waitHandle = new ManualResetEvent(false);
+    waitHandle = new ManualResetEventSlim(false);
     queue = [];
     thread = new Thread(Execute)
     {
@@ -36,9 +36,9 @@ public class DedicatedThread
 
   public int QueueCount => queue.Count;
 
-  public bool Terminated => waitHandle.SafeWaitHandle.IsClosed;
+  public bool Terminated { get; private set; }
 
-  public bool IsBlocked => !waitHandle.WaitOne(0);
+  public bool IsBlocked => !waitHandle.IsSet;
 
   /// <summary>
   /// Halt new actions from being enqueued and block thread execution.
@@ -83,15 +83,14 @@ public class DedicatedThread
   /// Enqueue item to action queue without unblocking thread worker.
   /// </summary>
   /// <remarks>Should not be used outside of debugging contexts.</remarks>
-  public void EnqueueSilently(AsyncAction action)
+  internal void EnqueueSilently(AsyncAction action)
   {
     queue.Enqueue(action);
   }
 
   private void UnpauseConsumer()
   {
-    if (!waitHandle.Set())
-      Trace.Fail("Unable to resume thread with item added to queue.");
+    waitHandle.Set();
   }
 
   /// <summary>
@@ -102,9 +101,7 @@ public class DedicatedThread
     shouldExit = true;
     // Unblock consumer so we can exit the loop and terminate
     if (!Terminated)
-    {
       waitHandle.Set();
-    }
   }
 
   /// <summary>
@@ -122,14 +119,12 @@ public class DedicatedThread
     {
       while (!shouldExit)
       {
-        waitHandle.WaitOne();
+        waitHandle.Wait();
         waitHandle.Reset();
 
-        while (queue.Count > 0 && !cts.IsCancellationRequested && !IsSuspended)
+        while (!cts.IsCancellationRequested && !IsSuspended &&
+          queue.TryDequeue(out AsyncAction asyncAction))
         {
-          if (!queue.TryDequeue(out AsyncAction asyncAction))
-            continue;
-
           try
           {
             if (asyncAction.IsValid)
@@ -155,7 +150,8 @@ public class DedicatedThread
     finally
     {
       // Release all resources currently waiting on this event handle
-      waitHandle.Close();
+      waitHandle.Dispose();
+      Terminated = true;
     }
   }
 

@@ -31,7 +31,8 @@ namespace SmashTools.Animations
     private Dictionary<string, List<AnimationPropertyParent>> properties = [];
     private bool[] expandedContainers;
 
-    public Dialog_PropertySelect(IAnimator animator, AnimationClip animation, Vector2 position, Action<AnimationPropertyParent> propertyAdded = null)
+    public Dialog_PropertySelect(IAnimator animator, AnimationClip animation, Vector2 position,
+      Action<AnimationPropertyParent> propertyAdded = null)
     {
       this.animator = animator;
       this.animation = animation;
@@ -53,18 +54,21 @@ namespace SmashTools.Animations
 
     public override void PreOpen()
     {
-      HashSet<AnimationPropertyParent> existingProperties = animation.properties != null ? [.. animation.properties] : [];
-      foreach (AnimationPropertyParent container in AnimationPropertyRegistry.GetAnimationProperties(animator))
+      HashSet<AnimationPropertyParent> existingProperties =
+        animation.properties != null ? [.. animation.properties] : [];
+      foreach (AnimationPropertyParent container in
+        AnimationPropertyRegistry.GetAnimationProperties(animator))
       {
         if (!existingProperties.Contains(container))
         {
           string key = container.Identifier != null ?
-            $"{container.Type.Name} ({container.Identifier})" : container.Type.Name;
+            $"{container.Type.Name} ({container.Identifier})" :
+            container.Type.Name;
           if (!properties.ContainsKey(key))
           {
             propertyListOrder.Add(key);
           }
-          properties.AddOrInsert(key, container);
+          properties.AddOrAppend(key, container);
         }
       }
       expandedContainers = new bool[properties.Count];
@@ -107,7 +111,8 @@ namespace SmashTools.Animations
 
     public override void DoWindowContents(Rect inRect)
     {
-      Widgets.DrawBoxSolidWithOutline(inRect, backgroundColor, backgroundOutlineColor, outlineThickness: 2);
+      Widgets.DrawBoxSolidWithOutline(inRect, backgroundColor, backgroundOutlineColor,
+        outlineThickness: 2);
 
       using var textBlock = new TextBlock(GameFont.Small, TextAnchor.MiddleLeft, false);
 
