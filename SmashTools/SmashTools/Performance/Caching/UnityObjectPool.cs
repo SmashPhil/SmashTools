@@ -6,7 +6,7 @@ using Object = UnityEngine.Object;
 
 namespace SmashTools;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+[PublicAPI]
 public class UnityObjectPool<T> where T : Object
 {
   // Raw stack implementation for fast retrieval and insertion

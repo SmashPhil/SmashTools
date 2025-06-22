@@ -1,4 +1,5 @@
 ﻿using System;
+using JetBrains.Annotations;
 using SmashTools.Performance;
 using UnityEngine;
 
@@ -11,6 +12,7 @@ namespace SmashTools.Rendering;
 /// threshold — meaning the resources acquired haven't been accessed for that amount of time — all resources will be
 /// freed and its timer will stop.
 /// </summary>
+[PublicAPI]
 public class RenderTextureIdler : IDisposable
 {
   private readonly RenderTextureBuffer buffer;

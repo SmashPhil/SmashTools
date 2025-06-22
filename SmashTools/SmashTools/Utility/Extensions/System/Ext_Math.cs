@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using SmashTools.Rendering;
 using UnityEngine;
+using UnityEngine.Assertions;
 using Verse;
 
 namespace SmashTools;
@@ -9,10 +12,10 @@ namespace SmashTools;
 [PublicAPI]
 public static class Ext_Math
 {
-  //Precalculated √2
+  // Precalculated √2
   public static readonly float Sqrt2 = Mathf.Sqrt(2);
 
-  //Up to n=16
+  // Up to n=16
   private static readonly float[] factorials =
   [
     1,
@@ -53,12 +56,9 @@ public static class Ext_Math
   /// De Casteljau's Algorithm
   /// </summary>
   /// <remarks>See https://en.wikipedia.org/wiki/De_Casteljau%27s_algorithm for reference.</remarks>
-  /// <param name="r"></param>
-  /// <param name="i"></param>
-  /// <param name="t"
   public static Vector2 DeCasteljau(List<CurvePoint> points, float t)
   {
-    //Only setup for p-count = 4
+    // Only setup for p-count = 4
     Vector2 p0 = Vector2.Lerp(points[0], points[1], t);
     Vector2 p1 = Vector2.Lerp(points[1], points[2], t);
     Vector2 p2 = Vector2.Lerp(points[2], points[3], t);
@@ -81,11 +81,12 @@ public static class Ext_Math
   {
     if (start >= end)
       throw new ArgumentException(nameof(start));
+
     return t switch
     {
       <= 0 => start,
       >= 1 => end,
-      _    => (t * t) * (3f - 2f * t),
+      _    => t * t * (3f - 2f * t)
     };
   }
 
@@ -99,11 +100,21 @@ public static class Ext_Math
     return value ? 1 : -1;
   }
 
+  /// <summary>
+  /// <paramref name="value"/> is odd.
+  /// </summary>
+  /// <param name="value"></param>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static bool IsOdd(this int value)
   {
     return value % 2 != 0;
   }
 
+  /// <summary>
+  /// <paramref name="value"/> is even.
+  /// </summary>
+  /// <param name="value"></param>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static bool IsEven(this int value)
   {
     return value % 2 == 0;
@@ -117,36 +128,19 @@ public static class Ext_Math
   /// <param name="b"></param>
   public static float ReverseInterpolate(float value, float a, float b)
   {
-    //value = (1 - t)a + bt
-    //value - a = bt - at
-    //(value - a) / (b - a) = t
+    // value = (1 - t)a + bt
+    // value - a = bt - at
+    // (value - a) / (b - a) = t
     return (value - a) / (b - a);
-  }
-
-  /// <summary>
-  /// Get Absolute Value of IntVec2
-  /// </summary>
-  /// <param name="c"></param>
-  public static IntVec2 Abs(IntVec2 cell)
-  {
-    return new IntVec2(Mathf.Abs(cell.x), Mathf.Abs(cell.z));
-  }
-
-  /// <summary>
-  /// Get Absolute Value of IntVec3
-  /// </summary>
-  /// <param name="c"></param>
-  public static IntVec3 Abs(IntVec3 cell)
-  {
-    return new IntVec3(Mathf.Abs(cell.x), Mathf.Abs(cell.y), Mathf.Abs(cell.z));
   }
 
   /// <summary>
   /// Arithmetic series formula eg. (1 + 2 + 3 + ... + k) * n
   /// </summary>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static int ArithmeticSeries(int k, int n)
   {
-    return n * (k * (k + 1)) / 2;
+    return n * k * (k + 1) / 2;
   }
 
   /// <summary>
@@ -218,17 +212,6 @@ public static class Ext_Math
     return take;
   }
 
-  /// <summary>
-  /// Inverse value. Useful for tick methods that increase from <paramref name="min"/> to <paramref name="max"/> for animation curves.
-  /// </summary>
-  /// <param name="value"></param>
-  /// <param name="min"></param>
-  /// <param name="max"></param>
-  public static int Inverse(this int value, int min, int max)
-  {
-    return max - value + min;
-  }
-
   public static Vector2 RotatePointClockwise(this Vector2 coord, float theta)
   {
     return RotatePointClockwise(coord.x, coord.y, theta);
@@ -283,18 +266,7 @@ public static class Ext_Math
   public static float RotateAngle(float angle, float rotation)
   {
     angle += rotation;
-    while (angle > 360 || angle < 0)
-    {
-      if (angle > 360)
-      {
-        angle -= 360f;
-      }
-      else if (angle < 0)
-      {
-        angle += 360f;
-      }
-    }
-    return angle;
+    return angle.ClampAngle();
   }
 
   /// <summary>
@@ -304,9 +276,9 @@ public static class Ext_Math
   /// <param name="map"></param>
   public static double AngleThroughOrigin(this IntVec3 c, Map map)
   {
-    int xPrime = c.x - (map.Size.x / 2);
-    int yPrime = c.z - (map.Size.z / 2);
-    float slope = yPrime / xPrime;
+    int xPrime = c.x - map.Size.x / 2;
+    int yPrime = c.z - map.Size.z / 2;
+    float slope = (float)yPrime / xPrime;
     float angleRadians = Mathf.Atan(slope);
     float angle = Mathf.Abs(angleRadians * Mathf.Deg2Rad);
     return Quadrant.QuadrantOfIntVec3(c, map).AsInt switch
@@ -321,9 +293,6 @@ public static class Ext_Math
   /// <summary>
   /// Calculate angle between 2 points on Cartesian coordinate plane.
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="point"></param>
-  /// <param name="map"></param>
   public static float AngleToCell(this IntVec3 pos, IntVec3 point)
   {
     Vector3 posVector = pos.ToVector3Shifted();
@@ -334,9 +303,6 @@ public static class Ext_Math
   /// <summary>
   /// Angle between 2 points in the in-game map. 0 is West, 270 is North
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="point"></param>
-  /// <param name="map"></param>
   public static float AngleToPointRelative(this Vector3 pos, Vector3 point)
   {
     float xPrime = pos.x - point.x;
@@ -347,8 +313,6 @@ public static class Ext_Math
   /// <summary>
   /// Angle between 2 points
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="point"></param>
   public static float AngleToPoint(float x1, float y1, float x2, float y2)
   {
     return (180 + Mathf.Atan2(x1 - x2, y1 - y2) * Mathf.Rad2Deg) % 360;
@@ -357,8 +321,6 @@ public static class Ext_Math
   /// <summary>
   /// Angle between 2 points
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="point"></param>
   public static float AngleToPoint(this Vector2 pos, Vector2 point)
   {
     return AngleToPoint(pos.x, pos.y, point.x, point.y);
@@ -367,8 +329,6 @@ public static class Ext_Math
   /// <summary>
   /// Angle between 2 points relative to <see cref="Vector3.forward"/>
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="point"></param>
   public static float AngleToPoint(this Vector3 pos, Vector3 point)
   {
     return AngleToPoint(pos.x, pos.z, point.x, point.z);
@@ -377,8 +337,6 @@ public static class Ext_Math
   /// <summary>
   /// Angle between 2 cells in the in-game map. 0 is North, 270 is West
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="point"></param>
   public static float AngleToPoint(this IntVec3 start, IntVec3 end)
   {
     return AngleToPoint(start.ToVector3Shifted(), end.ToVector3Shifted());
@@ -387,22 +345,16 @@ public static class Ext_Math
   /// <summary>
   /// Returns point from origin given radius and angle
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="distance"></param>
-  /// <param name="angle"></param>
   public static Vector3 PointFromAngle(this Vector3 pos, float distance, float angle)
   {
-    float x = (float)(pos.x + distance * Mathf.Sin(angle * Mathf.Deg2Rad));
-    float z = (float)(pos.z + distance * Mathf.Cos(angle * Mathf.Deg2Rad));
+    float x = pos.x + distance * Mathf.Sin(angle * Mathf.Deg2Rad);
+    float z = pos.z + distance * Mathf.Cos(angle * Mathf.Deg2Rad);
     return new Vector3(x, pos.y, z);
   }
 
   /// <summary>
   /// Returns point from origin given radius and angle
   /// </summary>
-  /// <param name="pos"></param>
-  /// <param name="distance"></param>
-  /// <param name="angle"></param>
   public static IntVec3 PointFromAngle(this IntVec3 pos, float distance, float angle)
   {
     int x = Mathf.CeilToInt(pos.x + distance * Mathf.Sin(angle * Mathf.Deg2Rad));
@@ -412,7 +364,7 @@ public static class Ext_Math
 
   public static Vector3 PointToEdge(this Vector3 origin, Map map, float angle)
   {
-    float clampedAngle = angle.ClampAndWrap(0, 360).RoundTo(0.01f);
+    float clampedAngle = angle.ClampAngle().RoundTo(0.01f);
     float maxX = map.Size.x;
     float maxZ = map.Size.z;
     Vector3 edgePoint = Vector3.zero;
@@ -545,5 +497,79 @@ public static class Ext_Math
   {
     float sphericalDistance = GenMath.SphericalDistance(source.normalized, target.normalized);
     return Find.WorldGrid.ApproxDistanceInTiles(sphericalDistance);
+  }
+
+  public static List<LineSegment> GetLineSegmentsFromCircle(float radius)
+  {
+    const float TwoPi = Mathf.PI * 2;
+
+    List<LineSegment> segments = [];
+    int segmentCount = Mathf.Clamp(Mathf.RoundToInt(24f * radius), 12, 48);
+    float theta = TwoPi / segmentCount;
+    float cosT = Mathf.Cos(theta);
+    float sinT = Mathf.Sin(theta);
+
+    Vector3 prev = new(radius, 0, 0);
+    for (int i = 0; i < segmentCount; i++)
+    {
+      Vector3 dir = prev;
+      // Rotate that vector by θ
+      float nextX = dir.x * cosT - dir.z * sinT;
+      float nextZ = dir.x * sinT + dir.z * cosT;
+
+      Vector3 next = new(nextX, 0f, nextZ);
+      segments.Add(new LineSegment(prev, next));
+
+      prev = next;
+    }
+    return segments;
+  }
+
+  public static List<LineSegment> GetLineSegmentsFromCone(Vector2 coneAngle, float minRange,
+    float maxRange)
+  {
+    List<LineSegment> segments = [];
+
+    Vector3 origin = Vector3.zero;
+    int startAngle = Mathf.RoundToInt(coneAngle.x.ClampAngle());
+    int endAngle = Mathf.RoundToInt(coneAngle.y.ClampAngle());
+    float theta = ((endAngle - startAngle + 360f) % 360f).ClampAngle();
+    Assert.IsFalse(Mathf.Approximately(theta, 0));
+
+    // 4 corners
+    Vector3 min1 = origin.PointFromAngle(minRange, startAngle);
+    Vector3 min2 = origin.PointFromAngle(minRange, endAngle);
+    Vector3 max1 = origin.PointFromAngle(maxRange, startAngle);
+    Vector3 max2 = origin.PointFromAngle(maxRange, endAngle);
+
+    // Radial boundary lines at the ends of the arc
+    segments.Add(new LineSegment(min1, max1));
+    segments.Add(new LineSegment(min2, max2));
+
+    // Inner radial lines (no-fire zone), colored red
+    if (minRange > 0f)
+    {
+      segments.Add(new LineSegment(origin, min1, Color.red));
+      segments.Add(new LineSegment(origin, min2, Color.red));
+    }
+
+    // Build the arc in 1° increments
+    Vector3 lastOuter = max1;
+    Vector3 lastInner = min1;
+    for (int d = startAngle; d <= theta; d++)
+    {
+      float ang = startAngle + d;
+      Vector3 nextOuter = origin.PointFromAngle(maxRange, ang);
+      segments.Add(new LineSegment(lastOuter, nextOuter));
+      lastOuter = nextOuter;
+
+      if (minRange > 0f)
+      {
+        Vector3 nextInner = origin.PointFromAngle(minRange, ang);
+        segments.Add(new LineSegment(lastInner, nextInner, Color.red));
+        lastInner = nextInner;
+      }
+    }
+    return segments;
   }
 }

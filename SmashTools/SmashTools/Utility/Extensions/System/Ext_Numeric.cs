@@ -1,105 +1,56 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using Verse;
-using RimWorld;
-using RimWorld.Planet;
+﻿using System.Runtime.CompilerServices;
 using UnityEngine;
-using System;
+using Verse;
 
-namespace SmashTools
+namespace SmashTools;
+
+public static class Ext_Numeric
 {
-  public static class Ext_Numeric
+  /// <summary>
+  /// Extension method for <see cref="Mathf.Clamp(float, float, float"/>
+  /// </summary>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static float Clamp(this float val, float min, float max)
   {
-    /// <summary>
-    /// Extension method for <see cref="Mathf.Clamp"/>
-    /// </summary>
-    /// <param name="val"></param>
-    /// <param name="min"></param>
-    /// <param name="max"></param>
-    public static float Clamp(this float val, float min, float max)
-    {
-      return Mathf.Clamp(val, min, max);
-    }
+    return Mathf.Clamp(val, min, max);
+  }
 
-    public static int Clamp(this int val, int min, int max)
-    {
-      return Mathf.Clamp(val, min, max);
-    }
+  /// <summary>
+  /// Extension method for <see cref="Mathf.Clamp(int, int, int"/>
+  /// </summary>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static int Clamp(this int val, int min, int max)
+  {
+    return Mathf.Clamp(val, min, max);
+  }
 
-    /// <summary>
-    /// Clamp value between a min and max but wrap around rather than return min / max
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="val"></param>
-    /// <param name="min"></param>
-    /// <param name="max"></param>
-    public static float ClampAndWrap(this float val, float min, float max)
-    {
-      while (val < min || val > max)
-      {
-        if (val < min)
-        {
-          val += max;
-        }
-        if (val > max)
-        {
-          val -= max;
-        }
-      }
-      return val;
-    }
+  /// <summary>
+  /// Convert &gt; 360 and &lt; 0 angles to relative 0:360 angles in a unit circle
+  /// </summary>
+  /// <param name="theta"></param>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static float ClampAngle(this float theta)
+  {
+    return Mathf.Repeat(theta, 360f);
+  }
 
-    /// <summary>
-    /// Clamp value between a min and max but wrap around rather than return min / max
-    /// </summary>
-    /// <param name="val"></param>
-    /// <param name="min"></param>
-    /// <param name="max"></param>
-    public static int ClampAndWrap(this int val, int min, int max)
-    {
-      while (val < min || val > max)
-      {
-        if (val < min)
-        {
-          val += (max + 1);
-        }
-        if (val > max)
-        {
-          val -= (max + 1);
-        }
-      }
-      return val;
-    }
+  /// <summary>
+  /// Check if <paramref name="value"/> falls within <paramref name="range"/>, both min and max are inclusive.
+  /// </summary>
+  /// <returns><see langword="true"/> if <paramref name="value"/> is within <paramref name="range"/></returns>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static bool InRange(this FloatRange range, float value)
+  {
+    return value >= range.min && value <= range.max;
+  }
 
-    /// <summary>
-    /// Convert > 360 and < 0 angles to relative 0:360 angles in a unit circle
-    /// </summary>
-    /// <param name="theta"></param>
-    public static float ClampAngle(this float theta)
-    {
-      while (theta > 360 || theta < 0)
-      {
-        if (theta > 360)
-        {
-          theta -= 360;
-        }
-        else if (theta < 0)
-        {
-          theta += 360;
-        }
-      }
-      return theta;
-    }
-
-    public static bool InRange(this FloatRange range, float value)
-    {
-      return value >= range.min && value <= range.max;
-    }
-
-    public static bool InRange(this IntRange range, int value)
-    {
-      return value >= range.min && value <= range.max;
-    }
+  /// <summary>
+  /// Check if <paramref name="value"/> falls within <paramref name="range"/>, both min and max are inclusive.
+  /// </summary>
+  /// <returns><see langword="true"/> if <paramref name="value"/> is within <paramref name="range"/></returns>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static bool InRange(this IntRange range, int value)
+  {
+    return value >= range.min && value <= range.max;
   }
 }

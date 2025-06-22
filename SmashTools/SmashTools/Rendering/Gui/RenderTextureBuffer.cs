@@ -8,7 +8,7 @@ namespace SmashTools.Rendering;
 /// <summary>
 /// Double buffer implementation for seemless read / write commands
 /// </summary>
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+[PublicAPI]
 public class RenderTextureBuffer : IDisposable
 {
   private RenderTexture rtA;
