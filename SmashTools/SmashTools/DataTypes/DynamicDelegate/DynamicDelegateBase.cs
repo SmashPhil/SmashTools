@@ -93,22 +93,20 @@ public abstract class DynamicDelegateBase
     }
     try
     {
-      string[] array = methodInfoBody.FirstOrDefault().Split('.');
+      string[] array = methodInfoBody[0].Split('.');
+      if (array.Length < 2)
+      {
+        Log.Error(
+          "Unable to resolve method, too few arguments. Must include at least TypeName.MethodName");
+        return;
+      }
       string methodName = array[array.Length - 1];
-      string typeName;
-      if (array.Length == 3)
-      {
-        typeName = array[0] + "." + array[1];
-      }
-      else
-      {
-        typeName = array[0];
-      }
+      string typeName = string.Join(".", array, 0, array.Length - 1);
 
       Type type = GenTypes.GetTypeInAnyAssembly(typeName);
       method = AccessTools.Method(type, methodName);
 
-      string argString = methodInfoBody.LastOrDefault().Replace(")", "");
+      string argString = methodInfoBody[methodInfoBody.Length - 1].Replace(")", "");
       string[] argStrings = argString.Split(',');
       ParameterInfo[] parameters = method.GetParameters();
 

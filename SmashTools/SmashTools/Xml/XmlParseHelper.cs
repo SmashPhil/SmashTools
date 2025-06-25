@@ -109,8 +109,7 @@ public static class XmlParseHelper
   public static void RegisterAttribute(string attribute,
     AttributeProcessor action, params string[] nodeAllowed)
   {
-    if (!Regex.IsMatch(attribute, ValidAttributeRegex, RegexOptions.CultureInvariant,
-      TimeSpan.FromMilliseconds(10)))
+    if (!Regex.IsMatch(attribute, ValidAttributeRegex, RegexOptions.CultureInvariant))
     {
       Log.Error(
         $"{ProjectSetup.LogLabel} Cannot register <color=teal>attribute</color> due to invalid naming. Only alphanumeric characters may be used.");
