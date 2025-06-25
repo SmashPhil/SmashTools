@@ -14,12 +14,19 @@ public class UnityThread : MonoBehaviour
   private static SynchronizationContext mainContext;
 
   private readonly List<OnUpdate> onUpdateMethods = [];
+  private readonly List<OnGui> onGuiMethods = [];
 
   /// <returns>
   /// <see langword="true"/> if <see cref="OnUpdate"/> should remain in queue for the next frame.
   /// <see langword="false"/> if it should be dequeued immediately.
   /// </returns>
   public delegate bool OnUpdate();
+
+  /// <returns>
+  /// <see langword="true"/> if <see cref="OnGui"/> should remain in queue for the next event.
+  /// <see langword="false"/> if it should be dequeued immediately.
+  /// </returns>
+  public delegate bool OnGui();
 
   static UnityThread()
   {
@@ -28,21 +35,34 @@ public class UnityThread : MonoBehaviour
 
   private static UnityThread Instance { get; }
 
-  [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members",
-    Justification = "Unity API")]
   private void Awake()
   {
     mainContext = SynchronizationContext.Current;
   }
 
-  [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members",
-    Justification = "Unity API")]
   private void Update()
   {
     for (int i = onUpdateMethods.Count - 1; i >= 0; i--)
     {
       if (!onUpdateMethods[i]())
         onUpdateMethods.RemoveAt(i);
+    }
+  }
+
+  private void OnGUI()
+  {
+    for (int i = onGuiMethods.Count - 1; i >= 0; i--)
+    {
+      try
+      {
+        if (!onGuiMethods[i]())
+          onGuiMethods.RemoveAt(i);
+      }
+      catch (Exception ex)
+      {
+        onGuiMethods.RemoveAt(i);
+        Log.Error($"Exception thrown from OnGUI.{Environment.NewLine}{ex}");
+      }
     }
   }
 
@@ -74,6 +94,28 @@ public class UnityThread : MonoBehaviour
       return;
     }
     Instance.onUpdateMethods.Add(onUpdate);
+  }
+
+  public static void StartGUI(OnGui onGui)
+  {
+    if (!UnityData.IsInMainThread)
+    {
+      Trace.Fail(
+        "Trying to add OnGUI method to queue from another thread. This can only be done from the main thread.");
+      return;
+    }
+    Instance.onGuiMethods.Add(onGui);
+  }
+
+  public static void RemoveOnGUI(OnGui onGui)
+  {
+    if (!UnityData.IsInMainThread)
+    {
+      Trace.Fail(
+        "Trying to remove OnGUI method to queue from another thread. This can only be done from the main thread.");
+      return;
+    }
+    Instance.onGuiMethods.Remove(onGui);
   }
 
   public static void ExecuteOnMainThread(params Action[] invokeList)

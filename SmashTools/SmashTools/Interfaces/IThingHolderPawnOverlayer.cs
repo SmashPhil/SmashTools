@@ -1,11 +1,10 @@
 ﻿using Verse;
 
-namespace SmashTools
-{
-  public interface IThingHolderPawnOverlayer : IThingHolderWithDrawnPawn
-  {
-    public Rot4 PawnRotation { get; }
+namespace SmashTools;
 
-    public bool ShowBody { get; }
-  }
+public interface IThingHolderPawnOverlayer : IThingHolderWithDrawnPawn
+{
+  public Rot4 PawnRotation { get; }
+
+  public bool ShowBody { get; }
 }
