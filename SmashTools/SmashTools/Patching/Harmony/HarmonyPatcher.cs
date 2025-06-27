@@ -48,11 +48,13 @@ public static class HarmonyPatcher
 
   public static void Run(PatchSequence sequence)
   {
+    //Harmony.DEBUG = true;
+
     Assert.IsFalse(RunningPatcher);
 
     using PatchStatusEnabler pse = new();
 
-    //Harmony.DEBUG = true;
+    DeepProfiler.Start($"HarmonyPatcher_{sequence}");
     foreach (IPatchCategory patch in patches)
     {
       Assert.IsNotNull(patch);
@@ -62,7 +64,9 @@ public static class HarmonyPatcher
           continue;
 
         typePatching = patch.GetType();
+        DeepProfiler.Start(typePatching.Name);
         patch.PatchMethods();
+        DeepProfiler.End();
       }
       catch (Exception ex)
       {
@@ -70,6 +74,7 @@ public static class HarmonyPatcher
           $"Failed to Patch <type>{patch.GetType().FullName}</type>. Method=\"{methodPatching}\"\n{ex}");
       }
     }
+    DeepProfiler.End();
   }
 
   public static void Patch(MethodBase original, HarmonyMethod prefix = null,
