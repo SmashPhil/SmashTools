@@ -61,7 +61,7 @@ public class BFS<T>
           if (visited.Contains(neighbor))
           {
             if (LogRetraceAttempts)
-              SmashLog.Error(
+              Log.Error(
                 $"Attempting to open closed node {neighbor}. Skipping to avoid infinite loop.");
             continue;
           }
@@ -81,7 +81,7 @@ public class BFS<T>
     }
     catch (Exception ex)
     {
-      SmashLog.Error($"Exception thrown while performing BFS FloodFill.\n{ex}");
+      Log.Error($"Exception thrown while performing BFS FloodFill.\n{ex}");
     }
     finally
     {
