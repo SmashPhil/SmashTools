@@ -14,7 +14,7 @@ public static class Ext_World
   /// For radial search within <paramref name="radius"/>, use <paramref name="result"/>
   /// </summary>
   /// <returns>If radial search exits prematurely, the tile it stopped on will be returned</returns>
-  public static int BFS(int tile, List<int> searchedTiles, int radius = 1,
+  public static int Bfs(int tile, List<int> searchedTiles, int radius = 1,
     Func<int, bool> validator = null, Func<int, int, bool> result = null)
   {
     if (radius < 1)
@@ -81,8 +81,8 @@ public static class Ext_World
     NativeArray<int> offsets = tile.Layer.UnsafeTileIDToNeighbors_offsets;
     NativeArray<PlanetTile> values = tile.Layer.UnsafeTileIDToNeighbors_values;
 
-    int root = offsets[tile];
-    int count = tile + 1 < offsets.Length ? offsets[tile + 1] : values.Length;
+    int root = offsets[tile.tileId];
+    int count = tile.tileId + 1 < offsets.Length ? offsets[tile.tileId + 1] : values.Length;
 
     for (int i = root; i < count; i++)
       yield return values[i];
