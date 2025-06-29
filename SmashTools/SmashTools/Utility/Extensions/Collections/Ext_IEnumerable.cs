@@ -33,7 +33,7 @@ public static class Ext_IEnumerable
   /// <param name="predicate"></param>
   /// <param name="fallback"></param>
   public static T RandomOrFallback<T>(this IEnumerable<T> enumerable,
-    Predicate<T> predicate = null, T fallback = default(T))
+    Predicate<T> predicate = null, T fallback = default)
   {
     if (enumerable.Where(item => predicate is null || predicate(item))
      .TryRandomElement(out T result))
@@ -71,40 +71,35 @@ public static class Ext_IEnumerable
   /// <typeparam name="T"></typeparam>
   /// <param name="list"></param>
   /// <param name="predicate"></param>
-  public static int CountWhere<T>(this IEnumerable<T> list, Predicate<T> predicate)
+  public static int CountWhere<T>(this IEnumerable<T> list, [NotNull] Predicate<T> predicate)
   {
     int count = 0;
     foreach (T item in list)
     {
-      if (predicate(item)) count++;
+      if (predicate(item))
+        count++;
     }
     return count;
   }
 
   /// <summary>
-  /// Performs the specified action on each element of <c>IEnumerable <typeparamref name="T"/></c>
+  /// Check if <paramref name="source"/> contains all items in <paramref name="target"/>
   /// </summary>
-  /// <typeparam name="T"></typeparam>
-  /// <param name="enumerable"></param>
-  /// <param name="action"></param>
-  public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> action)
+  /// <exception cref="ArgumentNullException">If either source or target are null.</exception>
+  public static bool ContainsAllOf<T>(this IEnumerable<T> source, IEnumerable<T> target)
   {
-    foreach (T item in enumerable)
-    {
-      action(item);
-    }
-  }
+    if (source is null)
+      throw new ArgumentNullException(nameof(source));
+    if (target is null)
+      throw new ArgumentNullException(nameof(target));
 
-  /// <summary>
-  /// Check if <paramref name="source"/> is entirely contained within <paramref name="target"/>
-  /// </summary>
-  /// <typeparam name="T"></typeparam>
-  /// <param name="source"></param>
-  /// <param name="target"></param>
-  public static bool ContainsAllOfList<T>(this IEnumerable<T> source, IEnumerable<T> target)
-  {
-    if (source is null || target is null) return false;
-    return source.Intersect(target).NotNullAndAny();
+    foreach (T item in target)
+    {
+      // ReSharper disable once PossibleMultipleEnumeration
+      if (!source.Contains(item))
+        return false;
+    }
+    return true;
   }
 
   /// <summary>
