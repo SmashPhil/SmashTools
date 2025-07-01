@@ -130,13 +130,13 @@ public sealed class SelfOrderingList<T> : IList<T>, IReadOnlyList<T>
     get
     {
       if (index < 0 || index >= size)
-        throw new ArgumentOutOfRangeException(nameof(index));
+        throw new IndexOutOfRangeException(nameof(index));
       return contents[index];
     }
     set
     {
       if (index < 0 || index >= size)
-        throw new ArgumentOutOfRangeException(nameof(index));
+        throw new IndexOutOfRangeException(nameof(index));
       contents[index] = value;
       version++;
     }
@@ -171,7 +171,7 @@ public sealed class SelfOrderingList<T> : IList<T>, IReadOnlyList<T>
     if (enumerable is null)
       throw new ArgumentNullException(nameof(enumerable));
     if (index < 0 || index > size)
-      throw new ArgumentOutOfRangeException(nameof(index));
+      throw new IndexOutOfRangeException(nameof(index));
     // ReSharper disable once PossibleUnintendedReferenceComparison
     if (this == enumerable)
       throw new NotSupportedException("Self insertion is not supported");
@@ -261,8 +261,8 @@ public sealed class SelfOrderingList<T> : IList<T>, IReadOnlyList<T>
     {
       if (!comparer.Equals(contents[i], item))
         continue;
-      Touch(i);
       result = contents[i];
+      Touch(i);
       return true;
     }
     result = default;
@@ -275,7 +275,7 @@ public sealed class SelfOrderingList<T> : IList<T>, IReadOnlyList<T>
       throw new ArgumentOutOfRangeException(nameof(index));
 
     counters[index]++;
-    if (counters[index] > counters[index - 1])
+    if (index > 0 && counters[index] > counters[index - 1])
       Bump(index);
     if (counters[index] == uint.MaxValue)
       ResetCounters();
