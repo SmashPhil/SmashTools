@@ -2,29 +2,30 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using JetBrains.Annotations;
 using Verse;
 
 namespace SmashTools.Performance;
 
+[PublicAPI]
 public class DedicatedThread
 {
-  public readonly Thread thread;
+  internal readonly Thread thread;
   public readonly int id;
   public readonly ThreadType type;
 
-  private bool isSuspended;
-  private bool shouldExit;
-  private readonly ManualResetEventSlim waitHandle;
+  private bool shouldTerminate;
+  private readonly ManualResetEventSlim workHandle;
+  private readonly ManualResetEventSlim suspendHandle;
   private readonly ConcurrentQueue<AsyncAction> queue;
-  private readonly CancellationTokenSource cts;
 
-  public DedicatedThread(int id, ThreadType type)
+  internal DedicatedThread(int id, ThreadType type)
   {
     this.id = id;
     this.type = type;
-    cts = new CancellationTokenSource();
 
-    waitHandle = new ManualResetEventSlim(false);
+    workHandle = new ManualResetEventSlim(false);
+    suspendHandle = new ManualResetEventSlim(false);
     queue = [];
     thread = new Thread(Execute)
     {
@@ -36,24 +37,68 @@ public class DedicatedThread
 
   public int QueueCount => queue.Count;
 
-  public bool Terminated { get; private set; }
-
-  public bool IsBlocked => !waitHandle.IsSet;
+  /// <summary>
+  /// Thread has been suspended and action queue is empty.
+  /// </summary>
+  public bool IsSuspended => State is ThreadState.Suspended;
 
   /// <summary>
-  /// Halt new actions from being enqueued and block thread execution.
+  /// Thread has been terminated and disposed.
   /// </summary>
-  public bool IsSuspended
+  public bool IsTerminated => State is ThreadState.Terminated;
+
+  /// <summary>
+  /// Wait handle is currently unset and thread is waiting for work.
+  /// </summary>
+  public bool IsBlocked => !workHandle.IsSet;
+
+  /// <summary>
+  /// State of the thread worker. <b>Not equivalent to <see cref="System.Threading.ThreadState"/></b>
+  /// </summary>
+  public ThreadState State { get; private set; }
+
+  /// <summary>
+  /// Suspends new actions from being enqueued and blocks after all remaining actions are executed.
+  /// </summary>
+  /// <remarks>
+  /// Execution of the calling thread will be blocked until the action queue is empty.
+  /// </remarks>
+  /// <exception cref="InvalidOperationException">Attempting to suspend the thread from inside the thread.</exception>
+  public void Suspend()
   {
-    get { return isSuspended; }
-    set
+    if (Thread.CurrentThread.ManagedThreadId == thread.ManagedThreadId)
+      throw new InvalidOperationException("Attempting to suspend thread from inside the thread.");
+
+    // Suspending is lower priority than everything else including stopping.
+    if (State is not ThreadState.Running)
+      return;
+
+    // Suspending empties the queue before entering a suspended state, however we still have this
+    // intermediate state where we can't accept new actions yet the thread is not fully suspended.
+    suspendHandle.Reset();
+    State = ThreadState.Suspending;
+    UnpauseConsumer();
+    suspendHandle.Wait();
+  }
+
+  /// <summary>
+  /// Resume execution of the thread and reenable enqueueing actions.
+  /// </summary>
+  /// <exception cref="InvalidOperationException">Attempting to unsuspend the thread when it is not currently suspended.</exception>
+  public void Unsuspend()
+  {
+    switch (State)
     {
-      isSuspended = value;
-      if (!isSuspended)
-      {
-        UnpauseConsumer();
-      }
+      case ThreadState.Running:
+        return;
+      case ThreadState.Suspending:
+        throw new InvalidOperationException(
+          "Unsuspending a thread which is still spinning up to suspend.");
+      case not ThreadState.Suspended:
+        throw new InvalidOperationException("Unsuspending a thread which was not suspended.");
     }
+    State = ThreadState.Running;
+    UnpauseConsumer();
   }
 
   /// <summary>
@@ -69,12 +114,9 @@ public class DedicatedThread
   /// </summary>
   public void Enqueue(AsyncAction action)
   {
-    if (IsSuspended)
-    {
-      Trace.Fail($"Thread {id} has been queued an item while suspended. It will not execute.");
-      return;
-    }
-
+    if (State is ThreadState.Suspending or ThreadState.Suspended)
+      throw new InvalidOperationException(
+        $"Thread {id} has been enqueued an item while suspended. It will not execute.");
     queue.Enqueue(action);
     UnpauseConsumer();
   }
@@ -90,7 +132,8 @@ public class DedicatedThread
 
   private void UnpauseConsumer()
   {
-    waitHandle.Set();
+    if (State is not ThreadState.Terminated)
+      workHandle.Set();
   }
 
   /// <summary>
@@ -98,10 +141,9 @@ public class DedicatedThread
   /// </summary>
   public void Stop()
   {
-    shouldExit = true;
+    shouldTerminate = true;
     // Unblock consumer so we can exit the loop and terminate
-    if (!Terminated)
-      waitHandle.Set();
+    UnpauseConsumer();
   }
 
   /// <summary>
@@ -109,21 +151,24 @@ public class DedicatedThread
   /// </summary>
   public void StopImmediately()
   {
-    cts.Cancel();
+    if (State is ThreadState.Terminated)
+      return;
+
+    State = ThreadState.Stopping;
     Stop();
   }
 
   private void Execute()
   {
+    State = ThreadState.Running;
     try
     {
-      while (!shouldExit)
+      while (!shouldTerminate)
       {
-        waitHandle.Wait();
-        waitHandle.Reset();
+        workHandle.Wait();
+        workHandle.Reset();
 
-        while (!cts.IsCancellationRequested && !IsSuspended &&
-          queue.TryDequeue(out AsyncAction asyncAction))
+        while (State is not ThreadState.Stopping && queue.TryDequeue(out AsyncAction asyncAction))
         {
           try
           {
@@ -141,6 +186,11 @@ public class DedicatedThread
             asyncAction.ReturnToPool();
           }
         }
+        if (State is ThreadState.Suspending)
+        {
+          State = ThreadState.Suspended;
+          suspendHandle.Set();
+        }
       }
     }
     catch (Exception ex)
@@ -149,9 +199,9 @@ public class DedicatedThread
     }
     finally
     {
-      // Release all resources currently waiting on this event handle
-      waitHandle.Dispose();
-      Terminated = true;
+      State = ThreadState.Terminated;
+      workHandle.Dispose();
+      suspendHandle.Dispose();
     }
   }
 
@@ -159,5 +209,15 @@ public class DedicatedThread
   {
     Single,
     Shared
+  }
+
+  public enum ThreadState
+  {
+    Uninitialized,
+    Running,
+    Suspending,
+    Suspended,
+    Stopping,
+    Terminated
   }
 }

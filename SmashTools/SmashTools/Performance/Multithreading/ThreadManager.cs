@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using HarmonyLib;
 using JetBrains.Annotations;
@@ -14,28 +14,31 @@ namespace SmashTools.Performance;
 /// <para />
 /// Useful for continuously running background calculations such as updating map or world grids.
 /// </summary>
+[PublicAPI]
 public static class ThreadManager
 {
-  // It should take nowhere even close to 5 seconds to send cancellation token and wait for
-  // dedicated thread to terminate. If we hit this threshold, then we probably deadlocked.
-  private const int JoinTimeout = 5000; // ms
+  // TODO - implement forced sharing if this upper limit is ever hit as a fallback case. This
+  // should never be the case in current implementations by Vehicle Framework.
+  private const int MaxThreads = 10;
 
-  private const sbyte MaxThreads = 20;
-  private const byte MaxPooledThreads = 20;
+  // Single thread ids start above this threshold, everything below is dedicated to shared threads.
+  private const int SingleThreadIdOffset = 100;
 
-  private static readonly FieldInfo eventThreadField =
-    AccessTools.Field(typeof(LongEventHandler), "eventThread");
+  private static readonly AccessTools.FieldRef<object, Thread> EventThreadFieldRef;
 
-  private static int nextId;
+  private static int nextId = SingleThreadIdOffset;
 
-  private static readonly DedicatedThread[] threads =
-    new DedicatedThread[MaxThreads + MaxPooledThreads];
+  private static readonly Dictionary<int, ushort> ThreadRefCounts = new(MaxThreads);
 
-  private static readonly ushort[] pooledThreadCounts = new ushort[MaxPooledThreads];
+  private static readonly List<DedicatedThread> Threads = new(MaxThreads);
 
-  private static readonly List<DedicatedThread> activeThreads = [];
+  private static readonly object ThreadListLock = new();
 
-  private static readonly object threadListLock = new();
+  static ThreadManager()
+  {
+    EventThreadFieldRef =
+      AccessTools.FieldRefAccess<Thread>(typeof(LongEventHandler), "eventThread");
+  }
 
   public static bool InMainOrEventThread
   {
@@ -43,7 +46,7 @@ public static class ThreadManager
     {
       if (UnityData.IsInMainThread)
         return true;
-      Thread eventThread = (Thread)eventThreadField.GetValue(null);
+      Thread eventThread = EventThreadFieldRef.Invoke();
       return eventThread == null ||
         Thread.CurrentThread.ManagedThreadId == eventThread.ManagedThreadId;
     }
@@ -55,9 +58,9 @@ public static class ThreadManager
   {
     get
     {
-      lock (threadListLock)
+      lock (ThreadListLock)
       {
-        return activeThreads.Count == 0;
+        return Threads.Count == 0;
       }
     }
   }
@@ -65,14 +68,13 @@ public static class ThreadManager
   /// <summary>
   /// Snapshot of active threads.
   /// </summary>
-  [UsedImplicitly]
   public static ListSnapshot<DedicatedThread> ThreadsSnapshot
   {
     get
     {
-      lock (threadListLock)
+      lock (ThreadListLock)
       {
-        return new ListSnapshot<DedicatedThread>(activeThreads);
+        return new ListSnapshot<DedicatedThread>(Threads);
       }
     }
   }
@@ -83,22 +85,12 @@ public static class ThreadManager
   /// <remarks>
   /// Returned thread will be thread type Single. When released it will be immediately disposed.
   /// </remarks>
+  [MustUseReturnValue]
   public static DedicatedThread CreateNew()
   {
-    if (nextId < 0)
-    {
-      Log.Error("Attempting to create more dedicated threads than allowed.");
-      return null;
-    }
-
-    DedicatedThread dedicatedThread = new(nextId, DedicatedThread.ThreadType.Single);
-    lock (threadListLock)
-    {
-      activeThreads.Add(dedicatedThread);
-      threads[nextId] = dedicatedThread;
-      FindNextUsableId();
-    }
-    return dedicatedThread;
+    DedicatedThread thread = CreateNew(nextId, DedicatedThread.ThreadType.Single);
+    Interlocked.Increment(ref nextId);
+    return thread;
   }
 
   /// <summary>
@@ -107,88 +99,102 @@ public static class ThreadManager
   /// <remarks>
   /// When all owners have released the thread, it will be disposed.
   /// </remarks>
-  public static DedicatedThread GetShared(int id)
+  [MustUseReturnValue]
+  public static DedicatedThread GetOrCreateShared(int id)
   {
-    if (id < 0 || id > MaxPooledThreads)
-    {
-      Log.Error($"Attempting to get shared Thread with invalid id.");
-      return null;
-    }
+    return CreateNew(id, DedicatedThread.ThreadType.Shared);
+  }
 
-    int index = id + MaxThreads;
-    lock (threadListLock)
+  private static DedicatedThread CreateNew(int id, DedicatedThread.ThreadType type)
+  {
+    lock (ThreadListLock)
     {
-      if (threads[index] == null)
+      if (Threads.Count > MaxThreads)
+        throw new InvalidOperationException(
+          "Trying to create more threads than is allowed by ThreadManager.");
+      if (type == DedicatedThread.ThreadType.Shared && id >= SingleThreadIdOffset)
+        throw new ArgumentException(
+          $"Shared thread ids must be between 0 and {SingleThreadIdOffset} to avoid conflicting with unshared thread ids.");
+
+      DedicatedThread thread = GetThread(id);
+      if (thread == null)
       {
-        DedicatedThread dedicatedThread = new(index, DedicatedThread.ThreadType.Shared);
-        threads[index] = dedicatedThread;
-        activeThreads.Add(dedicatedThread);
+        thread = new DedicatedThread(id, type);
+        Threads.Add(thread);
+        ThreadRefCounts.Add(id, 1);
       }
-
-      pooledThreadCounts[id]++;
-      return threads[index];
+      else
+      {
+        ThreadRefCounts[id]++;
+      }
+      return thread;
     }
   }
 
-  public static bool Release(this DedicatedThread dedicatedThread)
+  /// <summary>
+  /// Get thread by id from list of active threads.
+  /// </summary>
+  [Pure]
+  public static DedicatedThread GetThread(int id)
   {
-    if (dedicatedThread.type == DedicatedThread.ThreadType.Shared)
+    lock (ThreadListLock)
     {
-      return TryReleaseShared(dedicatedThread);
+      foreach (DedicatedThread thread in Threads)
+      {
+        if (thread.id == id)
+          return thread;
+      }
     }
-
-    DisposeThread(dedicatedThread);
-    return true;
+    return null;
   }
 
-  private static bool TryReleaseShared(DedicatedThread dedicatedThread)
+  public static void Release(this DedicatedThread dedicatedThread)
   {
-    lock (threadListLock)
+    switch (dedicatedThread.type)
+    {
+      case DedicatedThread.ThreadType.Single:
+        DisposeThread(dedicatedThread);
+      break;
+      case DedicatedThread.ThreadType.Shared:
+        ReleaseReference(dedicatedThread);
+      break;
+      default:
+        throw new NotImplementedException(dedicatedThread.type.ToString());
+    }
+  }
+
+  private static void ReleaseReference(DedicatedThread dedicatedThread)
+  {
+    lock (ThreadListLock)
     {
       int id = dedicatedThread.id;
-      pooledThreadCounts[id - MaxThreads]--;
-      if (pooledThreadCounts[id - MaxThreads] == 0)
+      ThreadRefCounts[id]--;
+      if (ThreadRefCounts[id] == 0)
       {
         DisposeThread(dedicatedThread);
-        return true;
       }
     }
-    return false;
   }
 
   private static void DisposeThread(DedicatedThread dedicatedThread)
   {
-    lock (threadListLock)
+    lock (ThreadListLock)
     {
       dedicatedThread.StopImmediately();
-      activeThreads.Remove(dedicatedThread);
-      threads[dedicatedThread.id] = null;
-      FindNextUsableId();
+      if (!Threads.Remove(dedicatedThread))
+        Trace.Fail($"Failed to remove thread {dedicatedThread.id} from ThreadManager");
+      ThreadRefCounts.Remove(dedicatedThread.id);
     }
-  }
-
-  private static void FindNextUsableId()
-  {
-    for (int i = 0; i < sbyte.MaxValue; i++)
-    {
-      if (threads[i] is null)
-      {
-        nextId = i;
-        return;
-      }
-    }
-
-    nextId = -1;
   }
 
   internal static void OnSceneChanged(Scene scene, LoadSceneMode mode)
   {
     Assert.AreEqual(mode, LoadSceneMode.Single);
-    ReleaseThreads();
+    ReleaseAll();
     ComponentCache.ClearAll();
   }
 
-  public static void ReleaseThreads()
+  public static void ReleaseAll()
   {
     using ListSnapshot<DedicatedThread> threadsSnapshot = ThreadsSnapshot;
 
@@ -204,11 +210,14 @@ public static class ThreadManager
 
   public static void ReleaseAndJoin(DedicatedThread dedicatedThread)
   {
-    dedicatedThread.Release();
+    // It should take nowhere even close to 5 seconds to signal the thread to stop immediately and
+    // wait for it to terminate. If we hit this threshold, then we probably deadlocked.
+    const int JoinTimeout = 5000; // ms
+
+    DisposeThread(dedicatedThread);
     if (!dedicatedThread.thread.Join(JoinTimeout))
     {
       Log.Error($"Thread {dedicatedThread.id} has failed to terminate.");
-      dedicatedThread.StopImmediately(); // Call once more for good measure and move on
     }
   }
 }
