@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using RimWorld;
@@ -14,11 +13,11 @@ namespace SmashTools;
 
 public static class Ext_Map
 {
-  private static readonly AccessTools.FieldRef<AreaManager, List<Area>> areaListFieldRef;
+  private static readonly AccessTools.FieldRef<AreaManager, List<Area>> AreaListFieldRef;
 
   static Ext_Map()
   {
-    areaListFieldRef = AccessTools.FieldRefAccess<List<Area>>(typeof(AreaManager), "areas");
+    AreaListFieldRef = AccessTools.FieldRefAccess<List<Area>>(typeof(AreaManager), "areas");
   }
 
   public static void EnsureAreaInitialized<T>(this Map map) where T : Area, new()
@@ -28,12 +27,12 @@ public static class Ext_Map
       Log.Error("Trying to add registered area types before AreaManager has been initialized.");
       return;
     }
-    Assert.IsNotNull(areaListFieldRef);
+    Assert.IsNotNull(AreaListFieldRef);
     T area = map.areaManager.Get<T>();
     if (area == null)
     {
       area = (T)Activator.CreateInstance(typeof(T), map.areaManager);
-      List<Area> areas = areaListFieldRef.Invoke(map.areaManager);
+      List<Area> areas = AreaListFieldRef.Invoke(map.areaManager);
       areas.Add(area);
     }
   }
@@ -146,21 +145,13 @@ public static class Ext_Map
     IntVec3 NW = new(c.x - 1, c.y, c.z + 1);
 
     if (NE.InBounds(map))
-    {
       yield return NE;
-    }
     if (SE.InBounds(map))
-    {
       yield return SE;
-    }
     if (SW.InBounds(map))
-    {
       yield return SW;
-    }
     if (NW.InBounds(map))
-    {
       yield return NW;
-    }
   }
 
   /// <summary>
