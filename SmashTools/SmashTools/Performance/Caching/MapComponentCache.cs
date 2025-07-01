@@ -8,7 +8,7 @@ public static class MapComponentCache<T> where T : MapComponent
 {
   private const int CompCacheSize = sbyte.MaxValue;
 
-  private static readonly T[] mapComps = new T[CompCacheSize];
+  private static readonly T[] MapComps = new T[CompCacheSize];
 
   // NOTE - Map::get_Index ends up iterating through the global map list to search for THIS specific
   // map, but the player will usually have less than 3~4 maps open at a time. This is roughly the
@@ -16,11 +16,11 @@ public static class MapComponentCache<T> where T : MapComponent
   // all cases to fetch the index and then use that for an array lookup.
   public static T GetComponent(Map map)
   {
-    T component = mapComps[map.Index];
+    T component = MapComps[map.Index];
     if (component == null)
     {
       component = map.GetComponent<T>();
-      mapComps[map.Index] = component;
+      MapComps[map.Index] = component;
     }
     Assert.AreEqual(map, component.map);
     return component;
@@ -28,21 +28,21 @@ public static class MapComponentCache<T> where T : MapComponent
 
   public static void ClearMap(Map map)
   {
-    mapComps[map.Index] = null;
+    MapComps[map.Index] = null;
   }
 
   public static void ClearAll()
   {
-    Array.Clear(mapComps, 0, CompCacheSize);
+    Array.Clear(MapComps, 0, CompCacheSize);
   }
 
   internal static T GetComponent(int index)
   {
-    return mapComps[index];
+    return MapComps[index];
   }
 
   internal static int Count()
   {
-    return mapComps.CountWhere(item => item is not null);
+    return MapComps.CountWhere(item => item is not null);
   }
 }

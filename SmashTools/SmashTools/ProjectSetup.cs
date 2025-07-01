@@ -153,7 +153,7 @@ public class ProjectSetup : Mod
     HarmonyPatcher.Run(PatchSequence.Mod);
 
     SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
-    GameEvent.OnWorldUnloading += ThreadManager.ReleaseThreads;
+    GameEvent.OnWorldUnloading += ThreadManager.ReleaseAll;
     GameEvent.OnWorldUnloading += ComponentCache.ClearAll;
 
 #if DEBUG

@@ -88,11 +88,26 @@ public static class Ext_IEnumerable
   /// <exception cref="ArgumentNullException">If either source or target are null.</exception>
   public static bool ContainsAllOf<T>(this IEnumerable<T> source, IEnumerable<T> target)
   {
+    // If source hits the cutoff point for hashset being faster, go that route. The extra garbage
+    // will pay off in this case. Run Benchmark_Contains for comparison.
+    const int CountThreshold = 25;
+
     if (source is null)
       throw new ArgumentNullException(nameof(source));
     if (target is null)
       throw new ArgumentNullException(nameof(target));
 
+
+    if (source is ICollection<T> { Count: >= CountThreshold })
+    {
+      HashSet<T> hashSet = source.ToHashSet();
+      foreach (T item in target)
+      {
+        if (!hashSet.Contains(item))
+          return false;
+      }
+      return true;
+    }
     foreach (T item in target)
     {
       // ReSharper disable once PossibleMultipleEnumeration

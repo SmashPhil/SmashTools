@@ -16,11 +16,7 @@ public static class HarmonyPatcher
   private static Type typePatching;
   private static string methodPatching = string.Empty;
 
-  private static readonly List<IPatchCategory> patches = [];
-
-#if DEBUG
-  private static readonly Dictionary<PatchSequence, int> patchCounts = [];
-#endif
+  private static readonly List<IPatchCategory> Patches = [];
 
   private static ModContentPack Mod { get; set; }
 
@@ -40,7 +36,7 @@ public static class HarmonyPatcher
         if (type.HasInterface(typeof(IPatchCategory)) && type.IsClass && !type.IsAbstract)
         {
           IPatchCategory patch = (IPatchCategory)Activator.CreateInstance(type, nonPublic: true);
-          patches.Add(patch);
+          Patches.Add(patch);
         }
       }
     }
@@ -55,7 +51,7 @@ public static class HarmonyPatcher
     using PatchStatusEnabler pse = new();
 
     DeepProfiler.Start($"HarmonyPatcher_{sequence}");
-    foreach (IPatchCategory patch in patches)
+    foreach (IPatchCategory patch in Patches)
     {
       Assert.IsNotNull(patch);
       try
