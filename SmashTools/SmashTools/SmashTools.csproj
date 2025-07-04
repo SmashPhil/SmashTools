@@ -113,6 +113,7 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
+      <Folder Include="Patching\PatchOperations\" />
       <Folder Include="Properties\" />
     </ItemGroup>
 </Project>

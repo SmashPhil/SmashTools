@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using HarmonyLib;
 using JetBrains.Annotations;
 using UnityEngine.Assertions;
@@ -13,10 +14,11 @@ namespace SmashTools.Patching;
 [PublicAPI]
 public static class HarmonyPatcher
 {
+  private static Task asyncPatchTask;
   private static Type typePatching;
   private static string methodPatching = string.Empty;
 
-  private static readonly List<IPatchCategory> Patches = [];
+  private static readonly Dictionary<PatchSequence, List<IPatchCategory>> Patches = [];
 
   private static ModContentPack Mod { get; set; }
 
@@ -30,13 +32,12 @@ public static class HarmonyPatcher
     Harmony = new Harmony(mod.ModMetaData.PackageIdPlayerFacing);
     foreach (Assembly assembly in mod.assemblies.loadedAssemblies)
     {
-      //harmony.PatchAll(Assembly.GetExecutingAssembly());
       foreach (Type type in assembly.GetTypes())
       {
         if (type.HasInterface(typeof(IPatchCategory)) && type.IsClass && !type.IsAbstract)
         {
           IPatchCategory patch = (IPatchCategory)Activator.CreateInstance(type, nonPublic: true);
-          Patches.Add(patch);
+          Patches.AddOrAppend(patch.PatchAt, patch);
         }
       }
     }
@@ -44,14 +45,40 @@ public static class HarmonyPatcher
 
   public static void Run(PatchSequence sequence)
   {
-    Harmony.DEBUG = true;
+#if DEBUG
+    //Harmony.DEBUG = true;
+#endif
 
     Assert.IsFalse(RunningPatcher);
+    if (!Patches.ContainsKey(sequence))
+      return;
+    if (sequence == PatchSequence.Async)
+    {
+      if (!Patches.TryGetValue(PatchSequence.Async, out List<IPatchCategory> categories) ||
+        categories.NullOrEmpty())
+        return;
+
+      Assert.IsNull(asyncPatchTask,
+        "Patching async patch categories but the task has already been kicked off.");
+      asyncPatchTask = Task.Run(RunAsyncPatches);
+      LongEventHandler.ExecuteWhenFinished(delegate
+      {
+        if (!asyncPatchTask.IsCompleted)
+        {
+          Log.Warning(
+            $"[{Mod.Name}] Patching took longer than expected, delaying startup until it's finished.");
+          // Wait for patches to finish otherwise the player could enter into a game while the
+          // patches are still running, causing the game to enter into a corrupted state.
+          asyncPatchTask.GetAwaiter().GetResult();
+        }
+        DumpPatchReport();
+      });
+      return;
+    }
 
     using PatchStatusEnabler pse = new();
-
     DeepProfiler.Start($"HarmonyPatcher_{sequence}");
-    foreach (IPatchCategory patch in Patches)
+    foreach (IPatchCategory patch in Patches[sequence])
     {
       Assert.IsNotNull(patch);
       try
@@ -66,11 +93,26 @@ public static class HarmonyPatcher
       }
       catch (Exception ex)
       {
-        SmashLog.Error(
-          $"Failed to Patch <type>{patch.GetType().FullName}</type>. Method=\"{methodPatching}\"\n{ex}");
+        Log.Error(
+          $"Failed to Patch {patch.GetType().FullName}. Method=\"{methodPatching}\"\n{ex}");
       }
     }
     DeepProfiler.End();
+  }
+
+  private static void RunAsyncPatches()
+  {
+    foreach (IPatchCategory patch in Patches[PatchSequence.Async])
+    {
+      try
+      {
+        patch.PatchMethods();
+      }
+      catch (Exception ex)
+      {
+        Log.Error($"Failed to Patch {patch.GetType().FullName}.\n{ex}");
+      }
+    }
   }
 
   public static void Patch(MethodBase original, HarmonyMethod prefix = null,
@@ -93,6 +135,9 @@ public static class HarmonyPatcher
   {
     if (Prefs.DevMode)
     {
+      if (!asyncPatchTask.IsCompleted)
+        return;
+
       int prefixes = 0;
       int postfixes = 0;
       int transpilers = 0;

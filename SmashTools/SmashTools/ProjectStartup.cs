@@ -13,6 +13,5 @@ public static class ProjectStartup
     HarmonyPatcher.Run(PatchSequence.PostDefDatabase);
     DelayedCrossRefResolver.ResolveAll();
     AnimationLoader.ResolveAllReferences();
-    HarmonyPatcher.DumpPatchReport();
   }
 }

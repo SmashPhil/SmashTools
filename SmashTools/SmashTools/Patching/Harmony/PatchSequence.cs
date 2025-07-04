@@ -3,5 +3,6 @@
 public enum PatchSequence
 {
   Mod,
-  PostDefDatabase
+  PostDefDatabase,
+  Async
 }

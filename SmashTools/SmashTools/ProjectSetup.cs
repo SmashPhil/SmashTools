@@ -151,6 +151,7 @@ public class ProjectSetup : Mod
 
     ConditionalPatches.RunAll();
     HarmonyPatcher.Run(PatchSequence.Mod);
+    HarmonyPatcher.Run(PatchSequence.Async);
 
     SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
     GameEvent.OnWorldUnloading += ThreadManager.ReleaseAll;
