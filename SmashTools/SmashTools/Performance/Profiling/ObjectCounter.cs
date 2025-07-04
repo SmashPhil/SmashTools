@@ -23,7 +23,6 @@ namespace SmashTools.Performance
 
     public static void ClearAll() => counter.Clear();
 
-    [Conditional("DEBUG")]
     public static void Increment<T>()
     {
       if (!counter.ContainsKey(typeof(T))) counter[typeof(T)] = 0;
@@ -78,7 +77,8 @@ namespace SmashTools.Performance
     }
 
 #if DEBUG
-    [DebugOutput(category = ProjectSetup.ProjectLabel, name = "Log Object Counters", onlyWhenPlaying = true)]
+    [DebugOutput(category = ProjectSetup.ProjectLabel, name = "Log Object Counters", onlyWhenPlaying
+ = true)]
     private static void LogAllDebugAction()
     {
       LogAll();
