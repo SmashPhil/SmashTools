@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Verse;
+﻿using Verse;
 
-namespace SmashTools
+namespace SmashTools;
+
+public static class Ext_Mods
 {
-	public static class Ext_Mods
-	{
-		public static bool HasActiveMod(string packageId)
-		{
-			return ModLister.GetActiveModWithIdentifier(packageId, ignorePostfix: true) != null;
-		}
-	}
+  public static bool HasActiveMod(string packageId)
+  {
+    return ModLister.GetActiveModWithIdentifier(packageId, ignorePostfix: true) != null;
+  }
 }

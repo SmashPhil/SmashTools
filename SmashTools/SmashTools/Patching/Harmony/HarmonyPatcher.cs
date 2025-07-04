@@ -44,7 +44,7 @@ public static class HarmonyPatcher
 
   public static void Run(PatchSequence sequence)
   {
-    //Harmony.DEBUG = true;
+    Harmony.DEBUG = true;
 
     Assert.IsFalse(RunningPatcher);
 
@@ -93,9 +93,34 @@ public static class HarmonyPatcher
   {
     if (Prefs.DevMode)
     {
+      int prefixes = 0;
+      int postfixes = 0;
+      int transpilers = 0;
+      int finalizers = 0;
+      List<MethodBase> patchMethods = Harmony.GetPatchedMethods().ToList();
+      foreach (MethodBase method in patchMethods)
+      {
+        Patches patches = Harmony.GetPatchInfo(method);
+        prefixes += CountPatches(patches.Prefixes);
+        postfixes += CountPatches(patches.Postfixes);
+        transpilers += CountPatches(patches.Transpilers);
+        finalizers += CountPatches(patches.Finalizers);
+      }
       SmashLog.Message(
-        $"<color=orange>[{Mod.Name.Replace(" ", "")}]</color> <success>{Harmony.GetPatchedMethods().Count()} " +
-        $"patches successfully applied.</success>");
+        $"<color=orange>[{Mod.Name.Replace(" ", "")}]</color> <success>{prefixes + postfixes + transpilers + finalizers} " +
+        $"patches successfully applied.</success>\nPrefixes: {prefixes} Postfixes: {postfixes} Transpilers: {transpilers} Finalizers: {finalizers}");
+    }
+    return;
+
+    static int CountPatches(IReadOnlyCollection<Patch> patches)
+    {
+      int count = 0;
+      foreach (Patch patch in patches)
+      {
+        if (patch.owner == Harmony.Id)
+          count++;
+      }
+      return count;
     }
   }
 

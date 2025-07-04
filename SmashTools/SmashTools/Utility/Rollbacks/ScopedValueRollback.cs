@@ -6,6 +6,10 @@ namespace SmashTools;
 /// <summary>
 /// Records the current value of an object and rolls it back when this struct goes out of scope.
 /// </summary>
+/// <remarks>
+/// This operates with the assumption that bdwgc remains non-compacting, and that the object in
+/// <see cref="ptr"/> does not destroy before the rollback.
+/// </remarks>
 /// <typeparam name="T">Type of the object being rolled back.</typeparam>
 [PublicAPI]
 public readonly unsafe struct ScopedValueRollback<T> : IDisposable where T : unmanaged
