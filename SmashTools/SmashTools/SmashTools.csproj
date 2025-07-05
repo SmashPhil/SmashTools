@@ -55,7 +55,8 @@
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-        <DebugType>pdbonly</DebugType>
+        <DebugType>None</DebugType>
+        <DebugSymbols>false</DebugSymbols>
         <Optimize>true</Optimize>
         <DefineConstants>TRACE;RELEASE</DefineConstants>
     </PropertyGroup>
