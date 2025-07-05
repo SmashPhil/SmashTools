@@ -30,6 +30,13 @@ public sealed class Transform : ITweakFields, IExposable
     Scribe_Values.Look(ref scale, nameof(scale));
   }
 
+  public void Reset()
+  {
+    position = Vector3.zero;
+    rotation = 0;
+    scale = Vector3.one;
+  }
+
   void ITweakFields.OnFieldChanged()
   {
   }
