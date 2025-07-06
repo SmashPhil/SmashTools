@@ -33,7 +33,7 @@ public static class Ext_EventManager
   /// <typeparam name="T">The enum event key type.</typeparam>
   /// <param name="manager">The event manager to fill.</param>
   /// <exception cref="ArgumentException">If <typeparamref name="T"/> is not an enum type.</exception>
-  public static void FillEvents_Enum<T>(this IEventManager<T> manager)
+  public static void FillEventsEnum<T>(this IEventManager<T> manager)
   {
     if (!typeof(T).IsEnum)
       throw new ArgumentException(
@@ -51,7 +51,7 @@ public static class Ext_EventManager
   /// </summary>
   /// <typeparam name="T">The definition type, derived from <see cref="Def"/>.</typeparam>
   /// <param name="manager">The event manager to fill.</param>
-  public static void FillEvents_Def<T>(this IEventManager<T> manager) where T : Def
+  public static void FillEventsDef<T>(this IEventManager<T> manager) where T : Def
   {
     manager.EventRegistry = new EventManager<T>();
     foreach (T def in DefDatabase<T>.AllDefsListForReading)
@@ -68,7 +68,7 @@ public static class Ext_EventManager
   /// <param name="event">The event key to register.</param>
   public static void RegisterEventType<T>(this IEventManager<T> manager, T @event)
   {
-    manager.EventRegistry[@event] = new EventTrigger();
+    manager.EventRegistry[@event] = new EventTrigger(manager.EventRegistry);
   }
 
   /// <summary>
@@ -225,6 +225,6 @@ public static class Ext_EventManager
   /// <returns><see langword="true"/> if the manager is non-null and has one or more events; otherwise, <c>false</c>.</returns>
   public static bool Initialized<T>(this EventManager<T> manager)
   {
-    return manager != null && !manager.lookup.NullOrEmpty();
+    return manager != null && !manager.map.NullOrEmpty();
   }
 }

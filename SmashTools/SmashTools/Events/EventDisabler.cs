@@ -29,6 +29,14 @@ public readonly struct EventDisabler<T> : IDisposable
   }
 
   /// <summary>
+  /// Restores the previous event-enabled state when the disabler goes out of scope.
+  /// </summary>
+  void IDisposable.Dispose()
+  {
+    SetState(true);
+  }
+
+  /// <summary>
   /// Toggles the enabled state of the event registry or specific event triggers.
   /// </summary>
   /// <param name="enabled">
@@ -40,20 +48,14 @@ public readonly struct EventDisabler<T> : IDisposable
     {
       foreach (T key in disableSpecific)
       {
-        manager.EventRegistry[key].Enabled = enabled;
+        IEventControl enabler = manager.EventRegistry[key];
+        enabler.Enabled = enabled;
       }
     }
     else
     {
-      manager.EventRegistry.Enabled = enabled;
+      IEventControl enabler = manager.EventRegistry;
+      enabler.Enabled = enabled;
     }
-  }
-
-  /// <summary>
-  /// Restores the previous event-enabled state when the disabler goes out of scope.
-  /// </summary>
-  void IDisposable.Dispose()
-  {
-    SetState(true);
   }
 }
