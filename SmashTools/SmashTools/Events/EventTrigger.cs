@@ -12,6 +12,29 @@ public class EventTrigger
 
   public bool Enabled { get; set; } = true;
 
+  public bool Contains(string key)
+  {
+    foreach (Trigger trigger in persistents)
+    {
+      if (key != null && trigger.key != null && key == trigger.key)
+        return true;
+    }
+    return false;
+  }
+
+  /// <summary>
+  /// Persistent trigger is currently registered in event trigger
+  /// </summary>
+  public bool Contains(Action action)
+  {
+    foreach (Trigger trigger in persistents)
+    {
+      if (trigger.action == action)
+        return true;
+    }
+    return false;
+  }
+
   public void Add(string key, Action action)
   {
     persistents.Add(new Trigger(key, action));
