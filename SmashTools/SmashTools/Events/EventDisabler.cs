@@ -4,28 +4,25 @@ using JetBrains.Annotations;
 namespace SmashTools;
 
 /// <summary>
-/// Temporarily disables event triggers on the specified <see cref="IEventManager{T}"/>.
+/// Temporarily disables events on the specified <see cref="IEventControl"/>.
 /// When disposed, event dispatching is re-enabled.
 /// </summary>
 /// <typeparam name="T">The type of event keys managed by the event manager.</typeparam>
 [PublicAPI]
 public readonly struct EventDisabler<T> : IDisposable
 {
-  private readonly IEventManager<T> manager;
-  private readonly T[] disableSpecific;
+  private readonly bool state;
+  private readonly IEventControl eventControl;
 
   /// <summary>
   /// Initializes a new <see cref="EventDisabler{T}"/>, disabling all events or only the specified event keys.
   /// </summary>
-  /// <param name="manager">The event manager whose events will be disabled.</param>
-  /// <param name="disableSpecific">
-  /// An optional array of event keys to suppress. If omitted or empty, all events are disabled.
-  /// </param>
-  public EventDisabler(IEventManager<T> manager, params T[] disableSpecific)
+  /// <param name="eventControl">The event control whose events will be disabled.</param>
+  public EventDisabler(IEventControl eventControl)
   {
-    this.manager = manager;
-    this.disableSpecific = disableSpecific;
-    SetState(false);
+    this.eventControl = eventControl;
+    state = eventControl.Enabled;
+    eventControl.Enabled = false;
   }
 
   /// <summary>
@@ -33,29 +30,6 @@ public readonly struct EventDisabler<T> : IDisposable
   /// </summary>
   void IDisposable.Dispose()
   {
-    SetState(true);
-  }
-
-  /// <summary>
-  /// Toggles the enabled state of the event registry or specific event triggers.
-  /// </summary>
-  /// <param name="enabled">
-  /// <see langword="true"/> to enable dispatching; <see langword="false"/> to suppress it.
-  /// </param>
-  private void SetState(bool enabled)
-  {
-    if (!disableSpecific.NullOrEmpty())
-    {
-      foreach (T key in disableSpecific)
-      {
-        IEventControl enabler = manager.EventRegistry[key];
-        enabler.Enabled = enabled;
-      }
-    }
-    else
-    {
-      IEventControl enabler = manager.EventRegistry;
-      enabler.Enabled = enabled;
-    }
+    eventControl.Enabled = state;
   }
 }
