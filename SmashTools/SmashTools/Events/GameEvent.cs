@@ -4,23 +4,35 @@ namespace SmashTools;
 
 public static class GameEvent
 {
-  // New game is being initialized.
+  /// <summary>
+  /// New game is being initialized.
+  /// </summary>
   public static event Action OnNewGame;
 
-  // Existing save file is being loaded.
+  /// <summary>
+  /// Existing save file is being loaded.
+  /// </summary>
   public static event Action OnLoadGame;
 
-  // MainMenu scene has been loaded.
+  /// <summary>
+  /// MainMenu scene has been loaded.
+  /// </summary>
   public static event Action OnMainMenu;
 
-  // World and all maps are about to be unloaded.
+  /// <summary>
+  /// World and all maps are about to be unloaded.
+  /// </summary>
   public static event Action OnWorldUnloading;
 
-  // World and all maps have finished being removed.
+  /// <summary>
+  /// World and all maps have finished being removed.
+  /// </summary>
   public static event Action OnWorldRemoved;
 
-  // DefDatabase implied defs are currently in the pre-resolve stage.
-  // Now is the time to add any implied defs from mods.
+  /// <summary>
+  /// DefDatabase implied defs are currently in the pre-resolve stage.
+  /// </summary>
+  /// <remarks>Now is the time to add any implied defs from mods.</remarks>
   public static event Action<bool> OnGenerateImpliedDefs;
 
   internal static void RaiseOnNewGame()
