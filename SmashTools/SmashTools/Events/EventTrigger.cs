@@ -13,7 +13,6 @@ public class EventTrigger : IEventControl
   // Backing field for IEventControl::Enabled
   private bool enabled = true;
 
-  // Backing stores for triggers
   private readonly List<Trigger> persistents = [];
   private readonly List<Trigger> singles = [];
 

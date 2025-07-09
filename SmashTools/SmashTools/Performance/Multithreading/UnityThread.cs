@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading;
+using SmashTools.Targeting;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Verse;
@@ -42,6 +42,7 @@ public class UnityThread : MonoBehaviour
 
   private void Update()
   {
+    TargeterDispatcher.TargeterUpdate();
     for (int i = onUpdateMethods.Count - 1; i >= 0; i--)
     {
       if (!onUpdateMethods[i]())
@@ -51,6 +52,7 @@ public class UnityThread : MonoBehaviour
 
   private void OnGUI()
   {
+    TargeterDispatcher.TargeterOnGUI();
     for (int i = onGuiMethods.Count - 1; i >= 0; i--)
     {
       try
