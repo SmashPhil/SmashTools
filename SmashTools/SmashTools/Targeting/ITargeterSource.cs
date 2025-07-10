@@ -1,23 +1,23 @@
-﻿using RimWorld.Planet;
+﻿namespace SmashTools.Targeting;
 
-namespace SmashTools.Targeting;
-
-public interface IWorldTargeterSource<in TPayload> where TPayload : ITargetOption
+public interface ITargeterSource<TTarget, in TPayload> where TPayload : ITargetOption
 {
+  bool TargeterValid { get; }
+
   /// <summary>
   /// Object can launch right now with its current configuration.
   /// </summary>
-  WorldTargetResult CanTarget(GlobalTargetInfo target);
+  TargetValidation CanTarget(TTarget target);
 
   /// <summary>
   /// Select target
   /// </summary>
   /// <param name="target"></param>
   /// <returns>Targeter can close and dequeue from the update loop.</returns>
-  TargeterResult Select(GlobalTargetInfo target);
+  TargeterResult Select(TTarget target);
 
   /// <summary>
   /// Target selection confirmed
   /// </summary>
-  void OnTargetingFinished(TargetData<GlobalTargetInfo> targetData, TPayload payload);
+  void OnTargetingFinished(TargetData<TTarget> targetData, TPayload payload);
 }

@@ -27,6 +27,14 @@ public abstract class Targeter<T> : ITargeter
     return TargeterResult.Cancel;
   }
 
+  public virtual void OnStart()
+  {
+  }
+
+  public virtual void OnStop()
+  {
+  }
+
   public virtual void OnGUI()
   {
     ProcessInput();
@@ -84,18 +92,25 @@ public abstract class Targeter<T> : ITargeter
           SoundDefOf.ClickReject.PlayOneShotOnCamera();
         break;
         case TargeterAction.Cancel:
+          SoundDefOf.CancelMode.PlayOneShotOnCamera();
           this.Stop();
         break;
         case TargeterAction.Submit:
-          if (!result.options.NullOrEmpty())
-            Finalize(result.options);
-        break;
-        case TargeterAction.None:
-        case TargeterAction.Accept:
           Assert.IsFalse(result.options.NullOrEmpty());
+          Finalize(result.options);
+        break;
+        case TargeterAction.Accept:
+        case TargeterAction.None:
         default:
         break;
       }
+      Event.current.Use();
+    }
+    if (KeyBindingDefOf.Cancel.KeyDownEvent)
+    {
+      SoundDefOf.CancelMode.PlayOneShotOnCamera();
+      this.Stop();
+      Event.current.Use();
     }
   }
 }

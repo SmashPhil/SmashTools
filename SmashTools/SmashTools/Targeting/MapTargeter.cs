@@ -7,22 +7,23 @@ using Verse.Sound;
 
 namespace SmashTools.Targeting;
 
-public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload : ITargetOption
+// TODO Launcher - Complete for local map targeting
+public class MapTargeter<TPayload> : Targeter<LocalTargetInfo> where TPayload : ITargetOption
 {
-  private readonly ITargeterSource<GlobalTargetInfo, TPayload> source;
+  private readonly ITargeterSource<LocalTargetInfo, TPayload> source;
 
-  private GlobalTargetInfo curTarget;
+  private LocalTargetInfo curTarget;
   private TargetValidation curResult;
 
   private bool closeWorldTabWhenFinished;
 
-  public WorldTargeter(ITargeterSource<GlobalTargetInfo, TPayload> source) : base(null)
+  public MapTargeter(ITargeterSource<LocalTargetInfo, TPayload> source) : base(null)
   {
     this.source = source;
   }
 
-  public WorldTargeter(ITargeterSource<GlobalTargetInfo, TPayload> source,
-    ITargeterUpdate<GlobalTargetInfo> updater) : base(updater)
+  public MapTargeter(ITargeterSource<LocalTargetInfo, TPayload> source,
+    ITargeterUpdate<LocalTargetInfo> updater) : base(updater)
   {
     this.source = source;
   }
@@ -108,28 +109,14 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
 
   private void UpdateTargetUnderMouse()
   {
-    curTarget = GlobalTargetInfo.Invalid;
+    curTarget = LocalTargetInfo.Invalid;
     curResult = TargetValidation.Failed;
 
-    List<WorldObject> objects = GenWorldUI.WorldObjectsUnderMouse(UI.MousePositionOnUI);
-    if (objects.Count > 0)
-    {
-      foreach (WorldObject obj in objects)
-      {
-        TargetValidation targetResult = source.CanTarget(obj);
-        if (targetResult.isValid)
-        {
-          curTarget = obj;
-          curResult = targetResult;
-          return;
-        }
-      }
-    }
-    PlanetTile tile = GenWorld.MouseTile();
-    if (!tile.Valid)
+    IntVec3 cell = UI.MouseCell();
+    if (!cell.IsValid)
       return;
 
-    curTarget = new GlobalTargetInfo(tile);
+    curTarget = new LocalTargetInfo(cell);
     curResult = source.CanTarget(curTarget);
   }
 }
