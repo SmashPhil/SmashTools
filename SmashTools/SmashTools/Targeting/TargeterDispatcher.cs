@@ -19,11 +19,11 @@ public static class TargeterDispatcher
     {
       Current.Update();
     }
-    catch
+    catch (Exception ex)
     {
       // Remove problematic targeter or we'll end up spamming incessantly
-      Targeters.Pop();
-      throw;
+      Targeters.TryPop(out _);
+      Log.Error($"Root level exception in TargeterUpdate: {ex}");
     }
   }
 
@@ -35,18 +35,19 @@ public static class TargeterDispatcher
     {
       Current.OnGUI();
     }
-    catch
+    catch (Exception ex)
     {
       // Remove problematic targeter or we'll end up spamming incessantly
       Targeters.Pop();
       UpdateCurrent();
-      throw;
+      Log.Error($"Root level exception in TargeterOnGUI: {ex}");
     }
   }
 
   public static void Start(this ITargeter targeter)
   {
     Targeters.Push(targeter);
+    targeter.OnStart();
     UpdateCurrent();
   }
 
@@ -64,12 +65,13 @@ public static class TargeterDispatcher
       Log.Error("Removing targeter out of sequence.");
       Remove(targeter);
     }
+    targeter.OnStop();
     UpdateCurrent();
   }
 
   private static void UpdateCurrent()
   {
-    Current = Targeters.Peek();
+    Current = Targeters.Count > 0 ? Targeters.Peek() : null;
   }
 
   private static void Remove(ITargeter targeter)
