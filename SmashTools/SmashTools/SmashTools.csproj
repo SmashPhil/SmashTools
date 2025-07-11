@@ -23,7 +23,7 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <OutDir>..\..\..\1.6\Assemblies\</OutDir>
         <LangVersion>preview</LangVersion>
-        <DebugType>portable</DebugType>
+        <DebugType>embedded</DebugType>
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
         <NoWarn>CS0649</NoWarn>
