@@ -26,7 +26,7 @@ public readonly unsafe struct ScopedValueRollback<T> : IDisposable where T : unm
     }
   }
 
-  void IDisposable.Dispose()
+  public void Dispose()
   {
     *ptr = value;
   }
