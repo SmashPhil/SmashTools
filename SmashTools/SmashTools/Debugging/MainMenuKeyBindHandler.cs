@@ -7,28 +7,29 @@ namespace SmashTools;
 
 public static class MainMenuKeyBindHandler
 {
-  private static readonly List<(KeyBindingDef keyBindingDef, Action action)> keyBindings = [];
+  private static readonly List<(KeyBindingDef keyBindingDef, Action action)> KeyBindings = [];
 
   public static void RegisterKeyBind(KeyBindingDef keyBindingDef, Action action)
   {
-    if (!keyBindings.Any(pair => pair.keyBindingDef == keyBindingDef))
+    if (!KeyBindings.Any(pair => pair.keyBindingDef == keyBindingDef))
     {
-      keyBindings.Add((keyBindingDef, action));
+      KeyBindings.Add((keyBindingDef, action));
     }
   }
 
-  internal static void HandleKeyInputs()
+  internal static bool HandleKeyInputs()
   {
-    if (Prefs.DevMode)
+    if (!Prefs.DevMode)
+      return true;
+
+    foreach ((KeyBindingDef keyBindingDef, Action action) in KeyBindings)
     {
-      foreach ((KeyBindingDef keyBindingDef, Action action) in keyBindings)
+      if (keyBindingDef.KeyDownEvent)
       {
-        if (keyBindingDef.KeyDownEvent)
-        {
-          action();
-          Event.current.Use();
-        }
+        action();
+        Event.current.Use();
       }
     }
+    return true;
   }
 }

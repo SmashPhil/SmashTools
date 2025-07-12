@@ -112,15 +112,8 @@ public class ProjectSetup : Mod
       postfix: new HarmonyMethod(typeof(ProjectSetup),
         nameof(DrawDebugWindowButton)));
 
-    // Input handling (DEBUG)
-    HarmonyPatcher.Harmony.Patch(
-      original: AccessTools.Method(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI)),
-      prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
-        nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
-    HarmonyPatcher.Harmony.Patch(
-      original: AccessTools.Method(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI)),
-      prefix: new HarmonyMethod(typeof(MainMenuKeyBindHandler),
-        nameof(MainMenuKeyBindHandler.HandleKeyInputs)));
+    // Input handling
+    LongEventHandler.ExecuteWhenFinished(() => UnityThread.StartGUI(MainMenuKeyBindHandler.HandleKeyInputs));
 #endif
 
     // Input handling

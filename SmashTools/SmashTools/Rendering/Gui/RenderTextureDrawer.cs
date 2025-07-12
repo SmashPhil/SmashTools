@@ -8,52 +8,29 @@ namespace SmashTools.Rendering;
 [StaticConstructorOnStartup]
 public static class RenderTextureDrawer
 {
-  private static readonly List<RenderData> renderDatas = [];
-  //private static readonly Mesh mesh;
+  private static readonly List<RenderData> RenderDatas = [];
 
   private static RenderTexture renderTexture;
 
   public static bool InUse => renderTexture;
 
-  static RenderTextureDrawer()
-  {
-    // TODO - finish prop block stuff, need mesh for this
-    //mesh = new Mesh
-    //{
-    //  vertices =
-    //  [
-    //    new Vector3(-0.5f, -0.5f, 0),
-    //    new Vector3(0.5f, -0.5f, 0),
-    //    new Vector3(0.5f, 0.5f, 0),
-    //    new Vector3(-0.5f, 0.5f, 0)
-    //  ],
-    //  uv =
-    //  [
-    //    new Vector2(0, 0),
-    //    new Vector2(1, 0),
-    //    new Vector2(1, 1),
-    //    new Vector2(0, 1)
-    //  ],
-    //  triangles = [0, 1, 2, 2, 3, 0]
-    //};
-  }
-
   public static void Add(RenderData renderData)
   {
-    renderDatas.Add(renderData);
+    RenderDatas.Add(renderData);
   }
 
   public static void Open(RenderTexture renderTexture)
   {
     Assert.IsFalse(InUse);
+    Assert.IsTrue(RenderDatas.Count == 0);
     RenderTextureDrawer.renderTexture = renderTexture;
-    renderDatas.Clear();
+    RenderDatas.Clear();
   }
 
   public static void Close()
   {
-    renderDatas.Clear();
-    RenderTextureDrawer.renderTexture = null;
+    RenderDatas.Clear();
+    renderTexture = null;
   }
 
   /// <summary>
@@ -64,17 +41,19 @@ public static class RenderTextureDrawer
   /// <param name="center">Set rect position of all render data to center of outer rect. Use for 'icon' images that need all offsets erased.</param>
   public static void Draw(Rect rect, float scale = 1, bool center = false)
   {
-    renderDatas.Sort();
+    RenderDatas.Sort();
 
     Assert.IsNull(RenderTexture.active);
     RenderTexture.active = renderTexture;
-    GL.Viewport(new Rect(0, 0, renderTexture.width, renderTexture.height));
-    GL.PushMatrix();
+
     try
     {
+      GL.PushMatrix();
+      GL.Viewport(new Rect(0, 0, renderTexture.width, renderTexture.height));
       GL.LoadPixelMatrix(0, renderTexture.width, renderTexture.height, 0);
       GL.Clear(true, true, Color.clear);
-      foreach (RenderData renderData in renderDatas)
+
+      foreach (RenderData renderData in RenderDatas)
       {
         DrawRenderData(rect, renderData, scale: scale, center: center);
       }
@@ -82,6 +61,8 @@ public static class RenderTextureDrawer
     finally
     {
       GL.PopMatrix();
+      GL.Flush();
+      RenderDatas.Clear();
       RenderTexture.active = null;
     }
     return;
@@ -90,7 +71,9 @@ public static class RenderTextureDrawer
     {
       if (renderData.material && !renderData.material.SetPass(0))
         return;
+
       GL.PushMatrix();
+      GL.LoadIdentity();
       try
       {
         Rect input = center ? renderData.rect with { center = rect.center } : renderData.rect;
@@ -102,10 +85,6 @@ public static class RenderTextureDrawer
         GL.MultMatrix(matrix);
 
         Graphics.DrawTexture(new Rect(0, 0, 1, 1), renderData.mainTex, renderData.material);
-
-        // TODO - Switch to mesh based draw w/ property block
-        //Graphics.DrawMesh(mesh, matrix, renderData.material, 0, null,
-        //  0, renderData.propertyBlock);
       }
       finally
       {
