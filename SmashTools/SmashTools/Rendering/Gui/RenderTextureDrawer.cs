@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Verse;
@@ -41,6 +42,11 @@ public static class RenderTextureDrawer
   /// <param name="center">Set rect position of all render data to center of outer rect. Use for 'icon' images that need all offsets erased.</param>
   public static void Draw(Rect rect, float scale = 1, bool center = false)
   {
+    if (!renderTexture || !renderTexture.IsCreated())
+    {
+      Trace.Fail("Trying to blit with null render texture.");
+      return;
+    }
     RenderDatas.Sort();
 
     Assert.IsNull(RenderTexture.active);
