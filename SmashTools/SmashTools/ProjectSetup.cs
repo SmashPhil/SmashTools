@@ -133,11 +133,13 @@ public class ProjectSetup : Mod
         nameof(HighPriorityInputs.HighPriorityOnGUI)));
 
     // UI
+    // NOTE - A few other mods patch DoInspectPaneButtons destructively, but inspectables don't need to show
+    // other mods' pins right now. Just show Inspectable's and let those mods work with non-VF pawns.
     HarmonyPatcher.Harmony.Patch(
       original: AccessTools.Method(typeof(MainTabWindow_Inspect),
         nameof(MainTabWindow_Inspect.DoInspectPaneButtons)),
-      prefix: new HarmonyMethod(typeof(ProjectSetup),
-        nameof(InspectablePaneButtons)));
+      prefix: new HarmonyMethod(AccessTools.Method(typeof(ProjectSetup),
+        nameof(InspectablePaneButtons)), priority: Priority.First));
 
     // Mod Init
     StaticConstructorOnModInit();
@@ -193,7 +195,6 @@ public class ProjectSetup : Mod
       lineEndWidth += inspectable.DoInspectPaneButtons(rect.width - lineEndWidth);
       return false;
     }
-
     return true;
   }
 }
