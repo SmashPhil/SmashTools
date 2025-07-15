@@ -164,7 +164,17 @@ namespace SmashTools
       return value;
     }
 
+    // TODO 1.7 - Cleanup
     public static void SliderLabeled(this Listing lister, string label, string tooltip,
+      string endSymbol, ref float value, float min, float max, float multiplier = 1f,
+      int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
+    {
+      lister.SliderLabeled(label, tooltip, string.Empty, endSymbol, ref value, min, max,
+        multiplier: multiplier, decimalPlaces: decimalPlaces, endValue: endValue, maxValueDisplay: maxValueDisplay);
+    }
+
+    // TODO 1.7 - Cleanup
+    public static void SliderLabeled(this Listing lister, string label, string tooltip, string startSymbol,
       string endSymbol, ref float value, float min, float max, float multiplier = 1f,
       int decimalPlaces = 2, float endValue = -1f, string maxValueDisplay = "")
     {
@@ -173,7 +183,7 @@ namespace SmashTools
       Rect fullRect = rect;
       rect.y += rect.height / 2;
 
-      string format = $"{Math.Round(value * multiplier, decimalPlaces)}" + endSymbol;
+      string format = $"{startSymbol}{Math.Round(value * multiplier, decimalPlaces)}{endSymbol}";
       if (!maxValueDisplay.NullOrEmpty() && endValue > 0)
       {
         if (value >= endValue)
