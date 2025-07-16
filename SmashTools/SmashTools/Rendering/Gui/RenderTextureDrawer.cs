@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Verse;
@@ -12,6 +11,31 @@ public static class RenderTextureDrawer
   private static readonly List<RenderData> RenderDatas = [];
 
   private static RenderTexture renderTexture;
+  private static Mesh mesh;
+
+  static RenderTextureDrawer()
+  {
+    mesh = new Mesh()
+    {
+      vertices =
+      [
+        new Vector3(0, 0, 0),
+        new Vector3(1, 0, 0),
+        new Vector3(1, 1, 0),
+        new Vector3(0, 1, 0),
+      ],
+      uv =
+      [
+        new Vector2(0, 0),
+        new Vector2(1, 0),
+        new Vector2(1, 1),
+        new Vector2(0, 1),
+      ],
+      triangles = [0, 1, 2, 2, 3, 0]
+    };
+    mesh.RecalculateNormals();
+    mesh.RecalculateBounds();
+  }
 
   public static bool InUse => renderTexture;
 
@@ -51,7 +75,6 @@ public static class RenderTextureDrawer
 
     Assert.IsNull(RenderTexture.active);
     RenderTexture.active = renderTexture;
-
     try
     {
       GL.PushMatrix();
@@ -88,9 +111,14 @@ public static class RenderTextureDrawer
         Quaternion rotation = Quaternion.Euler(0f, 0f, renderData.angle);
         Matrix4x4 matrix = Matrix4x4.TRS(normalizedRect.center, rotation, size)
           * Matrix4x4.Translate(new Vector3(-0.5f, -0.5f, 0f));
-        GL.MultMatrix(matrix);
+        //GL.MultMatrix(matrix);
+        Log.Message($"Drawing at {normalizedRect.center} at {rect}");
+        //Graphics.DrawTexture(new Rect(0, 0, 1, 1), renderData.mainTex, renderData.material);
+        renderData.material.SetPass(0);
+        Graphics.DrawMeshNow(mesh, matrix);
 
-        Graphics.DrawTexture(new Rect(0, 0, 1, 1), renderData.mainTex, renderData.material);
+        //Vector2 scaleT = normalizedRect.size / Mathf.Min(normalizedRect.size.x, normalizedRect.size.y);
+        //Graphics.Blit(renderData.mainTex, renderTexture, scaleT, Vector2.zero);
       }
       finally
       {
