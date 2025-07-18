@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Verse;
@@ -11,7 +10,36 @@ public static class RenderTextureDrawer
 {
   private static readonly List<RenderData> RenderDatas = [];
 
+  private static readonly Mesh IdentityMesh;
   private static RenderTexture renderTexture;
+
+  static RenderTextureDrawer()
+  {
+    IdentityMesh = new Mesh
+    {
+      name = "IdentityMesh",
+      vertices =
+      [
+        new Vector3(-0.5f, -0.5f, 0f),
+        new Vector3(-0.5f, 0.5f, 0f),
+        new Vector3(0.5f, 0.5f, 0f),
+        new Vector3(0.5f, -0.5f, 0f)
+      ],
+      uv =
+      [
+        new Vector2(0, 0),
+        new Vector2(0, 1),
+        new Vector2(1, 1),
+        new Vector2(1, 0),
+      ],
+      triangles =
+      [
+        0, 1, 2, 0, 2, 3
+      ]
+    };
+    IdentityMesh.RecalculateNormals();
+    IdentityMesh.RecalculateBounds();
+  }
 
   public static bool InUse => renderTexture;
 
@@ -52,13 +80,11 @@ public static class RenderTextureDrawer
     Assert.IsNull(RenderTexture.active);
     RenderTexture.active = renderTexture;
 
+    GL.Clear(true, true, Color.clear);
+    GL.PushMatrix();
+    GL.LoadPixelMatrix(0, renderTexture.width, 0, renderTexture.height);
     try
     {
-      GL.PushMatrix();
-      GL.Viewport(new Rect(0, 0, renderTexture.width, renderTexture.height));
-      GL.LoadPixelMatrix(0, renderTexture.width, renderTexture.height, 0);
-      GL.Clear(true, true, Color.clear);
-
       foreach (RenderData renderData in RenderDatas)
       {
         DrawRenderData(rect, renderData, scale: scale, center: center);
@@ -79,18 +105,15 @@ public static class RenderTextureDrawer
         return;
 
       GL.PushMatrix();
-      GL.LoadIdentity();
       try
       {
         Rect input = center ? renderData.rect with { center = rect.center } : renderData.rect;
         Rect normalizedRect = NormalizeRect(input, rect);
         Vector3 size = normalizedRect.size * scale;
         Quaternion rotation = Quaternion.Euler(0f, 0f, renderData.angle);
-        Matrix4x4 matrix = Matrix4x4.TRS(normalizedRect.center, rotation, size)
-          * Matrix4x4.Translate(new Vector3(-0.5f, -0.5f, 0f));
-        GL.MultMatrix(matrix);
-
-        Graphics.DrawTexture(new Rect(0, 0, 1, 1), renderData.mainTex, renderData.material);
+        Matrix4x4 matrix = Matrix4x4.TRS(normalizedRect.center, rotation, size);
+        Log.Message($"Pos: {normalizedRect.center} Rotation: {renderData.angle} Size: {size}");
+        Graphics.DrawMeshNow(IdentityMesh, matrix);
       }
       finally
       {
