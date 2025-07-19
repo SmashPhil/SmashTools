@@ -21,20 +21,20 @@ public static class RenderTextureDrawer
       vertices =
       [
         new Vector3(-0.5f, -0.5f, 0f),
+        new Vector3(0.5f, -0.5f, 0f),
         new Vector3(-0.5f, 0.5f, 0f),
-        new Vector3(0.5f, 0.5f, 0f),
-        new Vector3(0.5f, -0.5f, 0f)
+        new Vector3(0.5f, 0.5f, 0f)
       ],
       uv =
       [
         new Vector2(0, 0),
+        new Vector2(1, 0),
         new Vector2(0, 1),
         new Vector2(1, 1),
-        new Vector2(1, 0),
       ],
       triangles =
       [
-        0, 1, 2, 0, 2, 3
+        0, 2, 1, 2, 3, 1
       ]
     };
     IdentityMesh.RecalculateNormals();
@@ -112,7 +112,6 @@ public static class RenderTextureDrawer
         Vector3 size = normalizedRect.size * scale;
         Quaternion rotation = Quaternion.Euler(0f, 0f, renderData.angle);
         Matrix4x4 matrix = Matrix4x4.TRS(normalizedRect.center, rotation, size);
-        Log.Message($"Pos: {normalizedRect.center} Rotation: {renderData.angle} Size: {size}");
         Graphics.DrawMeshNow(IdentityMesh, matrix);
       }
       finally
