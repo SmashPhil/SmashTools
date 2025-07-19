@@ -6,18 +6,20 @@ namespace SmashTools.Rendering;
 
 public sealed class Transform : ITweakFields, IExposable
 {
+  private static readonly Vector3 DefaultScale = Vector3.one;
+
   [TweakField(SettingsType = UISettingsType.FloatBox)]
   [AnimationProperty(Name = "Position")]
   public Vector3 position;
 
   [TweakField(SettingsType = UISettingsType.SliderFloat)]
-  [SliderValues(MinValue = -360, MaxValue = 360)]
+  [SliderValues(MinValue = 0, MaxValue = 360, Increment = 1, RoundDecimalPlaces = 0)]
   [AnimationProperty(Name = "Rotation")]
   public float rotation;
 
   [TweakField(SettingsType = UISettingsType.FloatBox)]
   [AnimationProperty(Name = "Scale")]
-  public Vector3 scale;
+  public Vector3 scale = DefaultScale;
 
   string ITweakFields.Category => null;
 
@@ -27,14 +29,14 @@ public sealed class Transform : ITweakFields, IExposable
   {
     Scribe_Values.Look(ref position, nameof(position));
     Scribe_Values.Look(ref rotation, nameof(rotation));
-    Scribe_Values.Look(ref scale, nameof(scale));
+    Scribe_Values.Look(ref scale, nameof(scale), defaultValue: DefaultScale);
   }
 
   public void Reset()
   {
     position = Vector3.zero;
     rotation = 0;
-    scale = Vector3.one;
+    scale = DefaultScale;
   }
 
   void ITweakFields.OnFieldChanged()
