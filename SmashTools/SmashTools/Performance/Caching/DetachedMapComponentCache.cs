@@ -1,35 +1,36 @@
 ﻿using System;
+using System.Collections.Generic;
 using Verse;
 
 namespace SmashTools;
 
 public static class DetachedMapComponentCache<T> where T : DetachedMapComponent
 {
-  private static T[] mapComps = new T[sbyte.MaxValue];
+  private static readonly Dictionary<int, T> MapComps = [];
 
   public static void AddComponent(Map map)
   {
-    mapComps[map.Index] = (T)Activator.CreateInstance(typeof(T), map);
+    T component = (T)Activator.CreateInstance(typeof(T), map);
+    MapComps.Add(map.uniqueID, component);
   }
 
   public static T GetComponent(Map map)
   {
-    return mapComps[map.Index];
+    return MapComps[map.uniqueID];
   }
 
   public static void ClearMap(Map map)
   {
-    // Free up cached component so it can be fetched when index is reused
-    mapComps[map.Index] = null;
+    MapComps.Remove(map.uniqueID);
   }
 
   public static void ClearAll()
   {
-    mapComps = new T[sbyte.MaxValue];
+    MapComps.Clear();
   }
 
   internal static int Count()
   {
-    return mapComps.CountWhere(item => item is not null);
+    return MapComps.Count;
   }
 }

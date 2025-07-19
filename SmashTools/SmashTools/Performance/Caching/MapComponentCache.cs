@@ -1,48 +1,61 @@
-﻿using System;
-using UnityEngine.Assertions;
+﻿using System.Collections.Generic;
 using Verse;
 
 namespace SmashTools;
 
 public static class MapComponentCache<T> where T : MapComponent
 {
-  private const int CompCacheSize = sbyte.MaxValue;
+  // When 1 map is loaded or the same map is rapidly pulling the same component, doing an id comp will
+  // net ~2x faster lookups on average. The tradeoff is worth it compared to a flat dictionary lookup.
+  private static T recentAccess;
+  private static readonly Dictionary<int, T> MapComps = [];
 
-  private static readonly T[] MapComps = new T[CompCacheSize];
-
-  // NOTE - Map::get_Index ends up iterating through the global map list to search for THIS specific
-  // map, but the player will usually have less than 3~4 maps open at a time. This is roughly the
-  // cutoff between an array lookup time taking more time than a dictionary. It's faster in almost
-  // all cases to fetch the index and then use that for an array lookup.
   public static T GetComponent(Map map)
   {
-    T component = MapComps[map.Index];
-    if (component == null)
+    if (map.Disposed)
+      return null;
+    if (recentAccess != null && recentAccess.map.uniqueID == map.uniqueID)
+      return recentAccess;
+
+    if (!MapComps.TryGetValue(map.uniqueID, out T component))
     {
       component = map.GetComponent<T>();
-      MapComps[map.Index] = component;
+      MapComps[map.uniqueID] = component;
     }
-    Assert.AreEqual(map, component.map);
+    recentAccess = component;
     return component;
   }
 
   public static void ClearMap(Map map)
   {
-    MapComps[map.Index] = null;
+    MapComps.Remove(map.uniqueID);
   }
 
   public static void ClearAll()
   {
-    Array.Clear(MapComps, 0, CompCacheSize);
+    MapComps.Clear();
   }
 
-  internal static T GetComponent(int index)
+  public static int ClearAllDisposed()
   {
-    return MapComps[index];
+    List<int> entriesToRemove = [];
+    foreach ((int id, T component) in MapComps)
+    {
+      if (component?.map is null or { Disposed: true })
+        entriesToRemove.Add(id);
+    }
+    foreach (int id in entriesToRemove)
+      MapComps.Remove(id);
+    return entriesToRemove.Count;
+  }
+
+  internal static T GetComponent(int mapId)
+  {
+    return MapComps.TryGetValue(mapId);
   }
 
   internal static int Count()
   {
-    return MapComps.CountWhere(item => item is not null);
+    return MapComps.Values.CountWhere(item => item is not null);
   }
 }
