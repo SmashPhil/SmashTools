@@ -28,16 +28,19 @@ public static class MapComponentCache<T> where T : MapComponent
 
   public static void ClearMap(Map map)
   {
+    recentAccess = null;
     MapComps.Remove(map.uniqueID);
   }
 
   public static void ClearAll()
   {
+    recentAccess = null;
     MapComps.Clear();
   }
 
   public static int ClearAllDisposed()
   {
+    recentAccess = null;
     List<int> entriesToRemove = [];
     foreach ((int id, T component) in MapComps)
     {
