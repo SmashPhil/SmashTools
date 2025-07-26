@@ -42,9 +42,14 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
 
   protected override TargeterResult PrimaryClick()
   {
+    if (!curResult.isValid)
+      return TargeterResult.Reject;
+
     TargeterResult result = source.Select(curTarget);
+
     if (targetData.targets.Count > 0 && curTarget == targetData.targets[^1])
       return TargeterResult.Submit with { options = result.options };
+
     if (result.action is TargeterAction.Accept or TargeterAction.Submit)
       targetData.targets.Add(curTarget);
     return result;
@@ -68,13 +73,10 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
 
   public override void OnGUI()
   {
-    base.OnGUI();
-    if (!curResult.isValid)
-      return;
-
     const float OffsetFromMouse = 8f;
     const float MouseIconSize = 32f;
 
+    base.OnGUI();
     string tooltip = curResult.Tooltip;
     if (!tooltip.NullOrEmpty())
     {
@@ -117,13 +119,13 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
       foreach (WorldObject obj in objects)
       {
         TargetValidation targetResult = source.CanTarget(obj);
+        curTarget = obj;
+        curResult = targetResult;
+
         if (targetResult.isValid)
-        {
-          curTarget = obj;
-          curResult = targetResult;
           return;
-        }
       }
+      return;
     }
     PlanetTile tile = GenWorld.MouseTile();
     if (!tile.Valid)

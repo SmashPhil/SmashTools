@@ -86,6 +86,7 @@ public abstract class Targeter<T> : ITargeter
         1 => SecondaryClick(),
         _ => TargeterResult.None
       };
+
       switch (result.action)
       {
         case TargeterAction.Reject:
