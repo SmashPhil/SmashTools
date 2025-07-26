@@ -13,9 +13,9 @@ public static class Ext_World
   /// Fetch all tiles within <paramref name="radius"/> of <paramref name="tile"/>.
   /// For radial search within <paramref name="radius"/>, use <paramref name="result"/>
   /// </summary>
-  /// <returns>If radial search exits prematurely, the tile it stopped on will be returned</returns>
-  public static int Bfs(int tile, List<int> searchedTiles, int radius = 1,
-    Func<int, bool> validator = null, Func<int, int, bool> result = null)
+  /// <returns>Coastal tile within <paramref name="radius"/>, otherwise <paramref name="tile"/> if no coastal tile is found.</returns>
+  public static int Bfs(PlanetTile tile, List<PlanetTile> searchedTiles, int radius = 1,
+    Func<PlanetTile, bool> validator = null, Func<PlanetTile, PlanetTile, bool> result = null)
   {
     if (radius < 1)
     {
@@ -24,16 +24,13 @@ public static class Ext_World
     }
 
     Queue<int> queue = [];
-    queue.Enqueue(tile); //Queue start
+    queue.Enqueue(tile);
 
-    //Preinitialized list for neighbor search
     List<PlanetTile> neighbors = [];
-
-    //Handles visitation flags
     HashSet<PlanetTile> visitedTiles = [tile];
 
     int currentRadius = 0;
-    //Need to track amount of new neighbor tiles added for radii limits
+    // Need to track amount of new neighbor tiles added for radii limits
     int tilesAdded = 0;
     int searchCount = queue.Count;
     while (currentRadius < radius && queue.Count > 0)
@@ -45,23 +42,14 @@ public static class Ext_World
         Find.WorldGrid.GetTileNeighbors(currentTile, neighbors);
         foreach (PlanetTile neighbor in neighbors)
         {
-          //Check if tile is already visited
-          if (visitedTiles.Contains(neighbor) || (validator != null && !validator(neighbor)))
-          {
+          if (visitedTiles.Contains(neighbor) || validator != null && !validator(neighbor))
             continue;
-          }
 
-          //Add to result list, officially 'traversed' by BFS
           searchedTiles.Add(neighbor);
           tilesAdded++;
-
-          //Check if tile is valid result
           if (result != null && result(neighbor, currentRadius))
-          {
             return neighbor;
-          }
 
-          //Enqueue for further search
           queue.Enqueue(neighbor);
           visitedTiles.Add(neighbor);
         }
@@ -71,8 +59,7 @@ public static class Ext_World
       tilesAdded = 0;
       currentRadius++;
     }
-
-    //If BFS executes to full radius, return source tile as searched tiles are the result
+    // If BFS executes to full radius, return source tile as searched tiles are the result
     return tile;
   }
 
