@@ -14,7 +14,7 @@ public static class Ext_World
   /// For radial search within <paramref name="radius"/>, use <paramref name="result"/>
   /// </summary>
   /// <returns>Coastal tile within <paramref name="radius"/>, otherwise <paramref name="tile"/> if no coastal tile is found.</returns>
-  public static int Bfs(PlanetTile tile, List<PlanetTile> searchedTiles, int radius = 1,
+  public static PlanetTile Bfs(PlanetTile tile, Action<PlanetTile> processor, int radius = 1,
     Func<PlanetTile, bool> validator = null, Func<PlanetTile, PlanetTile, bool> result = null)
   {
     if (radius < 1)
@@ -23,7 +23,7 @@ public static class Ext_World
       return tile;
     }
 
-    Queue<int> queue = [];
+    Queue<PlanetTile> queue = [];
     queue.Enqueue(tile);
 
     List<PlanetTile> neighbors = [];
@@ -45,7 +45,7 @@ public static class Ext_World
           if (visitedTiles.Contains(neighbor) || validator != null && !validator(neighbor))
             continue;
 
-          searchedTiles.Add(neighbor);
+          processor(neighbor);
           tilesAdded++;
           if (result != null && result(neighbor, currentRadius))
             return neighbor;
