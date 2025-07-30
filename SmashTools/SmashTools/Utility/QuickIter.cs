@@ -39,7 +39,16 @@ public static class QuickIter
     {
       foreach (Assembly assembly in mod.assemblies.loadedAssemblies)
       {
-        types.AddRange(assembly.GetTypes());
+        try
+        {
+          Type[] typesFromMod = assembly.GetTypes();
+          types.AddRange(typesFromMod);
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+          Log.Error(
+            $"Exception loading types from {assembly.FullName}. Mod compatible with RimWorld version: {mod.ModMetaData.VersionCompatible.ToStringYesNo()}\n{ex}");
+        }
       }
     }
 
