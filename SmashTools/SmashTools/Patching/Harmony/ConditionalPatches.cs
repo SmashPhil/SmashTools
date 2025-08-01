@@ -8,7 +8,7 @@ namespace SmashTools.Patching;
 [PublicAPI]
 public static class ConditionalPatches
 {
-  private static readonly Dictionary<string, List<ConditionalPatch.Result>> patches = [];
+  private static readonly Dictionary<string, List<ConditionalPatch.Result>> Patches = [];
 
   /// <summary>
   /// Apply all conditional patches for a mod
@@ -23,10 +23,9 @@ public static class ConditionalPatches
       {
         PackageId = patch.PackageId
       };
-      if (ModLister.GetActiveModWithIdentifier(patch.PackageId, ignorePostfix: true) is
-        { } modMetaData)
+      if (Ext_Mods.GetActiveMod(patch.PackageId) is { } modMetaData)
       {
-        patches.AddOrAppend(patch.SourceId, result);
+        Patches.AddOrAppend(patch.SourceId, result);
         try
         {
           result.FriendlyName = modMetaData.Name;
@@ -45,6 +44,6 @@ public static class ConditionalPatches
 
   public static List<ConditionalPatch.Result> GetPatches(string sourceId)
   {
-    return patches.TryGetValue(sourceId);
+    return Patches.TryGetValue(sourceId);
   }
 }
