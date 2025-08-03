@@ -24,7 +24,7 @@ public static class MainMenuKeyBindHandler
 
     foreach ((KeyBindingDef keyBindingDef, Action action) in KeyBindings)
     {
-      if (keyBindingDef.KeyDownEvent)
+      if (Event.current != null && keyBindingDef.KeyDownEvent)
       {
         action();
         Event.current.Use();
