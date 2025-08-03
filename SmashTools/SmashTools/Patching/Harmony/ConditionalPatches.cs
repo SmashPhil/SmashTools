@@ -34,7 +34,7 @@ public static class ConditionalPatches
         }
         catch (Exception ex)
         {
-          Log.Error($"{ProjectSetup.LogLabel} Failed to apply patch {type}.\n{ex}");
+          Log.Error($"{ProjectSetup.LogLabel} Failed to apply compatibility patch {type.Name}.\n{ex}");
           result.Active = false;
           result.ExceptionThrown = ex;
         }
