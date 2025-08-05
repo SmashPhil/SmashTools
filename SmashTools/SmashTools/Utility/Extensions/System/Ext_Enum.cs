@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using UnityEngine;
 
 namespace SmashTools;
 
@@ -36,5 +38,28 @@ public static class Ext_Enum
   public static T Max<T>(T a, T b) where T : Enum
   {
     return Comparer<T>.Default.Compare(a, b) >= 0 ? a : b;
+  }
+
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static unsafe bool IsAnyBitSet<T>(this T a, T b) where T : unmanaged, Enum
+  {
+#if DEBUG
+    if (typeof(T).GetEnumUnderlyingType() != typeof(int))
+      throw new ArgumentException($"{typeof(T).Name} must have an underlying int32 type.");
+#endif
+
+    return (*(int*)&a & *(int*)&b) != 0;
+  }
+
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static unsafe bool AreAllBitsSet<T>(this T a, T b) where T : unmanaged, Enum
+  {
+#if DEBUG
+    if (typeof(T).GetEnumUnderlyingType() != typeof(int))
+      throw new ArgumentException($"{typeof(T).Name} must have an underlying int32 type.");
+#endif
+
+    int bInt = *(int*)&b;
+    return (*(int*)&a & bInt) == bInt;
   }
 }

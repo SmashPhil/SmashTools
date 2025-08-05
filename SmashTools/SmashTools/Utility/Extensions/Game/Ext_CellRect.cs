@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
-using UnityEngine;
+using SmashTools;
 using Verse;
 
 namespace SmashTools
@@ -212,18 +212,18 @@ namespace SmashTools
 
       // Top no-overlap
       x = edge == RectEdge.Top ? minLeftX : minRightX;
-      xLimit = edge.HasFlag(RectEdge.Top) ? maxRightX : maxLeftX;
+      xLimit = edge.AreAllBitsSet(RectEdge.Top) ? maxRightX : maxLeftX;
       switch (edge)
       {
         // Corners mirror limits
         case RectEdge.TopLeft or RectEdge.BottomRight:
           x = minLeftX;
           xLimit = maxLeftX;
-          break;
+        break;
         case RectEdge.TopRight or RectEdge.BottomLeft:
           x = minRightX;
           xLimit = maxRightX;
-          break;
+        break;
       }
 
       for (; x < xLimit; x++)
@@ -238,18 +238,18 @@ namespace SmashTools
 
       // Bottom no-overlap
       x = edge == RectEdge.Bottom ? minLeftX : minRightX;
-      xLimit = edge.HasFlag(RectEdge.Bottom) ? maxRightX : maxLeftX;
+      xLimit = edge.AreAllBitsSet(RectEdge.Bottom) ? maxRightX : maxLeftX;
       switch (edge)
       {
         // Corners mirror limits
         case RectEdge.TopLeft or RectEdge.BottomRight:
           x = minRightX;
           xLimit = maxRightX;
-          break;
+        break;
         case RectEdge.TopRight or RectEdge.BottomLeft:
           x = minLeftX;
           xLimit = maxLeftX;
-          break;
+        break;
       }
 
       for (; x < xLimit; x++)

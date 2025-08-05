@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using JetBrains.Annotations;
 using Verse;
 
 namespace SmashTools.Algorithms;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+[PublicAPI]
 public class BFS<T>
 {
   private readonly Queue<T> openQueue = [];
@@ -32,9 +33,13 @@ public class BFS<T>
   }
 
   public void FloodFill(T start, Func<T, IEnumerable<T>> neighbors, Action<T> processor,
-    Action<T> onEntered,
-    Action<T> onSkipped,
-    Func<T, bool> canEnter = null)
+    Action<T> onEntered, Action<T> onSkipped, Func<T, bool> canEnter = null)
+  {
+    FloodFill(start, neighbors, processor, onEntered, onSkipped, CancellationToken.None, canEnter);
+  }
+
+  public void FloodFill(T start, Func<T, IEnumerable<T>> neighbors, Action<T> processor,
+    Action<T> onEntered, Action<T> onSkipped, CancellationToken token, Func<T, bool> canEnter = null)
   {
     if (IsRunning)
     {
@@ -54,10 +59,17 @@ public class BFS<T>
       onEntered?.Invoke(start);
       while (openQueue.Count > 0)
       {
+        if (token.IsCancellationRequested)
+          return;
+
         T current = openQueue.Dequeue();
         processor?.Invoke(current);
+
         foreach (T neighbor in neighbors(current))
         {
+          if (token.IsCancellationRequested)
+            return;
+
           if (visited.Contains(neighbor))
           {
             if (LogRetraceAttempts)

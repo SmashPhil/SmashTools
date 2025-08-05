@@ -1,36 +1,30 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using SmashTools.Performance;
 using UnityEngine.Assertions;
-using Verse;
 
 namespace SmashTools;
 
+[PublicAPI]
 public static class TaskManager
 {
-  public static async void RunAsync(Action action, Action<Exception> exceptionHandler)
+  [Pure]
+  public static Task Run(Action action, CancellationToken token)
   {
-    try
-    {
-      await Task.Run(action).ConfigureAwait(false);
-    }
-    catch (Exception ex)
-    {
-      exceptionHandler(ex);
-    }
-  }
+    return ForgetAwaited(Task.Run(action, token));
 
-  public static async void RunAsync(Action action, bool reportFailure = true)
-  {
-    try
+    static async Task ForgetAwaited(Task task)
     {
-      await Task.Run(action).ConfigureAwait(false);
-    }
-    catch (Exception ex)
-    {
-      if (reportFailure)
+      try
       {
-        Log.Error($"AsyncTask {action.Method.Name} threw exception while running.\n{ex}");
+        await task.ConfigureAwait(false);
+      }
+      catch (Exception ex)
+      {
+        // Uncaught exceptions from thread pool thread will crash
+        Trace.Fail($"Exception thrown executing task.\n{ex}");
       }
     }
   }
@@ -38,20 +32,9 @@ public static class TaskManager
   /// <summary>
   /// Run async action through a task as opposed to enqueueing on the dedicated thread.
   /// </summary>
-  public static async void RunAsync(AsyncAction action, bool reportFailure = true)
+  public static void FireAndForget(AsyncAction action, CancellationToken token)
   {
-    try
-    {
-      Assert.IsTrue(action.IsValid);
-      await Task.Run(action.Invoke).ConfigureAwait(false);
-    }
-    catch (Exception ex)
-    {
-      if (reportFailure)
-      {
-        Log.Error($"AsyncTask {action.GetType()} threw exception while running.\n{ex}");
-        action.ExceptionThrown(ex);
-      }
-    }
+    Assert.IsTrue(action.IsValid);
+    _ = Run(action.Invoke, token);
   }
 }

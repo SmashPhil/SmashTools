@@ -1,7 +1,9 @@
 ﻿using System;
+using JetBrains.Annotations;
 
 namespace SmashTools;
 
+[PublicAPI]
 public static class GameEvent
 {
   /// <summary>
@@ -18,6 +20,19 @@ public static class GameEvent
   /// MainMenu scene has been loaded.
   /// </summary>
   public static event Action OnMainMenu;
+
+  /// <summary>
+  /// Game is about to be disposed.
+  /// </summary>
+  /// <remarks>
+  /// This occurs before the world and maps are unloaded via MemoryUtility.
+  /// </remarks>
+  public static event Action OnGameDisposing;
+
+  /// <summary>
+  /// Game has been disposed.
+  /// </summary>
+  public static event Action OnGameDisposed;
 
   /// <summary>
   /// World and all maps are about to be unloaded.
@@ -48,6 +63,16 @@ public static class GameEvent
   internal static void RaiseOnMainMenu()
   {
     OnMainMenu?.Invoke();
+  }
+
+  internal static void RaiseOnGameDisposing()
+  {
+    OnGameDisposing?.Invoke();
+  }
+
+  internal static void RaiseOnGameDisposed()
+  {
+    OnGameDisposed?.Invoke();
   }
 
   internal static void RaiseOnWorldUnloading()
