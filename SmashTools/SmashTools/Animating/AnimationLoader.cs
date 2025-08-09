@@ -9,7 +9,7 @@ using Verse;
 
 namespace SmashTools.Animations;
 
-#if DEBUG
+#if ANIMATOR
 [StaticConstructorOnModInit]
 #endif
 public static class AnimationLoader

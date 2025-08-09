@@ -4,6 +4,7 @@ using HarmonyLib;
 using LudeonTK;
 using SmashTools.Patching;
 using SmashTools.Performance;
+using SmashTools.Xml;
 using UnityEngine.SceneManagement;
 using Verse;
 
@@ -53,6 +54,7 @@ public class ProjectSetup : Mod
         nameof(SmashLog.RemoveRichTextMessageDetailsTranspiler)));
 #endif
 
+    XmlParseHelper.RegisterParseTypes();
     ConditionalPatches.RunAll();
     HarmonyPatcher.Run(PatchSequence.Mod);
     HarmonyPatcher.Run(PatchSequence.Async);

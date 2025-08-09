@@ -28,6 +28,10 @@ public static class HarmonyPatcher
 
   public static void Init(ModContentPack mod)
   {
+#if DEBUG
+    //Harmony.DEBUG = true;
+#endif
+
     Mod = mod;
     Harmony = new Harmony(mod.ModMetaData.PackageIdPlayerFacing);
     foreach (Assembly assembly in mod.assemblies.loadedAssemblies)
@@ -45,10 +49,6 @@ public static class HarmonyPatcher
 
   public static void Run(PatchSequence sequence)
   {
-#if DEBUG
-    //Harmony.DEBUG = true;
-#endif
-
     Assert.IsFalse(RunningPatcher);
     if (!Patches.ContainsKey(sequence))
       return;

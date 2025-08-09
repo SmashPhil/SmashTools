@@ -12,6 +12,9 @@ public static class ProjectStartup
   {
     HarmonyPatcher.Run(PatchSequence.PostDefDatabase);
     DelayedCrossRefResolver.ResolveAll();
+
+#if ANIMATOR
     AnimationLoader.ResolveAllReferences();
+#endif
   }
 }
