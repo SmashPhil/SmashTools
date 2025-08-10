@@ -18,6 +18,7 @@ public static class HarmonyPatcher
   private static Type typePatching;
   private static string methodPatching = string.Empty;
 
+  private static readonly List<Unpatcher> Unpatchers = [];
   private static readonly Dictionary<PatchSequence, List<IPatchCategory>> Patches = [];
 
   private static ModContentPack Mod { get; set; }
@@ -130,6 +131,20 @@ public static class HarmonyPatcher
     }
   }
 
+  public static void Unpatch(MethodBase original, HarmonyPatchType patchType, string harmonyId = "")
+  {
+    Unpatchers.Add(new Unpatcher(original, patchType, harmonyId));
+  }
+
+  public static void RunUnpatches()
+  {
+    foreach (Unpatcher unpatcher in Unpatchers)
+    {
+      unpatcher.Execute();
+    }
+    Unpatchers.Clear();
+  }
+
   [Conditional("DEBUG")]
   internal static void DumpPatchReport()
   {
@@ -166,6 +181,19 @@ public static class HarmonyPatcher
           count++;
       }
       return count;
+    }
+  }
+
+  private readonly struct Unpatcher(MethodBase original, HarmonyPatchType patchType, string harmonyId = "")
+  {
+    public void Execute()
+    {
+      Harmony.Unpatch(original, patchType, harmonyId);
+    }
+
+    public override string ToString()
+    {
+      return $"{patchType}::{original.Name}";
     }
   }
 
