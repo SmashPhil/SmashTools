@@ -568,13 +568,13 @@ public static class UIElements
   /// Draw <paramref name="texture"/> with <paramref name="material"/> rotated by <paramref name="angle"/>
   /// </summary>
   public static void DrawTextureWithMaterialOnGUI(Rect rect, Texture texture,
-    Material material,
-    float angle, Rect texCoords = default)
+    Material material, float angle, Rect texCoords = default)
   {
     Matrix4x4 matrix = GUI.matrix;
     try
     {
-      if (angle != 0 && angle != 360)
+      angle = angle.ClampAngle();
+      if (!Mathf.Approximately(angle, 0))
       {
         UI.RotateAroundPivot(angle, rect.center);
       }
