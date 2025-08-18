@@ -75,6 +75,6 @@ public static class ConditionalPatches
 			}
 		}
 		if (reportBuilder.Length > 0)
-			Log.Message(reportBuilder.ToString());
+			Log.Message(reportBuilder.ToString().TrimEnd());
 	}
 }

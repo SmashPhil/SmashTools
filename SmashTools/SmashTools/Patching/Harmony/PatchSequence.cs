@@ -2,7 +2,8 @@
 
 public enum PatchSequence
 {
-  Mod,
-  PostDefDatabase,
-  Async
+	Disabled,
+	Mod,
+	PostDefDatabase,
+	Async
 }
