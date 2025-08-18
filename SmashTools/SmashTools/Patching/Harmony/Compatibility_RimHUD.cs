@@ -6,25 +6,27 @@ using Verse;
 
 namespace SmashTools.Patching;
 
-internal class Compatibility_RimHUD : ConditionalPatch
+internal class Compatibility_RimHUD : IConditionalPatch
 {
-  public override string PackageId => "Jaxe.RimHUD";
+	string IConditionalPatch.PackageId => "Jaxe.RimHUD";
 
-  public override string SourceId => ProjectSetup.HarmonyId;
+	string IConditionalPatch.SourceId => ProjectSetup.HarmonyId;
 
-  public override void PatchAll(ModMetaData mod, Harmony harmony)
-  {
-    Type classType = AccessTools.TypeByName("RimHUD.Interface.Screen.InspectPaneButtons");
-    harmony.Patch(AccessTools.Method(classType, "Draw"),
-      postfix: new HarmonyMethod(typeof(Compatibility_RimHUD),
-        nameof(DrawButtonsOnRimHUD)));
-  }
+	PatchSequence IConditionalPatch.PatchAt => PatchSequence.Async;
 
-  public static void DrawButtonsOnRimHUD(Rect bounds, IInspectPane pane, ref float offset)
-  {
-    if (Find.Selector.SingleSelectedThing is IInspectable inspectable)
-    {
-      offset += inspectable.DoInspectPaneButtons(bounds.width - offset);
-    }
-  }
+	void IConditionalPatch.PatchAll(ModMetaData mod)
+	{
+		Type classType = AccessTools.TypeByName("RimHUD.Interface.Screen.InspectPaneButtons");
+		HarmonyPatcher.Patch(AccessTools.Method(classType, "Draw"),
+			postfix: new HarmonyMethod(typeof(Compatibility_RimHUD),
+				nameof(DrawButtonsOnRimHUD)));
+	}
+
+	public static void DrawButtonsOnRimHUD(Rect bounds, IInspectPane pane, ref float offset)
+	{
+		if (Find.Selector.SingleSelectedThing is IInspectable inspectable)
+		{
+			offset += inspectable.DoInspectPaneButtons(bounds.width - offset);
+		}
+	}
 }
