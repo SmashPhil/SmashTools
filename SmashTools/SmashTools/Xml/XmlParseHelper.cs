@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -12,79 +13,149 @@ namespace SmashTools.Xml;
 [PublicAPI]
 public static class XmlParseHelper
 {
-  private const string ValidAttributeRegex = "^([A-Za-z0-9]*$)";
+	private const string ValidAttributeRegex = "^([A-Za-z0-9]*$)";
 
-  internal static readonly Dictionary<string, (AttributeProcessor, string[])> RegisteredAttributes = [];
+	internal static readonly Dictionary<string, CustomAttribute> RegisteredAttributes = [];
 
-  public delegate void AttributeProcessor(XmlNode node, string defName, FieldInfo fieldInfo);
+	public delegate bool AttributePreProcessor(XmlNode node, string defName, FieldInfo fieldInfo = null);
 
-  internal static void RegisterParseTypes()
-  {
-    ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
-    ParseHelper.Parsers<Quadrant>.Register(Quadrant.FromString);
-    ParseHelper.Parsers<RimWorldTime>.Register(RimWorldTime.FromString);
-    ParseHelper.Parsers<KeyFrame>.Register(ParseKeyFrame);
-    ParseHelper.Parsers<Guid>.Register(ParseGuid);
-  }
+	public delegate void AttributeProcessor(XmlNode node, string defName, FieldInfo fieldInfo = null);
 
-  private static KeyFrame ParseKeyFrame(string entry)
-  {
-    return KeyFrame.FromString(entry);
-  }
+	internal static void RegisterParseTypes()
+	{
+		ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
+		ParseHelper.Parsers<Quadrant>.Register(Quadrant.FromString);
+		ParseHelper.Parsers<RimWorldTime>.Register(RimWorldTime.FromString);
+		ParseHelper.Parsers<KeyFrame>.Register(ParseKeyFrame);
+		ParseHelper.Parsers<Guid>.Register(ParseGuid);
+	}
 
-  private static Guid ParseGuid(string entry)
-  {
-    return !entry.NullOrEmpty() ? Guid.Parse(entry) : Guid.Empty;
-  }
+	private static KeyFrame ParseKeyFrame(string entry)
+	{
+		return KeyFrame.FromString(entry);
+	}
 
-  /// <summary>
-  /// Wraps text into xml object so vanilla parsing can operate on it
-  /// </summary>
-  public static object WrapStringAndParse(Type type, string innerText, bool doPostLoad = true)
-  {
-    if (ParseHelper.HandlesType(type))
-    {
-      return ParseHelper.FromString(innerText, type);
-    }
+	private static Guid ParseGuid(string entry)
+	{
+		return !entry.NullOrEmpty() ? Guid.Parse(entry) : Guid.Empty;
+	}
 
-    if (type != typeof(string))
-    {
-      innerText = innerText.Trim();
-    }
+	/// <summary>
+	/// Wraps text into xml object so vanilla parsing can operate on it
+	/// </summary>
+	public static object WrapStringAndParse(Type type, string innerText, bool doPostLoad = true)
+	{
+		if (ParseHelper.HandlesType(type))
+		{
+			return ParseHelper.FromString(innerText, type);
+		}
 
-    XmlDocument doc = new();
-    doc.LoadXml($"<temp>{innerText}</temp>");
-    XmlNode newNode = doc.DocumentElement;
-    return DirectXmlToObject.GetObjectFromXmlMethod(type)(newNode, doPostLoad);
-  }
+		if (type != typeof(string))
+		{
+			innerText = innerText.Trim();
+		}
 
-  /// <summary>
-  /// Register custom attribute to be parsed when loading save file
-  /// </summary>
-  /// <param name="attribute">XmlAttribute name</param>
-  /// <param name="action">Action to be executed upon loading of attribute</param>
-  /// <param name="nodeAllowed">Specify the only XmlNode that will be able to use this XmlAttribute</param>
-  /// <remarks>
-  /// <para>Action will only be executed if value of attribute matches value of action</para>
-  /// <para>
-  /// Arg1 = XmlNode's value
-  /// </para>
-  /// <para>
-  /// Arg2 = defName of parent ThingDef to the XmlNode
-  /// </para>
-  /// <para>
-  /// Arg3 = FieldInfo of XmlNode's associated field
-  /// </para>
-  /// </remarks>
-  public static void RegisterAttribute(string attribute,
-    AttributeProcessor action, params string[] nodeAllowed)
-  {
-    if (!Regex.IsMatch(attribute, ValidAttributeRegex, RegexOptions.CultureInvariant))
-    {
-      Log.Error(
-        $"{ProjectSetup.LogLabel} Cannot register <color=teal>attribute</color> due to invalid naming. Only alphanumeric characters may be used.");
-      return;
-    }
-    RegisteredAttributes.Add(attribute, (action, nodeAllowed));
-  }
+		XmlDocument doc = new();
+		doc.LoadXml($"<temp>{innerText}</temp>");
+		XmlNode newNode = doc.DocumentElement;
+		return DirectXmlToObject.GetObjectFromXmlMethod(type)(newNode, doPostLoad);
+	}
+
+	/// <summary>
+	/// Register custom attribute action to execute when loading fields from xml.
+	/// </summary>
+	/// <param name="attribute">XmlAttribute name</param>
+	/// <param name="processor">Action to be executed upon loading of attribute</param>
+	/// <param name="nodeAllowed">Specify the only XmlNodes that will be able to use this XmlAttribute</param>
+	public static void RegisterAttribute(string attribute,
+		AttributeProcessor processor, params string[] nodeAllowed)
+	{
+		if (!Regex.IsMatch(attribute, ValidAttributeRegex, RegexOptions.CultureInvariant))
+		{
+			Log.Error("Cannot register attribute due to invalid naming. Only alphanumeric characters may be used.");
+			return;
+		}
+		RegisteredAttributes.Add(attribute, new CustomAttribute(attribute, nodeAllowed)
+		{
+			Processor = processor
+		});
+	}
+
+	/// <summary>
+	/// Register custom preprocessor attribute to execute when loading fields from xml.
+	/// </summary>
+	/// <param name="attribute">XmlAttribute name</param>
+	/// <param name="preProcessor">Action to be executed upon loading of attribute. If returns false, node will skip parsing.</param>
+	/// <param name="nodeAllowed">Specify the only XmlNodes that will be able to use this XmlAttribute</param>
+	public static void RegisterPreProcessor(string attribute,
+		AttributePreProcessor preProcessor, params string[] nodeAllowed)
+	{
+		if (!Regex.IsMatch(attribute, ValidAttributeRegex, RegexOptions.CultureInvariant))
+		{
+			Log.Error("Cannot register attribute due to invalid naming. Only alphanumeric characters may be used.");
+			return;
+		}
+		RegisteredAttributes.Add(attribute, new CustomAttribute(attribute, nodeAllowed)
+		{
+			PreProcessor = preProcessor
+		});
+	}
+
+	internal class CustomAttribute
+	{
+		private readonly string attribute;
+
+		private readonly HashSet<string> nodeWhiteList;
+
+		public CustomAttribute(string attribute, params string[] nodeAllowed)
+		{
+			this.attribute = attribute;
+			if (!nodeAllowed.NullOrEmpty())
+			{
+				nodeWhiteList = nodeAllowed.ToHashSet();
+			}
+		}
+
+		public AttributePreProcessor PreProcessor { get; init; }
+
+		public AttributeProcessor Processor { get; init; }
+
+		public bool PreProcess(XmlNode node, XmlAttribute attr, FieldInfo fieldInfo)
+		{
+			if (PreProcessor == null)
+				return true;
+
+			if (attr.Name.NullOrEmpty())
+			{
+				Log.Error("Malformed xml attribute, missing name.");
+				return true;
+			}
+			if (!nodeWhiteList.NullOrEmpty() && !nodeWhiteList.Contains(node.Name))
+			{
+				Log.Error(
+					$"Unable to execute {attribute}. It is only allowed to be used on nodes=({string.Join(",", nodeWhiteList)}) curNode={node.Name}");
+				return true;
+			}
+			return PreProcessor(node, attr.Value, fieldInfo);
+		}
+
+		public void Process(XmlNode node, XmlAttribute attr, FieldInfo fieldInfo)
+		{
+			if (Processor == null)
+				return;
+
+			if (attr.Name.NullOrEmpty())
+			{
+				Log.Error("Malformed xml attribute, missing name.");
+				return;
+			}
+			if (!nodeWhiteList.NullOrEmpty() && !nodeWhiteList.Contains(node.Name))
+			{
+				Log.Error(
+					$"Unable to execute {attribute}. It is only allowed to be used on nodes=({string.Join(",", nodeWhiteList)}) curNode={node.Name}");
+				return;
+			}
+			Processor(node, attr.Value, fieldInfo);
+		}
+	}
 }
