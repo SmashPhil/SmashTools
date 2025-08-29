@@ -8,7 +8,7 @@
         <AssemblyVersion>1.6.0</AssemblyVersion>
 
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-        <Configurations>Debug;Release;Unstable;RelWithDbInfo</Configurations>
+        <Configurations>Debug;Unstable;Release;ReleaseTesting</Configurations>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
         <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
         <OutputType>Library</OutputType>
@@ -50,17 +50,16 @@
         <DefineConstants>TRACE;UNSTABLE;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDbInfo|AnyCPU'">
-        <DebugSymbols>true</DebugSymbols>
-        <Optimize>true</Optimize>
-        <DefineConstants>TRACE;RELEASE;</DefineConstants>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+	  <DebugSymbols>true</DebugSymbols>
+	    <Optimize>true</Optimize>
+	    <DefineConstants>TRACE;RELEASE;</DefineConstants>
     </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-        <DebugType>None</DebugType>
-        <DebugSymbols>false</DebugSymbols>
-        <Optimize>true</Optimize>
-        <DefineConstants>TRACE;RELEASE</DefineConstants>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseTesting|AnyCPU'">
+	    <DebugSymbols>true</DebugSymbols>
+	    <Optimize>true</Optimize>
+	    <DefineConstants>TRACE;RELEASE;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
     </PropertyGroup>
 
     <!-- Dependencies -->
