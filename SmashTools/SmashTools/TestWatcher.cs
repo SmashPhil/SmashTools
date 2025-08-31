@@ -2,5 +2,5 @@
 
 public static class TestWatcher
 {
-  public static bool RunningUnitTests { get; set; }
+	public static bool RunningTests { get; set; }
 }
