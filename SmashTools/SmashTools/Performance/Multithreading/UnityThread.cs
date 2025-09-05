@@ -142,47 +142,45 @@ public sealed class UnityThread : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Posts one or more actions to run asynchronously on the main Unity thread.
+	/// Posts an action to run on the main thread. Can be invoked from background threads.
 	/// </summary>
-	/// <param name="invokeList">Actions to execute.</param>
-	/// <exception cref="ArgumentNullException">If <paramref name="invokeList"/> is null or empty.</exception>
-	public static void ExecuteOnMainThread(params Action[] invokeList)
+	/// <param name="action">Action to execute.</param>
+	/// <exception cref="ArgumentNullException">If <paramref name="action"/> is null.</exception>
+	public static void ExecuteOnMainThread(Action action)
 	{
-		if (invokeList.NullOrEmpty())
-			throw new ArgumentNullException(nameof(invokeList));
+		if (action == null)
+			throw new ArgumentNullException(nameof(action));
 
 		if (UnityData.IsInMainThread)
 		{
-			foreach (Action action in invokeList)
-				action();
+			action();
 			return;
 		}
-		ConcurrentAction concurrentAction = new(invokeList);
+		ConcurrentAction concurrentAction = new(action);
 		mainContext.Post(concurrentAction.InvokeAndDispose, null);
 	}
 
 	/// <summary>
-	/// Posts one or more actions to run on the main Unity thread, blocking until completion or timeout.
+	/// Posts an action to run on the main thread, blocking until completion or timeout.
 	/// </summary>
 	/// <param name="waitTimeout">Milliseconds to wait before timing out.</param>
-	/// <param name="invokeList">Actions to execute.</param>
-	/// <exception cref="ArgumentNullException">If <paramref name="invokeList"/> is null or empty.</exception>
+	/// <param name="action">Action to execute.</param>
+	/// <exception cref="ArgumentNullException">If <paramref name="action"/> is null or empty.</exception>
 	/// <exception cref="ArgumentException">If <paramref name="waitTimeout"/> is not positive.</exception>
 	/// <exception cref="AssertionException">If the wait timed out.</exception>
-	public static void ExecuteOnMainThreadAndWait(int waitTimeout = 5000, params Action[] invokeList)
+	public static void ExecuteOnMainThreadAndWait(Action action, int waitTimeout = 5000)
 	{
-		if (invokeList.NullOrEmpty())
-			throw new ArgumentNullException(nameof(invokeList));
+		if (action == null)
+			throw new ArgumentNullException(nameof(action));
 		if (waitTimeout <= 0)
 			throw new ArgumentException("waitTimeout must be greater than 0.");
 
 		if (UnityData.IsInMainThread)
 		{
-			foreach (Action action in invokeList)
-				action();
+			action();
 			return;
 		}
-		ConcurrentAction concurrentAction = new(invokeList);
+		ConcurrentAction concurrentAction = new(action);
 		mainContext.Post(concurrentAction.InvokeAndDispose, null);
 		bool waited = concurrentAction.Wait(waitTimeout);
 		Assert.IsTrue(waited, "WaitHandle timed out.");
@@ -212,12 +210,12 @@ public sealed class UnityThread : MonoBehaviour
 	/// </summary>
 	private class ConcurrentAction : IDisposable
 	{
-		private readonly Action[] actions;
+		private readonly Action action;
 		private readonly ManualResetEventSlim waitHandle = new();
 
-		public ConcurrentAction(Action[] actions)
+		public ConcurrentAction(Action action)
 		{
-			this.actions = actions;
+			this.action = action;
 		}
 
 		/// <summary>
@@ -228,10 +226,7 @@ public sealed class UnityThread : MonoBehaviour
 			try
 			{
 				Assert.IsTrue(UnityData.IsInMainThread);
-				foreach (Action action in actions)
-				{
-					action();
-				}
+				action();
 			}
 			finally
 			{
