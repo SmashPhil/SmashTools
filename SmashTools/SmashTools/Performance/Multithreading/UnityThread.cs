@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using JetBrains.Annotations;
@@ -17,10 +18,10 @@ namespace SmashTools.Performance;
 [StaticConstructorOnStartup]
 public sealed class UnityThread : MonoBehaviour
 {
-	private static SynchronizationContext mainContext;
-
 	private readonly List<OnUpdate> onUpdateMethods = [];
 	private readonly List<OnGui> onGuiMethods = [];
+
+	private readonly ConcurrentQueue<Action> actionQueue = [];
 
 	/// <summary>
 	/// Delegate invoked each frame during Update.
@@ -47,13 +48,13 @@ public sealed class UnityThread : MonoBehaviour
 
 	private static UnityThread Instance { get; }
 
-	private void Awake()
-	{
-		mainContext = SynchronizationContext.Current;
-	}
-
 	private void Update()
 	{
+		while (actionQueue.TryDequeue(out Action action))
+		{
+			action();
+		}
+
 		TargeterDispatcher.TargeterUpdate();
 		for (int i = onUpdateMethods.Count - 1; i >= 0; i--)
 		{
@@ -156,8 +157,7 @@ public sealed class UnityThread : MonoBehaviour
 			action();
 			return;
 		}
-		ConcurrentAction concurrentAction = new(action);
-		mainContext.Post(concurrentAction.InvokeAndDispose, null);
+		Instance.actionQueue.Enqueue(action);
 	}
 
 	/// <summary>
@@ -181,7 +181,7 @@ public sealed class UnityThread : MonoBehaviour
 			return;
 		}
 		ConcurrentAction concurrentAction = new(action);
-		mainContext.Post(concurrentAction.InvokeAndDispose, null);
+		Instance.actionQueue.Enqueue(concurrentAction.InvokeAndDispose);
 		bool waited = concurrentAction.Wait(waitTimeout);
 		Assert.IsTrue(waited, "WaitHandle timed out.");
 	}
@@ -221,11 +221,10 @@ public sealed class UnityThread : MonoBehaviour
 		/// <summary>
 		/// Invokes all actions on the main thread, then disposes the wait handle.
 		/// </summary>
-		public void InvokeAndDispose(object state)
+		public void InvokeAndDispose()
 		{
 			try
 			{
-				Assert.IsTrue(UnityData.IsInMainThread);
 				action();
 			}
 			finally
@@ -241,7 +240,6 @@ public sealed class UnityThread : MonoBehaviour
 		/// <returns><see langword="true"/> if signaled within the timeout; otherwise <see langword="false"/>.</returns>
 		public bool Wait(int waitTimeout)
 		{
-			Assert.IsFalse(UnityData.IsInMainThread);
 			bool waited = waitHandle.Wait(waitTimeout);
 			return waited;
 		}
