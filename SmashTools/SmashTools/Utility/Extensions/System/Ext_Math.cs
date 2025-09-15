@@ -15,8 +15,8 @@ public static class Ext_Math
 	// Precalculated √2
 	public static readonly float Sqrt2 = Mathf.Sqrt(2);
 
-	// Up to n=16
-	private static readonly float[] factorials =
+	// Precomputed factorials from 0! to 16!
+	private static readonly float[] Factorials =
 	[
 		1,
 		1,
@@ -39,9 +39,9 @@ public static class Ext_Math
 
 	public static float Binomial(int n, int i)
 	{
-		float a1 = factorials[n];
-		float a2 = factorials[i];
-		float a3 = factorials[n - i];
+		float a1 = Factorials[n];
+		float a2 = Factorials[i];
+		float a3 = Factorials[n - i];
 		return a1 / (a2 * a3);
 	}
 
@@ -75,7 +75,6 @@ public static class Ext_Math
 	/// <param name="start"></param>
 	/// <param name="end"></param>
 	/// <param name="t"></param>
-	/// <returns></returns>
 	/// <exception cref="ArgumentException"></exception>
 	public static float SmoothStep(float start, float end, float t)
 	{
@@ -95,6 +94,7 @@ public static class Ext_Math
 	/// </summary>
 	/// <param name="value"></param>
 	/// <returns>True = 1, False = -1</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Sign(bool value)
 	{
 		return value ? 1 : -1;
@@ -107,7 +107,7 @@ public static class Ext_Math
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsOdd(this int value)
 	{
-		return value % 2 != 0;
+		return (value & 1) != 0;
 	}
 
 	/// <summary>
@@ -117,7 +117,7 @@ public static class Ext_Math
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsEven(this int value)
 	{
-		return value % 2 == 0;
+		return (value & 1) == 0;
 	}
 
 	/// <summary>
@@ -135,12 +135,17 @@ public static class Ext_Math
 	}
 
 	/// <summary>
-	/// Arithmetic series formula eg. (1 + 2 + 3 + ... + k) * n
+	/// Arithmetic series. <see cref="http://en.wikipedia.org/wiki/Arithmetic_progression"/>
 	/// </summary>
+	/// <exception cref="InvalidOperationException">If n is less than 0.</exception>
+	/// <returns>The sum of numbers from <paramref name="a"/> to <paramref name="k"/> given <paramref name="n"/> terms.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int ArithmeticSeries(int k, int n)
+	public static int ArithmeticSeries(int n, int a, int k)
 	{
-		return n * k * (k + 1) / 2;
+		if (n < 0)
+			throw new InvalidOperationException("n cannot be negative.");
+
+		return n * ((a + k) / 2);
 	}
 
 	/// <summary>
@@ -167,18 +172,24 @@ public static class Ext_Math
 	}
 
 	/// <summary>
-	/// Round to nearest n digits. <paramref name="roundTo"/> is representative of the decimal place. Eg. 0.01 for 2 decimal places
+	/// Round to nearest n digits. <paramref name="roundTo"/> is representative of the decimal place. Eg. 0.01 for 2 decimal places.
 	/// </summary>
+	/// <exception cref="InvalidOperationException">If <paramref name="roundTo"/> is &lt;= 0</exception>
 	public static float RoundTo(this float num, float roundTo)
 	{
+		if (roundTo <= 0)
+			throw new InvalidOperationException("roundTo must be greater than 0.");
 		return Mathf.Round(num / roundTo) * roundTo;
 	}
 
 	/// <summary>
 	/// Round to nearest n
 	/// </summary>
+	/// <exception cref="InvalidOperationException">If <paramref name="roundTo"/> is &lt;= 0</exception>
 	public static int RoundTo(this int num, int roundTo)
 	{
+		if (roundTo <= 0)
+			throw new InvalidOperationException("roundTo must be greater than 0.");
 		return Mathf.RoundToInt((float)num / roundTo) * roundTo;
 	}
 
@@ -486,38 +497,6 @@ public static class Ext_Math
 			//Fallthrough - should never hit
 			_ => IntVec3.Invalid,
 		};
-	}
-
-	/// <summary>
-	/// Converts an angle [0 : 360] into a pendulum-like arc from <paramref name="min"/> to <paramref name="max"/> with the peak equalizing to t=0.5
-	/// </summary>
-	/// <remarks>Useful for interpolating an angle between 2 points with an input angle of [0 : 360]. eg. calculating what angle something
-	/// should fall on the map given its simulated flight path between 2 points.</remarks>
-	/// <param name="from"></param>
-	/// <param name="to"></param>
-	/// <param name="min"></param>
-	/// <param name="max"></param>
-	public static float DropAngle(IntVec3 from, IntVec3 to, float min, float max)
-	{
-		float heading = HeadingFromPoints(from, to, min, max);
-		float θ = heading.ClampAngle() * Mathf.Deg2Rad;
-		float s = Mathf.Sin(θ);
-		float t = (1f - s) * 0.5f;
-		return Mathf.Lerp(min, max, t);
-
-		static float HeadingFromPoints(IntVec3 start, IntVec3 end, float min, float max)
-		{
-			float dx = end.x - start.x;
-			float dy = end.z - start.z;
-
-			// No angle offset, default to halfway point between min and max
-			if (Mathf.Approximately(dx, 0f) && Mathf.Approximately(dy, 0f))
-				return max - (max - min) / 2f;
-
-			float degFromX = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
-			float headingUpZero = 90f - degFromX;
-			return headingUpZero.ClampAngle();
-		}
 	}
 
 	/// <summary>
