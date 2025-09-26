@@ -29,6 +29,11 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <NoWarn>CS0649</NoWarn>
     </PropertyGroup>
+    <ItemGroup>
+      <Compile Remove="Patching\PatchOperations\**" />
+      <EmbeddedResource Remove="Patching\PatchOperations\**" />
+      <None Remove="Patching\PatchOperations\**" />
+    </ItemGroup>
 
     <!-- AssemblyInfo -->
     <ItemGroup>
@@ -122,7 +127,6 @@
         -->
     </ItemGroup>
     <ItemGroup>
-      <Folder Include="Patching\PatchOperations\" />
       <Folder Include="Properties\" />
     </ItemGroup>
 </Project>

@@ -6,8 +6,6 @@ namespace SmashTools;
 [StaticConstructorOnStartup]
 public static class UIData
 {
-	public const float ScrollbarSize = 16f;
-
 	public static readonly Texture2D FillableBarTexture =
 		SolidColorMaterials.NewSolidColorTexture(0.5f, 0.5f, 0.5f, 0.5f);
 

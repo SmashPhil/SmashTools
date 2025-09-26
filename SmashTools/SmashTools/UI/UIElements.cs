@@ -387,6 +387,22 @@ public static class UIElements
 		return false;
 	}
 
+	public static int HorizontalSlider(Rect rect, string tooltip, int value, int min, int max)
+	{
+		Rect fullRect = rect;
+		rect.y += rect.height / 4;
+		if (!tooltip.NullOrEmpty())
+		{
+			if (Mouse.IsOver(fullRect))
+			{
+				Widgets.DrawHighlight(fullRect);
+			}
+			TooltipHandler.TipRegion(fullRect, tooltip);
+		}
+		float result = Widgets.HorizontalSlider(rect, value, min, max);
+		return Mathf.RoundToInt(result);
+	}
+
 	public static bool SliderLabeled(Rect rect, string label, string tooltip, string endSymbol,
 		ref float value, float min, float max, float multiplier = 1f, int decimalPlaces = 2,
 		float endValue = -1f, string maxValueDisplay = "")

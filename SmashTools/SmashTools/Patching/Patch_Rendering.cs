@@ -23,18 +23,18 @@ internal class Patch_Rendering : IPatchCategory
 		// Input handling
 		HarmonyPatcher.Patch(
 			original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.Add)),
-			postfix: new HarmonyMethod(typeof(HighPriorityInputs),
-				nameof(HighPriorityInputs.WindowAddedToStack)));
+			postfix: new HarmonyMethod(typeof(WindowEvents),
+				nameof(WindowEvents.WindowAddedToStack)));
 		HarmonyPatcher.Patch(
 			original: AccessTools.Method(typeof(WindowStack), nameof(WindowStack.TryRemove),
 				parameters: [typeof(Window), typeof(bool)]),
-			postfix: new HarmonyMethod(typeof(HighPriorityInputs),
-				nameof(HighPriorityInputs.WindowRemovedFromStack)));
+			postfix: new HarmonyMethod(typeof(WindowEvents),
+				nameof(WindowEvents.WindowRemovedFromStack)));
 		HarmonyPatcher.Patch(
 			original: AccessTools.Method(typeof(WindowStack),
 				nameof(WindowStack.HandleEventsHighPriority)),
-			postfix: new HarmonyMethod(typeof(HighPriorityInputs),
-				nameof(HighPriorityInputs.HighPriorityOnGUI)));
+			postfix: new HarmonyMethod(typeof(WindowEvents),
+				nameof(WindowEvents.HighPriorityOnGUI)));
 
 		// UI
 		// NOTE - A few other mods patch DoInspectPaneButtons destructively, but inspectables don't need to show
