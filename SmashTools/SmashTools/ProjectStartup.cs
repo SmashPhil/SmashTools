@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using HarmonyLib;
-using SmashTools.Animations;
 using SmashTools.Patching;
 using SmashTools.Performance;
 using SmashTools.Xml;
@@ -53,7 +52,13 @@ public static class ProjectStartup
 		{
 			StartupTest.OpenMenu();
 		}
-
+#if PROFILER
+		if (___widgetRow.ButtonIcon(TexButton.OpenStatsReport,
+			"Open Profile graph.\n\n This shows the list of methods currently being profiled."))
+		{
+			Find.WindowStack.Add(new Dialog_ProfilerResults());
+		}
+#endif
 		___widgetRowFinalX = ___widgetRow.FinalX;
 	}
 }

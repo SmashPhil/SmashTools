@@ -46,7 +46,7 @@
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <DebugSymbols>true</DebugSymbols>
         <Optimize>false</Optimize>
-        <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
+        <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Unstable|AnyCPU'">
@@ -64,12 +64,12 @@
     <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseTesting|AnyCPU'">
 	    <DebugSymbols>true</DebugSymbols>
 	    <Optimize>true</Optimize>
-	    <DefineConstants>TRACE;RELEASE;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
+	    <DefineConstants>TRACE;RELEASE;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
     </PropertyGroup>
 
     <!-- Dependencies -->
     <ItemGroup>
-        <PackageReference Include="Lib.Harmony" Version="2.3.6">
+        <PackageReference Include="Lib.Harmony" Version="2.4.1">
             <IncludeAssets>compile; build</IncludeAssets>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
@@ -78,7 +78,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4523" />
+        <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4566" />
         <!--
         <Reference Include="Assembly-CSharp">
             <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>

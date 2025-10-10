@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using JetBrains.Annotations;
 using Verse;
 
@@ -11,11 +9,13 @@ namespace SmashTools;
 /// </summary>
 /// <typeparam name="T">Type of elements stored in the circular buffer.</typeparam>
 [PublicAPI]
-public class RingBuffer<T> : IEnumerable<T>
+public class RingBuffer<T>
 {
 	private readonly T[] array;
 	private int head;
 	private int tail;
+
+	private readonly object syncRoot = new();
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="RingBuffer{T}"/> class with the specified capacity.
@@ -48,8 +48,11 @@ public class RingBuffer<T> : IEnumerable<T>
 	{
 		get
 		{
-			int realIndex = GenMath.PositiveMod(tail + index, Length);
-			return array[realIndex];
+			lock (syncRoot)
+			{
+				int realIndex = GenMath.PositiveMod(tail + index, Length);
+				return array[realIndex];
+			}
 		}
 	}
 
@@ -60,12 +63,15 @@ public class RingBuffer<T> : IEnumerable<T>
 	/// <returns>The element that was dropped (overwritten), or default(T) if the slot was empty.</returns>
 	public T Push(T item)
 	{
-		T dropped = array[head];
-		array[head] = item;
-		head = GenMath.PositiveMod(++head, Length);
-		if (head == tail)
-			tail = GenMath.PositiveMod(++tail, Length);
-		return dropped;
+		lock (syncRoot)
+		{
+			T dropped = array[head];
+			array[head] = item;
+			head = GenMath.PositiveMod(++head, Length);
+			if (head == tail)
+				tail = GenMath.PositiveMod(++tail, Length);
+			return dropped;
+		}
 	}
 
 	/// <summary>
@@ -74,28 +80,10 @@ public class RingBuffer<T> : IEnumerable<T>
 	/// <param name="index">The zero-based logical index of the element to remove.</param>
 	public void RemoveAt(int index)
 	{
-		int realIndex = GenMath.PositiveMod(tail + index, Length);
-		array[realIndex] = default!;
-	}
-
-	/// <summary>
-	/// Returns an enumerator that iterates through the elements in the buffer from oldest to newest.
-	/// </summary>
-	/// <returns>An enumerator for the buffer contents.</returns>
-	public IEnumerator<T> GetEnumerator()
-	{
-		for (int i = head; i != tail; i = GenMath.PositiveMod(++i, Length))
+		lock (syncRoot)
 		{
-			yield return array[i];
+			int realIndex = GenMath.PositiveMod(tail + index, Length);
+			array[realIndex] = default!;
 		}
-	}
-
-	/// <summary>
-	/// Returns a non-generic enumerator that iterates through the elements in the buffer.
-	/// </summary>
-	/// <returns>An <see cref="IEnumerator"/> for the buffer contents.</returns>
-	IEnumerator IEnumerable.GetEnumerator()
-	{
-		return GetEnumerator();
 	}
 }

@@ -1,55 +1,206 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Threading;
+using HarmonyLib;
+using JetBrains.Annotations;
+using RimWorld;
+using Verse;
 
 namespace SmashTools.Performance;
 
+[PublicAPI]
 public static class Profiler
 {
 	private const int MaxPoolSize = 100;
 	private const int PreWarmSize = 50;
 
-	private static readonly ObjectPool<Block> Pool = new(MaxPoolSize, PreWarmSize);
-	private static readonly Stack<Block> Blocks = [];
+	private const string HarmonyId = "SmashTools.Profiler";
 
+	private static readonly MethodInfo PatchInjectionMethod =
+		AccessTools.Method(typeof(Profiler), nameof(InjectProfileInstructions));
 
-	private static readonly RingBuffer<Result> ResultBuffer = new(1000);
+	private static readonly MethodInfo ProfileStartMethod =
+		AccessTools.Method(typeof(Profiler), nameof(Begin));
 
+	private static readonly MethodInfo ProfileStopMethod =
+		AccessTools.Method(typeof(Profiler), nameof(End));
 
-	private static Block current;
-	private static Result currentResult;
+	private static readonly Harmony Harmony;
+
+	private static readonly ObjectPool<Timer> TimerPool = new(MaxPoolSize, PreWarmSize);
+	private static readonly ObjectPool<Result> ResultPool = new(MaxPoolSize, PreWarmSize);
+	private static readonly ThreadLocal<Stack<Timer>> Blocks = new(() => new Stack<Timer>());
+	private static readonly ConcurrentDictionary<string, Summary> ResultBuffer = [];
 
 	static Profiler()
 	{
-		currentResult = new Result();
-		for (int i = 0; i < ResultBuffer.Length; i++)
-		{
-			ResultBuffer.Push(new Result());
-		}
+#if RELEASE
+		Log.Error($"ProfilerWatch initialized in release build! This will affect performance.");
+#endif
+
+#if PROFILER
+		Harmony = new Harmony(HarmonyId);
+#endif
 	}
 
-	public static void Start(string label)
+	internal static void Enable()
 	{
-		Block block = Pool.Get();
-		Blocks.Push(block);
+		ApplyPatches();
+		//UnityThread.StartUpdate(UpdatePerFrameCounts);
+	}
+
+	internal static void Disable()
+	{
+		Harmony.UnpatchAll(HarmonyId);
+	}
+
+	internal static Timer Begin(string label)
+	{
+		Timer block = TimerPool.Get();
+		Blocks.Value.Push(block);
 		block.Label = label;
-		current = block;
-		current.Begin();
+		block.Start();
+		return block;
 	}
 
-	public static void Stop()
+	internal static void End(Timer timer)
 	{
-		current.End();
-		if (Blocks.Pop() != current)
+		timer.Stop();
+		Result result = ResultPool.Get();
+		result.Record(timer);
+		Summary summary = ResultBuffer.GetOrAdd(timer.Label, SummaryFactory());
+		ResultPool.Return(summary.Push(result));
+		TimerPool.Return(timer);
+		return;
+
+		static Summary SummaryFactory()
 		{
-			Trace.Fail("Out of sequence profiler. The results will be incorrect.");
+			const int BufferSize = 1000;
+			return new Summary(BufferSize);
 		}
-		currentResult.Record(current);
-		currentResult = ResultBuffer.Push(currentResult);
-		Pool.Return(current);
-		Blocks.TryPeek(out current);
 	}
 
-	private class Block : IPoolable
+	[MustDisposeResource]
+	internal static IEnumerator<KeyValuePair<string, Summary>> GetResults()
+	{
+		return ResultBuffer.GetEnumerator();
+	}
+
+	private static void ApplyPatches()
+	{
+		_ = TaskManager.Run(ProcessMethods, CancellationToken.None);
+		return;
+
+		static void ProcessMethods()
+		{
+			foreach (ModContentPack mod in LoadedModManager.RunningModsListForReading)
+			{
+				foreach (Assembly assembly in mod.assemblies.loadedAssemblies)
+				{
+					foreach (Type type in assembly.GetTypes())
+					{
+						foreach (MethodInfo method in type.GetMethods(AccessTools.allDeclared))
+						{
+							if (method.IsAbstract)
+								continue;
+
+							if (method.TryGetAttribute(out ProfileAttribute _))
+							{
+								Harmony.Patch(method, transpiler: PatchInjectionMethod);
+								Messages.Message($"{method.Name} patched for profiling.", MessageTypeDefOf.SilentInput,
+									historical: false);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private static IEnumerable<CodeInstruction> InjectProfileInstructions(IEnumerable<CodeInstruction> instructions,
+		ILGenerator ilg,
+		MethodBase __originalMethod)
+	{
+		LocalBuilder timerLocal = ilg.DeclareLocal(typeof(Timer));
+		yield return new CodeInstruction(opcode: OpCodes.Ldstr,
+			operand: $"{__originalMethod.DeclaringType?.Name}.{__originalMethod.Name}");
+		yield return new CodeInstruction(opcode: OpCodes.Call, operand: ProfileStartMethod);
+		yield return new CodeInstruction(opcode: OpCodes.Stloc_S, operand: timerLocal.LocalIndex);
+
+		foreach (CodeInstruction instruction in instructions)
+		{
+			if (instruction.opcode == OpCodes.Ret)
+			{
+				yield return new CodeInstruction(opcode: OpCodes.Ldloc_S, operand: timerLocal.LocalIndex);
+				yield return new CodeInstruction(opcode: OpCodes.Call, operand: ProfileStopMethod);
+			}
+			yield return instruction;
+		}
+	}
+
+	public enum Measurement
+	{
+		Seconds,
+		Milliseconds,
+		Microseconds,
+		Nanoseconds,
+	}
+
+	internal sealed class Summary
+	{
+		private readonly RingBuffer<Result> buffer;
+		private readonly int size;
+
+		private long total;
+		private int count;
+		private double average;
+
+		private readonly object syncRoot = new();
+
+		public Summary(int size)
+		{
+			this.size = size;
+			buffer = new RingBuffer<Result>(size);
+			for (int i = 0; i < size; i++)
+			{
+				buffer.Push(new Result());
+			}
+		}
+
+		public long Total => total;
+
+		public int Count => count;
+
+		public double Average => average;
+
+		internal Result Push(Result current)
+		{
+			Result removed;
+			lock (syncRoot)
+			{
+				removed = buffer.Push(current);
+				Recalculate(removed.Ticks, current.Ticks);
+			}
+			return removed;
+		}
+
+		private void Recalculate(long removed, long added)
+		{
+			total -= removed;
+			total += added;
+
+			if (count < size)
+				count++;
+
+			average = (double)total / count;
+		}
+	}
+
+	public sealed class Timer : IPoolable
 	{
 		private readonly Stopwatch stopwatch = new();
 
@@ -62,21 +213,21 @@ public static class Profiler
 		void IPoolable.Reset()
 		{
 			stopwatch.Reset();
-			Label = null;
+			Label = "Invalid";
 		}
 
-		public void Begin()
+		public void Start()
 		{
-			stopwatch.Start();
+			stopwatch.Restart();
 		}
 
-		public void End()
+		public void Stop()
 		{
 			stopwatch.Stop();
 		}
 	}
 
-	private record Result
+	internal sealed record Result : IPoolable
 	{
 		private string name;
 		private long ticks;
@@ -85,15 +236,18 @@ public static class Profiler
 
 		public long Ticks => ticks;
 
-		public void Record(Block block)
+		bool IPoolable.InPool { get; set; }
+
+		public void Record(Timer timer)
 		{
-			name = block.Label;
-			ticks = block.ElapsedTicks;
+			name = timer.Label;
+			ticks = timer.ElapsedTicks;
 		}
 
-		public override string ToString()
+		void IPoolable.Reset()
 		{
-			return $"{name}: {ticks * 1000 / Stopwatch.Frequency}ms";
+			name = null;
+			ticks = 0;
 		}
 	}
 }
