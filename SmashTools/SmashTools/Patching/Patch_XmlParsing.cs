@@ -20,6 +20,12 @@ internal class Patch_XmlParsing : IPatchCategory
 			postfix: new HarmonyMethod(typeof(Patch_XmlParsing),
 				nameof(ReadCustomAttributesOnDef)));
 		HarmonyPatcher.Patch(
+			original: AccessTools.Method(typeof(DirectXmlToObjectNew), nameof(DirectXmlToObjectNew.DefFromNodeNew)),
+			prefix: new HarmonyMethod(typeof(Patch_XmlParsing),
+				nameof(PreProcessAttributesOnDef)),
+			postfix: new HarmonyMethod(typeof(Patch_XmlParsing),
+				nameof(ReadCustomAttributesOnDef)));
+		HarmonyPatcher.Patch(
 			original: AccessTools.Method(typeof(XmlToObjectUtils),
 				nameof(XmlToObjectUtils.DoFieldSearch)),
 			prefix: new HarmonyMethod(typeof(Patch_XmlParsing),
