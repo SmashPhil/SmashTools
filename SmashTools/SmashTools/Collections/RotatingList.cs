@@ -1,77 +1,76 @@
 ﻿using System.Collections.Generic;
 
-namespace SmashTools
+namespace SmashTools;
+
+public class RotatingList<T> : List<T>
 {
-	public class RotatingList<T> : List<T>
+	private int currentIndex;
+
+	public RotatingList() : base()
 	{
-		private int currentIndex;
+		currentIndex = 0;
+	}
 
-		public RotatingList() : base()
+	public RotatingList(int capacity) : base(capacity)
+	{
+		currentIndex = 0;
+	}
+
+	public RotatingList(IEnumerable<T> enumerable) : base(enumerable)
+	{
+		currentIndex = 0;
+	}
+
+	public int Index => currentIndex;
+
+	public T Next
+	{
+		get
 		{
-			currentIndex = 0;
-		}
-
-		public RotatingList(int capacity) : base(capacity)
-		{
-			currentIndex = 0;
-		}
-
-		public RotatingList(IEnumerable<T> enumerable) : base(enumerable)
-		{
-			currentIndex = 0;
-		}
-
-		public int Index => currentIndex;
-
-		public T Next
-		{
-			get
-			{
-				currentIndex++;
-				if (currentIndex >= Count)
-				{
-					currentIndex = 0;
-				}	
-				return this[currentIndex];
-			}
-		}
-
-		public T Previous
-		{
-			get
-			{
-				currentIndex--;
-				if (currentIndex < 0)
-				{
-					currentIndex = Count - 1;
-				}	
-				return this[currentIndex];
-			}
-		}
-
-		public T Current
-		{
-			get
-			{
-				return this[currentIndex];
-			}
-		}
-
-		public void PostItemRemove()
-		{
-			if (Count == 0)
+			T item = this[currentIndex++];
+			if (currentIndex >= Count)
 			{
 				currentIndex = 0;
 			}
-			else
-			{
-				currentIndex %= Count;
-			}
+			return item;
 		}
+	}
 
-		public void SetIndex(int index)
+	public T Previous
+	{
+		get
 		{
-			currentIndex = index % Count;
+			T item = this[currentIndex--];
+			if (currentIndex < 0)
+			{
+				currentIndex = Count - 1;
+			}
+			return item;
 		}
+	}
+
+	public T Current
+	{
+		get
+		{
+			return this[currentIndex];
+		}
+	}
+
+	public void PostItemRemove()
+	{
+		if (Count == 0)
+		{
+			currentIndex = 0;
+		}
+		else
+		{
+			currentIndex %= Count;
+		}
+	}
+
+	public void SetIndex(int index)
+	{
+		currentIndex = index % Count;
 	}
 }
