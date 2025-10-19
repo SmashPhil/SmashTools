@@ -3,14 +3,16 @@ using System.Reflection;
 
 namespace SmashTools.Performance;
 
-public sealed unsafe class FuncPtrVoid
+public sealed unsafe class StaticVoidFuncPtr
 {
 	private readonly delegate*<void> function;
 
-	public FuncPtrVoid(MethodInfo method)
+	public StaticVoidFuncPtr(MethodInfo method)
 	{
 		if (method is null)
 			throw new ArgumentNullException(nameof(method));
+		if (!method.IsStatic)
+			throw new ArgumentException("Non-static method cannot be used as static delegate.", nameof(method));
 		if (method.ReturnType != typeof(void))
 			throw new InvalidOperationException($"Unable to get function pointer from {method.Name}, does not have return type void.");
 		if (method.GetParameters().Length != 0)
@@ -25,14 +27,16 @@ public sealed unsafe class FuncPtrVoid
 	}
 }
 
-public sealed unsafe class FuncPtrVoid<T>
+public sealed unsafe class StaticVoidFuncPtr<T>
 {
 	private readonly delegate*<T, void> function;
 
-	public FuncPtrVoid(MethodInfo method)
+	public StaticVoidFuncPtr(MethodInfo method)
 	{
 		if (method is null)
 			throw new ArgumentNullException(nameof(method));
+		if (!method.IsStatic)
+			throw new ArgumentException("Non-static method cannot be used as static delegate.", nameof(method));
 		if (method.ReturnType != typeof(void))
 			throw new InvalidOperationException($"Unable to get function pointer from {method.Name}, does not have return type void.");
 		if (method.GetParameters().Length != 0)
@@ -47,14 +51,16 @@ public sealed unsafe class FuncPtrVoid<T>
 	}
 }
 
-public sealed unsafe class FuncPtrVoid<T1, T2>
+public sealed unsafe class StaticVoidFuncPtr<T1, T2>
 {
 	private readonly delegate*<T1, T2, void> function;
 
-	public FuncPtrVoid(MethodInfo method)
+	public StaticVoidFuncPtr(MethodInfo method)
 	{
 		if (method is null)
 			throw new ArgumentNullException(nameof(method));
+		if (!method.IsStatic)
+			throw new ArgumentException("Non-static method cannot be used as static delegate.", nameof(method));
 		if (method.ReturnType != typeof(void))
 			throw new InvalidOperationException($"Unable to get function pointer from {method.Name}, does not have return type void.");
 		if (method.GetParameters().Length != 2)
@@ -69,14 +75,16 @@ public sealed unsafe class FuncPtrVoid<T1, T2>
 	}
 }
 
-public sealed unsafe class FuncPtrVoid<T1, T2, T3>
+public sealed unsafe class StaticVoidFuncPtr<T1, T2, T3>
 {
 	private readonly delegate*<T1, T2, T3, void> function;
 
-	public FuncPtrVoid(MethodInfo method)
+	public StaticVoidFuncPtr(MethodInfo method)
 	{
 		if (method is null)
 			throw new ArgumentNullException(nameof(method));
+		if (!method.IsStatic)
+			throw new ArgumentException("Non-static method cannot be used as static delegate.", nameof(method));
 		if (method.ReturnType != typeof(void))
 			throw new InvalidOperationException($"Unable to get function pointer from {method.Name}, does not have return type void.");
 		if (method.GetParameters().Length != 3)
@@ -91,14 +99,16 @@ public sealed unsafe class FuncPtrVoid<T1, T2, T3>
 	}
 }
 
-public sealed unsafe class FuncPtrVoid<T1, T2, T3, T4>
+public sealed unsafe class StaticVoidFuncPtr<T1, T2, T3, T4>
 {
 	private readonly delegate*<T1, T2, T3, T4, void> function;
 
-	public FuncPtrVoid(MethodInfo method)
+	public StaticVoidFuncPtr(MethodInfo method)
 	{
 		if (method is null)
 			throw new ArgumentNullException(nameof(method));
+		if (!method.IsStatic)
+			throw new ArgumentException("Non-static method cannot be used as static delegate.", nameof(method));
 		if (method.ReturnType != typeof(void))
 			throw new InvalidOperationException($"Unable to get function pointer from {method.Name}, does not have return type void.");
 		if (method.GetParameters().Length != 3)

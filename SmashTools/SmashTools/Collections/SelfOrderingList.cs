@@ -129,14 +129,10 @@ public sealed class SelfOrderingList<T> : IList<T>, IReadOnlyList<T>
   {
     get
     {
-      if (index < 0 || index >= size)
-        throw new IndexOutOfRangeException(nameof(index));
       return contents[index];
     }
     set
     {
-      if (index < 0 || index >= size)
-        throw new IndexOutOfRangeException(nameof(index));
       contents[index] = value;
       version++;
     }
