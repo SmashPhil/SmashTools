@@ -44,7 +44,7 @@ public static class QuickIter
 					Type[] typesFromMod = assembly.GetTypes();
 					types.AddRange(typesFromMod);
 				}
-				catch (ReflectionTypeLoadException ex)
+				catch (Exception ex) when (ex is ReflectionTypeLoadException or TypeLoadException)
 				{
 					Log.Error(
 						$"Exception loading types from {assembly.FullName}. Mod compatible with RimWorld version: {mod.ModMetaData.VersionCompatible.ToStringYesNo()}\n{ex}");
