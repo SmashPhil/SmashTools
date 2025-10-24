@@ -1,85 +1,84 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <Authors>Smash Phil</Authors>
-        <Description>Developer tool SDK for RimWorld mods. Primarily used by Vehicle Framework.</Description>
-        <Product>SmashTools</Product>
-        <FileVersion>1.6.0</FileVersion>
-        <AssemblyVersion>1.6.0</AssemblyVersion>
+	<PropertyGroup>
+		<Authors>Smash Phil</Authors>
+		<Description>Developer tool SDK for RimWorld mods. Primarily used by Vehicle Framework.</Description>
+		<Product>SmashTools</Product>
+		<FileVersion>1.6.0</FileVersion>
+		<AssemblyVersion>1.6.0</AssemblyVersion>
 
-        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-        <Configurations>Debug;Unstable;Release;ReleaseTesting</Configurations>
-        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-        <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
-        <OutputType>Library</OutputType>
-        <AppDesignerFolder>Properties</AppDesignerFolder>
-        <RootNamespace>SmashTools</RootNamespace>
-        <AssemblyName>SmashTools</AssemblyName>
-        <TargetFramework>net48</TargetFramework>
-        <FileAlignment>512</FileAlignment>
-        <Deterministic>true</Deterministic>
-        <LangVersion>preview</LangVersion>
-        <PlatformTarget>AnyCPU</PlatformTarget>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <OutDir>..\..\..\1.6\Assemblies\</OutDir>
-        <LangVersion>preview</LangVersion>
-        <DebugType>embedded</DebugType>
-        <ErrorReport>prompt</ErrorReport>
-        <WarningLevel>4</WarningLevel>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <NoWarn>CS0649</NoWarn>
-    </PropertyGroup>
-    <ItemGroup>
-      <Compile Remove="Patching\PatchOperations\**" />
-      <EmbeddedResource Remove="Patching\PatchOperations\**" />
-      <None Remove="Patching\PatchOperations\**" />
-    </ItemGroup>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+		<Configurations>Debug;Unstable;Release;ReleaseTesting</Configurations>
+		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+		<ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
+		<OutputType>Library</OutputType>
+		<AppDesignerFolder>Properties</AppDesignerFolder>
+		<RootNamespace>SmashTools</RootNamespace>
+		<AssemblyName>SmashTools</AssemblyName>
+		<TargetFramework>net48</TargetFramework>
+		<FileAlignment>512</FileAlignment>
+		<Deterministic>true</Deterministic>
+		<LangVersion>preview</LangVersion>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<OutDir>..\..\..\1.6\Assemblies\</OutDir>
+		<LangVersion>preview</LangVersion>
+		<DebugType>embedded</DebugType>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>4</WarningLevel>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>CS0649</NoWarn>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="Patching\PatchOperations\**" />
+		<EmbeddedResource Remove="Patching\PatchOperations\**" />
+		<None Remove="Patching\PatchOperations\**" />
+	</ItemGroup>
 
-    <!-- AssemblyInfo -->
-    <ItemGroup>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>DevTools_SmashTools</_Parameter1>
-        </AssemblyAttribute>
-    </ItemGroup>
+	<!-- AssemblyInfo -->
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+			<_Parameter1>DevTools_SmashTools</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
 
-    <!-- Configurations -->
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-        <DebugSymbols>true</DebugSymbols>
-        <Optimize>false</Optimize>
-        <DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
-    </PropertyGroup>
+	<!-- Build Events -->
+	<Target Name="PostClean" AfterTargets="Clean">
+		<RemoveDir Directories="$(OutDir)" />
+	</Target>
+	
+	<!-- Configurations -->
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>false</Optimize>
+		<DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
+	</PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Unstable|AnyCPU'">
-        <DebugSymbols>true</DebugSymbols>
-        <Optimize>true</Optimize>
-        <DefineConstants>TRACE;UNSTABLE;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
-    </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Unstable|AnyCPU'">
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>true</Optimize>
+		<DefineConstants>TRACE;UNSTABLE;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
+	</PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-	  <DebugSymbols>true</DebugSymbols>
-	    <Optimize>true</Optimize>
-	    <DefineConstants>TRACE;RELEASE;</DefineConstants>
-    </PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>true</Optimize>
+		<DefineConstants>TRACE;RELEASE;</DefineConstants>
+	</PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseTesting|AnyCPU'">
-	    <DebugSymbols>true</DebugSymbols>
-	    <Optimize>true</Optimize>
-	    <DefineConstants>TRACE;RELEASE;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
-    </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseTesting|AnyCPU'">
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>true</Optimize>
+		<DefineConstants>TRACE;RELEASE;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
+	</PropertyGroup>
 
-    <!-- Dependencies -->
-    <ItemGroup>
-        <PackageReference Include="Lib.Harmony" Version="2.4.1">
-            <IncludeAssets>compile; build</IncludeAssets>
-            <ExcludeAssets>runtime</ExcludeAssets>
-        </PackageReference>
+	<!-- Dependencies -->
+	<ItemGroup>
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*" />
+		<PackageReference Include="Lib.Harmony.Ref" Version="2.4.1" />
+		<PackageReference Include="PolySharp" Version="1.*" />
 
-        <PackageReference Include="PolySharp" Version="1.15.0">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4566" />
-        <!--
+		<!--
         <Reference Include="Assembly-CSharp">
             <HintPath>..\..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
             <Private>False</Private>
@@ -125,8 +124,8 @@
             <Private>False</Private>
         </Reference>
         -->
-    </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Properties\" />
-    </ItemGroup>
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="Properties\" />
+	</ItemGroup>
 </Project>
