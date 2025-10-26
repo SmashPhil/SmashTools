@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using SmashTools.Performance;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace SmashTools.Algorithms;
@@ -36,13 +38,15 @@ public sealed class KuhnMunkres
 		committedWorkers = new bool[n];
 	}
 
+	[Profile]
 	public int[] Compute(float[,] costMatrix)
 	{
-		Assert.AreEqual(costMatrix.GetLength(0), costMatrix.GetLength(1));
-		Assert.AreEqual(costMatrix.GetLength(0), n);
+		if (costMatrix.GetLength(0) != n || costMatrix.GetLength(1) != n)
+			throw new ArgumentException("costMatrix must be NxN matrix.");
 
 		int[] result = new int[n];
 		result.Populate(-1);
+		Array.Clear(labelByJob, 0, labelByJob.Length);
 		matchWorkerByJob.Populate(-1);
 
 		InitializeLabels(costMatrix);
