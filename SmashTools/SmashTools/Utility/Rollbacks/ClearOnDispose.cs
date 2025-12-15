@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using JetBrains.Annotations;
 
 namespace SmashTools;
@@ -15,13 +14,13 @@ public readonly struct ClearOnDispose<T> : IDisposable
 {
   private readonly ICollection<T> value;
 
-  public ClearOnDispose(ICollection<T> obj)
+  public ClearOnDispose(ICollection<T> collection)
   {
-    value = obj;
+    value = collection ?? throw new ArgumentNullException(nameof(collection));
   }
 
   void IDisposable.Dispose()
   {
-    value?.Clear();
+    value.Clear();
   }
 }

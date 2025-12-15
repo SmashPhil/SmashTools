@@ -19,7 +19,7 @@ public static class GlobalObjectPool
 		return new StringBuilderReceipt(out stringBuilder);
 	}
 
-	public static CollectionReceipt<List<T>, T> Get<T>(out List<T> list)
+  public static CollectionReceipt<List<T>, T> Get<T>(out List<T> list)
 	{
 		return new CollectionReceipt<List<T>, T>(out list);
 	}
