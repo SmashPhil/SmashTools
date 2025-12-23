@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Verse;
 
 namespace SmashTools.Targeting;
 
@@ -23,7 +22,7 @@ public static class TargeterDispatcher
     {
       // Remove problematic targeter or we'll end up spamming incessantly
       Targeters.TryPop(out _);
-      Log.Error($"Root level exception in TargeterUpdate: {ex}");
+      Logger.Error($"Root level exception in TargeterUpdate: {ex}");
     }
   }
 
@@ -40,7 +39,7 @@ public static class TargeterDispatcher
       // Remove problematic targeter or we'll end up spamming incessantly
       Targeters.Pop();
       UpdateCurrent();
-      Log.Error($"Root level exception in TargeterOnGUI: {ex}");
+      Logger.Error($"Root level exception in TargeterOnGUI: {ex}");
     }
   }
 
@@ -62,7 +61,7 @@ public static class TargeterDispatcher
     }
     else
     {
-      Log.Error("Removing targeter out of sequence.");
+      Logger.Error("Removing targeter out of sequence.");
       Remove(targeter);
     }
     targeter.OnStop();

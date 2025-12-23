@@ -1,12 +1,10 @@
-﻿using Verse;
-
-namespace SmashTools.Targeting;
+﻿namespace SmashTools.Targeting;
 
 public struct TargetValidation
 {
   public required bool isValid;
 
-  public TaggedString Tooltip { get; init; }
+  public string Tooltip { get; init; }
 
   public static TargetValidation Success => new() { isValid = true };
 

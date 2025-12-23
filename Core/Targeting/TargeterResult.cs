@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using JetBrains.Annotations;
-using Verse;
 
 namespace SmashTools.Targeting;
 

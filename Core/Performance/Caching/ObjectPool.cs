@@ -4,10 +4,10 @@ using UnityEngine.Assertions;
 
 namespace SmashTools.Performance;
 
-public class ObjectPool<T> where T : class
+[PublicAPI]
+public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
 {
-  // Raw stack implementation for fast retrieval and insertion
-  // with no auto-resizing.
+  // Raw stack implementation for fast retrieval and insertion with no auto-resizing.
   private readonly T[] pool;
   private int head;
 
@@ -102,8 +102,14 @@ public class ObjectPool<T> where T : class
   {
     lock (poolLock)
     {
-      if (pool.OutOfBounds(head))
+      // NOTE - there are no guarantees that T will never inherit from IDisposable as this is
+      // a public api. SmashTools.Burst.PathFinder does pool disposable objects.
+      // ReSharper disable SuspiciousTypeConversion.Global
+      if (head >= pool.Length)
+      {
+        (item as IDisposable)?.Dispose();
         return;
+      }
 
       IPoolable poolable = item as IPoolable;
       poolable?.Reset();
@@ -128,10 +134,30 @@ public class ObjectPool<T> where T : class
 
       head--;
       T item = pool[head];
-      pool[head] = null;
+      pool[head] = default!;
       IPoolable poolable = item as IPoolable;
       poolable?.InPool = false;
       return item;
+    }
+  }
+
+  /// <summary>
+  /// Try to get existing item from pool. If pool is empty,
+  /// </summary>
+  /// <param name="item"></param>
+  /// <returns>
+  /// <see langword="false"/> if pool is empty. <see langword="true"/> if an item is available for fetching.
+  /// </returns>
+  public bool TryGet(out T item)
+  {
+    lock (poolLock)
+    {
+      item = default!;
+      if (head == 0)
+        return false;
+
+      item = Get();
+      return true;
     }
   }
 
@@ -173,16 +199,16 @@ public class ObjectPool<T> where T : class
   /// <summary>
   /// Remove all objects from pool and reset head to 0.
   /// </summary>
-  public void Dump()
+  public void Clear()
   {
     lock (poolLock)
     {
       while (head > 0)
       {
-        _ = Get();
+        T item = Get();
+        (item as IDisposable)?.Dispose();
       }
       Assert.AreEqual(Count, 0);
-      Assert.IsNull(pool[0]);
     }
   }
 
@@ -195,7 +221,7 @@ public class ObjectPool<T> where T : class
     private readonly ObjectPool<T> pool;
     private readonly T item;
 
-    public Scope(ObjectPool<T> pool, in T item)
+    internal Scope(ObjectPool<T> pool, in T item)
     {
       this.pool = pool;
       this.item = item;

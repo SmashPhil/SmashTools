@@ -4,10 +4,10 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using Object = UnityEngine.Object;
 
-namespace SmashTools;
+namespace SmashTools.Performance;
 
 [PublicAPI]
-public class UnityObjectPool<T> where T : Object
+public class UnityObjectPool<T> : IObjectPool<T> where T : Object
 {
   // Raw stack implementation for fast retrieval and insertion
   // with no auto-resizing.
@@ -45,8 +45,7 @@ public class UnityObjectPool<T> where T : Object
   /// <summary>
   /// Head of internal stack
   /// </summary>
-  // NOTE - this is just for unit testing and debugging, the warnings here are
-  // unwarranted as long as the context in which this is used does not change.
+  // NOTE - this is just for unit testing and debugging, the warnings here are unwarranted.
   // ReSharper disable once ConvertToAutoProperty
   // ReSharper disable once InconsistentlySynchronizedField
   public int Count => head;
@@ -59,7 +58,7 @@ public class UnityObjectPool<T> where T : Object
   /// </remarks>
   public void Return(T item)
   {
-    if (pool.OutOfBounds(head))
+    if (head >= pool.Length)
     {
       onDestroy?.Invoke(item);
       Object.Destroy(item);
@@ -106,7 +105,7 @@ public class UnityObjectPool<T> where T : Object
   /// <summary>
   /// Remove all objects from pool and reset head to 0.
   /// </summary>
-  public void Dump()
+  public void Clear()
   {
     while (head > 0)
     {

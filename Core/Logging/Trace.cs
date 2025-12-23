@@ -1,11 +1,10 @@
 ﻿using System.Diagnostics;
 using UnityEngine;
-using Verse;
 
 namespace SmashTools;
 
 /// <summary>
-/// Log wrapper class for extracting strack trace info before sending to log
+/// Log wrapper class for extracting stack trace info before sending to log
 /// </summary>
 public static class Trace
 {
@@ -44,7 +43,7 @@ public static class Trace
   [Conditional("TRACE")]
   public static void Fail(string message = null)
   {
-    Log.Error(
+    Logger.Error(
       $"{message ?? "Assertion Failed"}\nStackTrace:\n{StackTraceUtility.ExtractStackTrace()}");
   }
 }

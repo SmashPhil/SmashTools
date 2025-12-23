@@ -6,7 +6,6 @@ using JetBrains.Annotations;
 using SmashTools.Targeting;
 using UnityEngine;
 using UnityEngine.Assertions;
-using Verse;
 
 namespace SmashTools.Performance;
 
@@ -15,10 +14,11 @@ namespace SmashTools.Performance;
 /// and maintain per-frame and per-GUI delegates.
 /// </summary>
 [PublicAPI]
-[StaticConstructorOnStartup]
 public sealed class UnityThread : MonoBehaviour
 {
-	private readonly List<OnUpdate> onUpdateMethods = [];
+  private static int mainThreadId;
+
+  private readonly List<OnUpdate> onUpdateMethods = [];
 	private readonly List<OnGui> onGuiMethods = [];
 
 	private readonly ConcurrentQueue<Action> actionQueue = [];
@@ -48,7 +48,14 @@ public sealed class UnityThread : MonoBehaviour
 
 	private static UnityThread Instance { get; }
 
-	private void Update()
+  public static bool IsInMainThread => mainThreadId == Thread.CurrentThread.ManagedThreadId;
+
+  private void Awake()
+  {
+    mainThreadId = Thread.CurrentThread.ManagedThreadId;
+  }
+
+  private void Update()
 	{
 		while (actionQueue.TryDequeue(out Action action))
 		{
@@ -76,7 +83,7 @@ public sealed class UnityThread : MonoBehaviour
 			catch (Exception ex)
 			{
 				onGuiMethods.RemoveAt(i);
-				Log.Error($"Exception thrown from OnGUI.{Environment.NewLine}{ex}");
+        Logger.Error($"Exception thrown from OnGUI.{Environment.NewLine}{ex}");
 			}
 		}
 	}
@@ -87,7 +94,7 @@ public sealed class UnityThread : MonoBehaviour
 	/// <param name="onUpdate">The delegate to remove.</param>
 	public static void RemoveUpdate(OnUpdate onUpdate)
 	{
-		if (!UnityData.IsInMainThread)
+		if (!IsInMainThread)
 		{
 			Trace.Fail(
 				"Trying to remove update method to queue from another thread. This can only be done from the main thread.");
@@ -102,7 +109,7 @@ public sealed class UnityThread : MonoBehaviour
 	/// <param name="onUpdate">The delegate to enqueue.</param>
 	public static void StartUpdate(OnUpdate onUpdate)
 	{
-		if (!UnityData.IsInMainThread)
+		if (!IsInMainThread)
 		{
 			Trace.Fail(
 				"Trying to add update method to queue from another thread. This can only be done from the main thread.");
@@ -117,7 +124,7 @@ public sealed class UnityThread : MonoBehaviour
 	/// <param name="onGui">The delegate to enqueue.</param>
 	public static void StartGUI(OnGui onGui)
 	{
-		if (!UnityData.IsInMainThread)
+		if (!IsInMainThread)
 		{
 			Trace.Fail(
 				"Trying to add OnGUI method to queue from another thread. This can only be done from the main thread.");
@@ -133,7 +140,7 @@ public sealed class UnityThread : MonoBehaviour
 	/// <param name="onGui">The delegate to remove.</param>
 	public static void RemoveOnGUI(OnGui onGui)
 	{
-		if (!UnityData.IsInMainThread)
+		if (!IsInMainThread)
 		{
 			Trace.Fail(
 				"Trying to remove OnGUI method to queue from another thread. This can only be done from the main thread.");
@@ -152,7 +159,7 @@ public sealed class UnityThread : MonoBehaviour
 		if (action == null)
 			throw new ArgumentNullException(nameof(action));
 
-		if (UnityData.IsInMainThread)
+		if (IsInMainThread)
 		{
 			action();
 			return;
@@ -175,7 +182,7 @@ public sealed class UnityThread : MonoBehaviour
 		if (waitTimeout <= 0)
 			throw new ArgumentException("waitTimeout must be greater than 0.");
 
-		if (UnityData.IsInMainThread)
+		if (IsInMainThread)
 		{
 			action();
 			return;
