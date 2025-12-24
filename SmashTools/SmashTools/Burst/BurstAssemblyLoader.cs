@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 using Unity.Burst;
-using UnityEngine;
 using UnityEngine.Assertions;
 using Verse;
 
@@ -33,7 +32,7 @@ public static class BurstAssemblyLoader
 		{
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				return Path.Combine(FolderNameWindows, UnityData.Is64BitBuild ? FolderName64 : FolderName32);
+				return System.IO.Path.Combine(FolderNameWindows, UnityData.Is64BitBuild ? FolderName64 : FolderName32);
 			}
 			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 			{
@@ -41,7 +40,7 @@ public static class BurstAssemblyLoader
 			}
 			else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 			{
-				return Path.Combine(FolderNameMac, IsArmArchitecture ? FolderNameArm : FolderName64);
+				return System.IO.Path.Combine(FolderNameMac, IsArmArchitecture ? FolderNameArm : FolderName64);
 			}
 			Log.Warning(
 				$"{RuntimeInformation.OSDescription} is not currently supported for burst libraries.");
@@ -72,12 +71,12 @@ public static class BurstAssemblyLoader
 			return false;
 
 		bool anyLoaded = false;
-		string folderPath = Path.Combine(AssemblyFolder, folderName);
+		string folderPath = System.IO.Path.Combine(AssemblyFolder, folderName);
 		List<string> folders = mod.foldersToLoadDescendingOrder;
 		for (int i = folders.Count; --i >= 0;)
 		{
 			string folder = folders[i];
-			DirectoryInfo directoryInfo = new(Path.Combine(folder, folderPath));
+			DirectoryInfo directoryInfo = new(System.IO.Path.Combine(folder, folderPath));
 			if (directoryInfo.Exists)
 			{
 				foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles("*.*", SearchOption.AllDirectories))

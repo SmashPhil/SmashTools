@@ -69,6 +69,11 @@
 		<PackageReference Include="Lib.Harmony.Ref" Version="2.4.1" />
 		<PackageReference Include="PolySharp" Version="1.*" />
 
+		<Reference Include="SmashToolsBurst">
+			<HintPath>$(OutDir)\SmashToolsBurst.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+
 		<Reference Include="SmashToolsCoreLib">
 			<HintPath>$(OutDir)\SmashToolsCoreLib.dll</HintPath>
 			<Private>False</Private>
