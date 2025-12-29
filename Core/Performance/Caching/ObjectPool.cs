@@ -8,7 +8,7 @@ namespace SmashTools.Performance;
 public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
 {
   // Raw stack implementation for fast retrieval and insertion with no auto-resizing.
-  private readonly T[] pool;
+  private T[] pool;
   private int head;
 
   private readonly Func<T> factory;
@@ -93,6 +93,16 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   public int Count => head;
 
   /// <summary>
+  /// ObjectPool grows dynamically when more items are fetched than its current capacity.
+  /// </summary>
+  public bool Resizable { get; set; }
+
+  /// <summary>
+  /// Growth factor when resizing pool.
+  /// </summary>
+  public int GrowthFactor { get; set; } = 2;
+
+  /// <summary>
   /// Add <paramref name="item"/> to pool.
   /// </summary>
   /// <remarks>
@@ -107,8 +117,12 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
       // ReSharper disable SuspiciousTypeConversion.Global
       if (head >= pool.Length)
       {
-        (item as IDisposable)?.Dispose();
-        return;
+        if (!Resizable)
+        {
+          (item as IDisposable)?.Dispose();
+          return;
+        }
+        Array.Resize(ref pool, pool.Length);
       }
 
       IPoolable poolable = item as IPoolable;

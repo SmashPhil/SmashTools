@@ -2,8 +2,9 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using JetBrains.Annotations;
+using SmashTools.Performance;
 using UnityEngine;
-using Verse;
+using UnityEngine.Assertions;
 
 namespace SmashTools;
 
@@ -11,8 +12,7 @@ namespace SmashTools;
 /// Queue up tasks that require being on the MainThread
 /// </summary>
 /// <remarks>Can split up loops of logic across multiple frames or queue up actions from other threads to be executed on the MainThread</remarks>
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-[StaticConstructorOnStartup]
+[PublicAPI]
 public class CoroutineManager : MonoBehaviour
 {
 	// Execution time to maintain max 1 fps impact converted from ms to seconds
@@ -21,16 +21,20 @@ public class CoroutineManager : MonoBehaviour
 	private readonly ConcurrentQueue<Enumerator> enumerators = [];
 	private float executionTimeElapsed;
 
-	static CoroutineManager()
-	{
-		Instance = InjectToScene();
-	}
-
 	public bool Running { get; private set; }
 
 	public bool NeedsRestart => !Running && enumerators.Count > 0;
 
-	public static CoroutineManager Instance { get; }
+	public static CoroutineManager Instance { get; private set; }
+
+  public static void EnsureInitialized()
+  {
+		Assert.IsTrue(UnityThread.IsInMainThread);
+    if (Instance == null)
+    {
+      Instance = InjectToScene();
+    }
+  }
 
 	public static void QueueInvoke(Action action)
 	{

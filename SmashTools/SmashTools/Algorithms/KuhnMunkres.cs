@@ -1,7 +1,6 @@
 ﻿using System;
 using SmashTools.Performance;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace SmashTools.Algorithms;
 

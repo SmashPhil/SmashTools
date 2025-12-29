@@ -22,7 +22,7 @@ public static class BurstAssemblyLoader
 	private const string FolderName32 = "x86";
 	private const string FolderNameArm = "arm64";
 
-	// TODO - I don't think Unity supports 32bit ARM but I can't find any documentation on this.  Will check later
+	// TODO - I don't think Unity supports 32bit ARM, but I can't find any documentation on this.  Will check later
 	private static bool IsArmArchitecture => 
 		RuntimeInformation.ProcessArchitecture is Architecture.Arm64;
 
@@ -31,19 +31,19 @@ public static class BurstAssemblyLoader
 		get
 		{
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-			{
-				return System.IO.Path.Combine(FolderNameWindows, UnityData.Is64BitBuild ? FolderName64 : FolderName32);
-			}
-			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-			{
-				return FolderNameLinux;
-			}
-			else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-			{
-				return System.IO.Path.Combine(FolderNameMac, IsArmArchitecture ? FolderNameArm : FolderName64);
-			}
-			Log.Warning(
-				$"{RuntimeInformation.OSDescription} is not currently supported for burst libraries.");
+        return System.IO.Path.Combine(FolderNameWindows, UnityData.Is64BitBuild ? FolderName64 : FolderName32);
+
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        return FolderNameLinux;
+
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        return System.IO.Path.Combine(FolderNameMac, IsArmArchitecture ? FolderNameArm : FolderName64);
+
+      if (Prefs.DevMode)
+      {
+        Log.Message(
+          $"{RuntimeInformation.OSDescription} is not currently supported for burst lib.");
+      }
 			return null;
 		}
 	}
@@ -77,27 +77,31 @@ public static class BurstAssemblyLoader
 		{
 			string folder = folders[i];
 			DirectoryInfo directoryInfo = new(System.IO.Path.Combine(folder, folderPath));
-			if (directoryInfo.Exists)
-			{
-				foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles("*.*", SearchOption.AllDirectories))
-				{
-					try
-					{
-						Assert.IsTrue(IsValidFileExtension(fileInfo.Extension.ToLowerInvariant()));
-						if (!BurstRuntime.LoadAdditionalLibrary(fileInfo.FullName))
-						{
-							Log.Error($"Unable to load file {fileInfo.Name} into BurstRuntime.");
-							return false;
-						}
-						anyLoaded = true;
-					}
-					catch (Exception ex)
-					{
-						Log.Error($"Exception thrown loading {fileInfo.Name} into BurstRuntime.\n{ex}");
-					}
-				}
-			}
-		}
+      if (!directoryInfo.Exists)
+        continue;
+
+      foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles("*.*", SearchOption.AllDirectories))
+      {
+        try
+        {
+          Assert.IsTrue(IsValidFileExtension(fileInfo.Extension.ToLowerInvariant()));
+          if (!BurstRuntime.LoadAdditionalLibrary(fileInfo.FullName))
+          {
+            Log.Error($"Unable to load file {fileInfo.Name} into BurstRuntime.");
+            return false;
+          }
+          anyLoaded = true;
+          if (Prefs.LogVerbose)
+          {
+            Log.Message($"[{mod.Name}] Loading {fileInfo.Name}");
+          }
+        }
+        catch (Exception ex)
+        {
+          Log.Error($"Exception thrown loading {fileInfo.Name} into BurstRuntime.\n{ex}");
+        }
+      }
+    }
 		return anyLoaded;
 	}
 }
