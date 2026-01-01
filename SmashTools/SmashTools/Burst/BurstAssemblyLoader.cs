@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 using Unity.Burst;
 using UnityEngine.Assertions;
 using Verse;
-using static SmashTools.Burst.OSUtils;
+using static CoreLib.Burst.OSUtils;
 
 namespace SmashTools.Burst;
 

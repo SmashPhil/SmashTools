@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
-namespace SmashTools.Burst;
+namespace CoreLib.Burst;
 
 [PublicAPI]
 public static class OSUtils

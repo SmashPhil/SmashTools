@@ -13,8 +13,8 @@
 		<ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
 		<OutputType>Library</OutputType>
 		<AppDesignerFolder>Properties</AppDesignerFolder>
-		<RootNamespace>SmashTools</RootNamespace>
-		<AssemblyName>SmashToolsCoreLib</AssemblyName>
+		<RootNamespace>CoreLib</RootNamespace>
+		<AssemblyName>CoreLib</AssemblyName>
 		<TargetFramework>net48</TargetFramework>
 		<FileAlignment>512</FileAlignment>
 		<Deterministic>true</Deterministic>
@@ -40,14 +40,10 @@
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
 			<_Parameter1>Test_SmashTools</_Parameter1>
 		</AssemblyAttribute>
-	</ItemGroup>
-	<!--
-	<ItemGroup>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-			<_Parameter1>DevTools_SmashTools_Core</_Parameter1>
+			<_Parameter1>Test_CoreLib</_Parameter1>
 		</AssemblyAttribute>
 	</ItemGroup>
-	-->
 
 	<!-- Build Events -->
 	<Target Name="PostClean" AfterTargets="Clean">
@@ -81,7 +77,6 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" />
 		<PackageReference Include="PolySharp" Version="1.*" />
 
         <Reference Include="System">

@@ -1,15 +1,17 @@
 ﻿using System;
+using System.Diagnostics;
 using JetBrains.Annotations;
 using UnityEngine.Assertions;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 [PublicAPI]
+[DebuggerDisplay("Count = {Count}")]
 public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
 {
   // Raw stack implementation for fast retrieval and insertion with no auto-resizing.
   private T[] pool;
-  private int head;
+  private int head = -1;
 
   private readonly Func<T> factory;
 
@@ -84,16 +86,21 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   }
 
   /// <summary>
-  /// Head of internal stack
+  /// Count of objects inside the pool.
   /// </summary>
   // NOTE - this is just for unit testing and debugging, the warnings here are
   // unwarranted as long as the context in which this is used does not change.
   // ReSharper disable once ConvertToAutoProperty
   // ReSharper disable once InconsistentlySynchronizedField
-  public int Count => head;
+  public int Count => head + 1;
 
   /// <summary>
-  /// ObjectPool grows dynamically when more items are fetched than its current capacity.
+  /// Size of pool.
+  /// </summary>
+  public int Size => pool.Length;
+
+  /// <summary>
+  /// ObjectPool can grow dynamically when more items are returned than its current capacity.
   /// </summary>
   public bool Resizable { get; set; }
 
@@ -113,25 +120,21 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
     lock (poolLock)
     {
       // NOTE - there are no guarantees that T will never inherit from IDisposable as this is
-      // a public api. SmashTools.Burst.PathFinder does pool disposable objects.
+      // a public api. CoreLib.Burst.PathFinder does pool disposable objects.
       // ReSharper disable SuspiciousTypeConversion.Global
-      if (head >= pool.Length)
+      if (head >= pool.Length - 1)
       {
         if (!Resizable)
         {
           (item as IDisposable)?.Dispose();
           return;
         }
-        Array.Resize(ref pool, pool.Length);
+        Array.Resize(ref pool, newSize: pool.Length * GrowthFactor);
       }
 
       IPoolable poolable = item as IPoolable;
       poolable?.Reset();
-      pool[head] = item;
-      if (head < pool.Length - 1)
-      {
-        head++;
-      }
+      pool[++head] = item;
       poolable?.InPool = true;
     }
   }
@@ -143,12 +146,12 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   {
     lock (poolLock)
     {
-      if (head == 0)
+      if (head == -1)
         return factory();
 
-      head--;
       T item = pool[head];
       pool[head] = default!;
+      head--;
       IPoolable poolable = item as IPoolable;
       poolable?.InPool = false;
       return item;
@@ -167,7 +170,7 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
     lock (poolLock)
     {
       item = default!;
-      if (head == 0)
+      if (head == -1)
         return false;
 
       item = Get();
@@ -199,7 +202,7 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   {
     lock (poolLock)
     {
-      int countToAdd = count - head;
+      int countToAdd = count - Count;
       if (countToAdd > 0)
       {
         for (int i = 0; i < countToAdd; i++)
@@ -217,7 +220,7 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   {
     lock (poolLock)
     {
-      while (head > 0)
+      while (Count > 0)
       {
         T item = Get();
         (item as IDisposable)?.Dispose();

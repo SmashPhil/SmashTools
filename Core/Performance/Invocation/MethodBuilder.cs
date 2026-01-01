@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using JetBrains.Annotations;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 /// <summary>
 /// Invoke <typeparam name="T"/>'s parameterless constructor without reflection.

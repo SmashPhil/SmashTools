@@ -2,7 +2,7 @@
 using JetBrains.Annotations;
 using UnityEngine;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 /// <summary>
 /// Schedules an action to be executed after a specified delay, resetting the delay if invoked again before expiration.
@@ -16,6 +16,9 @@ public sealed class Debouncer
 	/// <summary>
 	/// Initializes a new <see cref="Debouncer"/> action.
 	/// </summary>
+	/// <remarks>
+	/// Does not immediately start the timer. <see cref="Invoke"/> must be called at least once to trigger the debouncer.
+	/// </remarks>
 	/// <param name="action">The action to execute after the delay.</param>
 	/// <param name="milliseconds">The delay duration in milliseconds.</param>
 	/// <exception cref="ArgumentNullException"/>
@@ -36,7 +39,7 @@ public sealed class Debouncer
 	public float TimeRemaining => timer.TimeLeft;
 
 	/// <summary>
-	/// Resets the debounce timer. The action will be delayed again.
+	/// Resets the debounce timer.
 	/// </summary>
 	public void Invoke()
 	{

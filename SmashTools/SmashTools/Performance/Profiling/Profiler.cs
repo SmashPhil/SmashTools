@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
+using CoreLib.Performance;
 using HarmonyLib;
 using JetBrains.Annotations;
 using RimWorld;

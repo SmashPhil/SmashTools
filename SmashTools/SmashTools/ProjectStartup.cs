@@ -1,4 +1,6 @@
 ﻿using System.Collections;
+using CoreLib;
+using CoreLib.Performance;
 using HarmonyLib;
 using SmashTools.Patching;
 using SmashTools.Performance;

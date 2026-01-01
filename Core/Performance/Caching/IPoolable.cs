@@ -1,6 +1,6 @@
 ﻿using JetBrains.Annotations;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 [PublicAPI]
 public interface IPoolable

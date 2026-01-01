@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 public sealed unsafe class StaticFuncPtr<R>
 {

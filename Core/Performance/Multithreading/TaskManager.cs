@@ -2,10 +2,10 @@
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using SmashTools.Performance;
+using SmashTools;
 using UnityEngine.Assertions;
 
-namespace SmashTools;
+namespace CoreLib.Performance;
 
 [PublicAPI]
 public static class TaskManager

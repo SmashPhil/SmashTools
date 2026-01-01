@@ -6,13 +6,14 @@ using System.Threading;
 using JetBrains.Annotations;
 using UnityEngine.Assertions;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 /// <summary>
 /// Static implementation of ObjectPool with thread safe operations for retrieving and returning
 /// items to the pool.
 /// </summary>
 /// <typeparam name="T">Reference type with public default constructor.</typeparam>
+[PublicAPI]
 public static class AsyncPool<T> where T : class, new()
 {
 	private static ConcurrentBag<T> bag = [];
@@ -53,7 +54,7 @@ public static class AsyncPool<T> where T : class, new()
 		bag.Add(item);
 	}
 
-	[Conditional("DEBUG")]
+  [Conditional("DEBUG")]
 	private static void ItemReturned()
 	{
 		Interlocked.Increment(ref counter);
@@ -85,7 +86,7 @@ public static class AsyncPool<T> where T : class, new()
 	internal static void Clear()
 	{
 		// Easier to do a reference swap than to take out every single item in a loop. We don't yet
-		// have access to ConcurrentBag::Clear, it'll be available in .Net Framework 5.0
+		// have access to ConcurrentBag::Clear, it's only available in .Net Framework 5.0
 		ConcurrentBag<T> newBag = [];
 		bag = newBag;
 		counter = 0;

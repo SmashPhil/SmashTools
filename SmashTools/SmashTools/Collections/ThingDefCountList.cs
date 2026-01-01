@@ -1,8 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using CoreLib.Performance;
 using JetBrains.Annotations;
 using RimWorld;
-using SmashTools.Performance;
 using Verse;
 
 namespace SmashTools;

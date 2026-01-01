@@ -2,11 +2,11 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using JetBrains.Annotations;
-using SmashTools.Performance;
+using CoreLib.Performance;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace SmashTools;
+namespace CoreLib;
 
 /// <summary>
 /// Queue up tasks that require being on the MainThread

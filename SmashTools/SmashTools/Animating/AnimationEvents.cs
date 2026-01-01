@@ -1,4 +1,5 @@
-﻿using SmashTools.Animations;
+﻿using CoreLib;
+using SmashTools.Animations;
 using ParamType = SmashTools.Animations.AnimationParameter.ParamType;
 
 namespace SmashTools

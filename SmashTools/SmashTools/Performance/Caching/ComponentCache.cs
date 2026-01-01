@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using UnityEngine.SceneManagement;
 using Verse;
 
 namespace SmashTools;
@@ -64,6 +65,11 @@ public static class ComponentCache
       GenGeneric.InvokeStaticMethodOnGenericType(typeof(DetachedMapComponentCache<>), type,
         nameof(DetachedMapComponentCache<DetachedMapComponent>.ClearMap), map);
     }
+  }
+
+  internal static void OnSceneChange(Scene scene, LoadSceneMode mode)
+  {
+    ClearAll();
   }
 
   internal static void ClearAll()

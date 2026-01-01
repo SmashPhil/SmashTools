@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using HarmonyLib;
 using JetBrains.Annotations;
+using SmashTools;
 using UnityEngine.Assertions;
 using UnityEngine.SceneManagement;
-using Verse;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 /// <summary>
 /// Thread creation and management for dedicated threads that run continuously until released.
@@ -24,8 +23,6 @@ public static class ThreadManager
   // Single thread ids start above this threshold, everything below is dedicated to shared threads.
   private const int SingleThreadIdOffset = 100;
 
-  private static readonly AccessTools.FieldRef<object, Thread> EventThreadFieldRef;
-
   private static int nextId = SingleThreadIdOffset;
 
   private static readonly Dictionary<int, ushort> ThreadRefCounts = new(MaxThreads);
@@ -33,24 +30,6 @@ public static class ThreadManager
   private static readonly List<DedicatedThread> Threads = new(MaxThreads);
 
   private static readonly object ThreadListLock = new();
-
-  static ThreadManager()
-  {
-    EventThreadFieldRef =
-      AccessTools.FieldRefAccess<Thread>(typeof(LongEventHandler), "eventThread");
-  }
-
-  public static bool InMainOrEventThread
-  {
-    get
-    {
-      if (UnityData.IsInMainThread)
-        return true;
-      Thread eventThread = EventThreadFieldRef.Invoke();
-      return eventThread == null ||
-        Thread.CurrentThread.ManagedThreadId == eventThread.ManagedThreadId;
-    }
-  }
 
   // Just reading the _size int, it can't be guaranteed this count isn't stale
   // if being checked immediately after List has been modified.
@@ -191,7 +170,6 @@ public static class ThreadManager
   {
     Assert.AreEqual(mode, LoadSceneMode.Single);
     ReleaseAll();
-    ComponentCache.ClearAll();
   }
 
   public static void ReleaseAll()
@@ -217,7 +195,7 @@ public static class ThreadManager
     DisposeThread(dedicatedThread);
     if (!dedicatedThread.thread.Join(JoinTimeout))
     {
-      Log.Error($"Thread {dedicatedThread.id} has failed to terminate.");
+      Logger.Error($"Thread {dedicatedThread.id} has failed to terminate.");
     }
   }
 }

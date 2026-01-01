@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using CoreLib;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Verse;
@@ -35,9 +35,9 @@ public static class RenderTextureDrawer
   }
 
   /// <summary>
-  /// Finalize RenderTexture rendering with added render datas.
+  /// Finalize RenderTexture rendering with added render data.
   /// </summary>
-  /// <param name="rect">Outer rect containing all of the graphics being drawn.</param>
+  /// <param name="rect">Outer rect containing all the graphics being drawn.</param>
   /// <param name="scale">Zoom factor on all drawn graphics, scaled from the center of the rect.</param>
   /// <param name="center">Set rect position of all render data to center of outer rect. Use for 'icon' images that need all offsets erased.</param>
   public static void Draw(Rect rect, float scale = 1, bool center = false)

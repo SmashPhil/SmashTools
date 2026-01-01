@@ -4,6 +4,8 @@ using HarmonyLib;
 using LudeonTK;
 using SmashTools.Patching;
 using SmashTools.Performance;
+using CoreLib;
+using CoreLib.Performance;
 using SmashTools.Xml;
 using UnityEngine.SceneManagement;
 using Verse;
@@ -25,6 +27,8 @@ public class ProjectSetup : Mod
     HarmonyPatcher.Init(content);
 
     SceneManager.sceneLoaded += ThreadManager.OnSceneChanged;
+    SceneManager.sceneLoaded += ComponentCache.OnSceneChange;
+
     GameEvent.OnWorldUnloading += ThreadManager.ReleaseAll;
     GameEvent.OnWorldUnloading += ComponentCache.ClearAll;
 

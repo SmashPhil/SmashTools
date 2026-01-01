@@ -1,7 +1,7 @@
 ﻿using System;
 using JetBrains.Annotations;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 /// <summary>
 /// Object pool that reuses instances of <typeparamref name="T"/> to reduce allocations and construction overhead.

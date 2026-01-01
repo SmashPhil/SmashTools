@@ -1,7 +1,7 @@
 ﻿using JetBrains.Annotations;
 using UnityEngine;
 
-namespace SmashTools;
+namespace CoreLib;
 
 [PublicAPI]
 public static class Logger

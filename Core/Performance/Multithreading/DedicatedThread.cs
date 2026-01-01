@@ -3,9 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using JetBrains.Annotations;
-using Verse;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 [PublicAPI]
 public class DedicatedThread
@@ -177,7 +176,7 @@ public class DedicatedThread
           }
           catch (Exception ex)
           {
-            Log.Error($"Exception thrown while executing {asyncAction} on DedicatedThread " +
+            Logger.Error($"Exception thrown while executing {asyncAction} on DedicatedThread " +
               $"#{id:D3}.\nException={ex}");
             asyncAction.ExceptionThrown(ex);
           }
@@ -195,7 +194,7 @@ public class DedicatedThread
     }
     catch (Exception ex)
     {
-      Log.Error($"Exception thrown from thread={thread.ManagedThreadId}.\n{ex}");
+      Logger.Error($"Exception thrown from thread={thread.ManagedThreadId}.\n{ex}");
     }
     finally
     {

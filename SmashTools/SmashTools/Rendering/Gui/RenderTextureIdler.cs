@@ -1,6 +1,6 @@
 ﻿using System;
+using CoreLib.Performance;
 using JetBrains.Annotations;
-using SmashTools.Performance;
 using UnityEngine;
 
 namespace SmashTools.Rendering;

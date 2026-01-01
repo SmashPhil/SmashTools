@@ -1,18 +1,20 @@
 ﻿using System;
+using System.Diagnostics;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Object = UnityEngine.Object;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
 [PublicAPI]
+[DebuggerDisplay("Count = {Count}")]
 public class UnityObjectPool<T> : IObjectPool<T> where T : Object
 {
   // Raw stack implementation for fast retrieval and insertion
   // with no auto-resizing.
   private readonly T[] pool;
-  private int head;
+  private int head = -1;
 
   private Func<T> factory;
   private Action<T> onDestroy;
@@ -48,7 +50,7 @@ public class UnityObjectPool<T> : IObjectPool<T> where T : Object
   // NOTE - this is just for unit testing and debugging, the warnings here are unwarranted.
   // ReSharper disable once ConvertToAutoProperty
   // ReSharper disable once InconsistentlySynchronizedField
-  public int Count => head;
+  public int Count => head + 1;
 
   /// <summary>
   /// Add <paramref name="item"/> to pool.
@@ -58,15 +60,13 @@ public class UnityObjectPool<T> : IObjectPool<T> where T : Object
   /// </remarks>
   public void Return(T item)
   {
-    if (head >= pool.Length)
+    if (head >= pool.Length - 1)
     {
       onDestroy?.Invoke(item);
       Object.Destroy(item);
       return;
     }
-    pool[head] = item;
-    if (head < pool.Length - 1)
-      head++;
+    pool[++head] = item;
   }
 
   /// <summary>
@@ -74,11 +74,12 @@ public class UnityObjectPool<T> : IObjectPool<T> where T : Object
   /// </summary>
   public T Get()
   {
-    if (head == 0)
+    if (head == -1)
       return factory();
-    head--;
+
     T item = pool[head];
     pool[head] = null;
+    head--;
     return item;
   }
 
@@ -92,7 +93,7 @@ public class UnityObjectPool<T> : IObjectPool<T> where T : Object
   /// </remarks>
   public void PreWarm(int count)
   {
-    int countToAdd = count - head;
+    int countToAdd = count - Count;
     if (countToAdd > 0)
     {
       for (int i = 0; i < countToAdd; i++)
@@ -107,7 +108,7 @@ public class UnityObjectPool<T> : IObjectPool<T> where T : Object
   /// </summary>
   public void Clear()
   {
-    while (head > 0)
+    while (Count > 0)
     {
       T obj = Get();
       onDestroy?.Invoke(obj);

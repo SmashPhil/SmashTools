@@ -1,11 +1,17 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 using UnityEngine;
+using Logger = CoreLib.Logger;
 
+// TODO 1.7 - Change to CoreLib
 namespace SmashTools;
 
 /// <summary>
 /// Log wrapper class for extracting stack trace info before sending to log
 /// </summary>
+[PublicAPI]
+[TypeForwardedFrom(assemblyFullName: "SmashTools, Version=1.6.0.0, Culture=neutral, PublicKeyToken=null")]
 public static class Trace
 {
   [Conditional("TRACE")]

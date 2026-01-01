@@ -1,10 +1,10 @@
 ﻿using System;
 using JetBrains.Annotations;
+using UnityEngine.Assertions;
 
-namespace SmashTools.Performance;
+namespace CoreLib.Performance;
 
-// ReSharper disable PossibleNullReferenceException
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+[PublicAPI]
 public class AsyncLongOperationAction : AsyncAction
 {
   public event Action OnInvoke;
@@ -16,6 +16,11 @@ public class AsyncLongOperationAction : AsyncAction
 
   public override void Invoke()
   {
+    // ReSharper disable PossibleNullReferenceException
+    // NOTE - AsyncAction should never be invoked if IsValid is false, so OnInvoke cannot be null
+    // if the action reaches this point since it must be valid.
+    Assert.IsTrue(IsValid);
+
     OnInvoke();
   }
 
