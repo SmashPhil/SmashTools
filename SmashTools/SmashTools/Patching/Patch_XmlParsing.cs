@@ -34,25 +34,21 @@ internal class Patch_XmlParsing : IPatchCategory
 				nameof(ReadCustomAttributes)));
 	}
 
-	private static bool PreProcessAttributesOnDef(out Def __result, XmlNode node)
+	private static bool PreProcessAttributesOnDef(out Def __result, XmlNode node, LoadableXmlAsset loadingAsset)
 	{
 		__result = null;
-		return PreProcessXmlNode(node, null);
+		return PreProcessXmlNode(node, loadingAsset: loadingAsset, fieldInfo: null);
 	}
 
-	/// <summary>
-	/// Parse <paramref name="node"/> and handle registered custom attributes on <seealso cref="Def"/> XmlNode.
-	/// </summary>
-	/// <param name="node"></param>
-	private static void ReadCustomAttributesOnDef(XmlNode node)
+	private static void ReadCustomAttributesOnDef(XmlNode node, LoadableXmlAsset loadingAsset)
 	{
-		ProcessXmlNode(node, null);
+		ProcessXmlNode(node, loadingAsset: loadingAsset, fieldInfo: null);
 	}
 
 	private static bool PreProcessAttributes(XmlNode fieldNode, out FieldInfo __result)
 	{
 		__result = null;
-		return PreProcessXmlNode(fieldNode, __result);
+		return PreProcessXmlNode(fieldNode, loadingAsset: null, __result);
 	}
 
 	/// <summary>
@@ -60,10 +56,10 @@ internal class Patch_XmlParsing : IPatchCategory
 	/// </summary>
 	private static void ReadCustomAttributes(XmlNode fieldNode, FieldInfo __result)
 	{
-		ProcessXmlNode(fieldNode, __result);
+		ProcessXmlNode(fieldNode, loadingAsset: null, __result);
 	}
 
-	private static bool PreProcessXmlNode(XmlNode node, FieldInfo fieldInfo)
+	private static bool PreProcessXmlNode(XmlNode node, LoadableXmlAsset loadingAsset, FieldInfo fieldInfo)
 	{
 		if (node?.NodeType != XmlNodeType.Element)
 			return true;
@@ -79,7 +75,7 @@ internal class Patch_XmlParsing : IPatchCategory
 				if (!XmlParseHelper.RegisteredAttributes.TryGetValue(attribute.Name, out XmlParseHelper.CustomAttribute attr))
 					continue;
 
-				if (!attr.PreProcess(node, attribute, fieldInfo))
+				if (!attr.PreProcess(node, attribute, loadingAsset, fieldInfo))
 					return false;
 			}
 		}
@@ -92,7 +88,7 @@ internal class Patch_XmlParsing : IPatchCategory
 	}
 
 
-	private static void ProcessXmlNode(XmlNode node, FieldInfo fieldInfo)
+	private static void ProcessXmlNode(XmlNode node, LoadableXmlAsset loadingAsset, FieldInfo fieldInfo)
 	{
 		if (node?.NodeType != XmlNodeType.Element)
 			return;
@@ -108,7 +104,7 @@ internal class Patch_XmlParsing : IPatchCategory
 				if (!XmlParseHelper.RegisteredAttributes.TryGetValue(attribute.Name, out XmlParseHelper.CustomAttribute attr))
 					continue;
 
-				attr.Process(node, attribute, fieldInfo);
+				attr.Process(node, attribute, loadingAsset, fieldInfo);
 			}
 		}
 		catch (Exception ex)

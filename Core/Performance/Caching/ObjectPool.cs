@@ -5,6 +5,14 @@ using UnityEngine.Assertions;
 
 namespace CoreLib.Performance;
 
+/// <summary>
+/// Generic object pool for retaining object lifetime beyond its intended scope.
+/// </summary>
+/// <remarks>
+/// If <typeparamref name="T"/> implements <see cref="IDisposable"/>, <see cref="Clear"/> must be called at the end
+/// of the object pool's lifetime to ensure all remaining objects in the pool are disposed.
+/// </remarks>
+/// <typeparam name="T"></typeparam>
 [PublicAPI]
 [DebuggerDisplay("Count = {Count}")]
 public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
@@ -216,6 +224,9 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   /// <summary>
   /// Remove all objects from pool and reset head to 0.
   /// </summary>
+  /// <remarks>
+  /// If the object is disposable, Dispose will be called after its removal from the pool.
+  /// </remarks>
   public void Clear()
   {
     lock (poolLock)
