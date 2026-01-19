@@ -76,14 +76,17 @@
 	</PropertyGroup>
 
 	<!-- Dependencies -->
+	<PropertyGroup>
+		<UseKrafsPackageRef Condition="!Exists('$(RefDir)')">true</UseKrafsPackageRef>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="PolySharp" Version="1.*" />
 	</ItemGroup>
-	
-	<ItemGroup Condition="!Exists('$(RefDir)')">
+	<ItemGroup Condition="'$(UseKrafsPackageRef)' == 'true'">
 		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*" />
 	</ItemGroup>
-	<ItemGroup Condition="Exists('$(RefDir)')">
+	<ItemGroup Condition="'$(UseKrafsPackageRef)' != 'true'">
 		<Reference Include="System">
 			<HintPath>$(RefDir)\System.dll</HintPath>
 			<Private>False</Private>
