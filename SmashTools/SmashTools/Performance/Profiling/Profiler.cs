@@ -59,7 +59,7 @@ public static class Profiler
 		Harmony.UnpatchAll(HarmonyId);
 	}
 
-	internal static Timer Begin(string label)
+	public static Timer Begin(string label)
 	{
 		Timer block = TimerPool.Get();
 		Blocks.Value.Push(block);
@@ -68,7 +68,7 @@ public static class Profiler
 		return block;
 	}
 
-	internal static void End(Timer timer)
+  public static void End(Timer timer)
 	{
 		timer.Stop();
 		Result result = ResultPool.Get();
