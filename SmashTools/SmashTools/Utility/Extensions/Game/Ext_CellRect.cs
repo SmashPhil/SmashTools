@@ -94,20 +94,30 @@ namespace SmashTools
 		/// Enumerate over all cells in <paramref name="cellRect"/> and <paramref name="otherRect"/> without 
 		/// repeating cells from overlapping sections.
 		/// </summary>
+		[Obsolete("Use CellRectOverlap instead.")]
 		public static IEnumerable<IntVec3> AllCellsNoRepeat(this CellRect cellRect, CellRect otherRect)
 		{
 			// Same rects, returning the cells of 1 is fine
 			if (cellRect == otherRect)
 			{
-				foreach (IntVec3 cell in cellRect) yield return cell;
+        foreach (IntVec3 cell in cellRect)
+        {
+          yield return cell;
+        }
 				yield break;
 			}
 
 			// No overlap, will be faster to return both separately
 			if (!cellRect.Overlaps(otherRect))
 			{
-				foreach (IntVec3 cell in cellRect) yield return cell;
-				foreach (IntVec3 cell in otherRect) yield return cell;
+        foreach (IntVec3 cell in cellRect)
+        {
+          yield return cell;
+        }
+        foreach (IntVec3 cell in otherRect)
+        {
+          yield return cell;
+        }
 				yield break;
 			}
 
@@ -131,13 +141,15 @@ namespace SmashTools
 			{
 				maxTopZ = cellRect.maxZ + 1;
 				maxBotZ = otherRect.maxZ + 1;
-				if (cellRect.Width > otherRect.Width) edge |= RectEdge.Top;
+				if (cellRect.Width > otherRect.Width) 
+          edge |= RectEdge.Top;
 			}
 			else
 			{
 				maxTopZ = otherRect.maxZ + 1;
 				maxBotZ = cellRect.maxZ + 1;
-				if (otherRect.Width > cellRect.Width) edge |= RectEdge.Top;
+				if (otherRect.Width > cellRect.Width) 
+          edge |= RectEdge.Top;
 			}
 
 			// Bottom
@@ -145,13 +157,15 @@ namespace SmashTools
 			{
 				minTopZ = cellRect.minZ;
 				minBotZ = otherRect.minZ;
-				if (cellRect.Width < otherRect.Width) edge |= RectEdge.Bottom;
+				if (cellRect.Width < otherRect.Width) 
+          edge |= RectEdge.Bottom;
 			}
 			else
 			{
 				minTopZ = otherRect.minZ;
 				minBotZ = cellRect.minZ;
-				if (otherRect.Width < cellRect.Width) edge |= RectEdge.Bottom;
+				if (otherRect.Width < cellRect.Width) 
+          edge |= RectEdge.Bottom;
 			}
 
 			// Left
@@ -159,13 +173,15 @@ namespace SmashTools
 			{
 				minLeftX = cellRect.minX;
 				minRightX = otherRect.minX;
-				if (cellRect.Height > otherRect.Height) edge |= RectEdge.Left;
+				if (cellRect.Height > otherRect.Height) 
+          edge |= RectEdge.Left;
 			}
 			else
 			{
 				minLeftX = otherRect.minX;
 				minRightX = cellRect.minX;
-				if (otherRect.Height > cellRect.Height) edge |= RectEdge.Left;
+				if (otherRect.Height > cellRect.Height) 
+          edge |= RectEdge.Left;
 			}
 
 			// Right
@@ -173,20 +189,21 @@ namespace SmashTools
 			{
 				maxLeftX = cellRect.maxX + 1;
 				maxRightX = otherRect.maxX + 1;
-				if (cellRect.Height < otherRect.Height) edge |= RectEdge.Right;
+				if (cellRect.Height < otherRect.Height) 
+          edge |= RectEdge.Right;
 			}
 			else
 			{
 				maxLeftX = otherRect.maxX + 1;
 				maxRightX = cellRect.maxX + 1;
-				if (otherRect.Height < cellRect.Height) edge |= RectEdge.Right;
+				if (otherRect.Height < cellRect.Height) 
+          edge |= RectEdge.Right;
 			}
 
-			int x, z, xLimit, zLimit;
-
+			int z, zLimit;
 			// Left no-overlap
-			x = minLeftX;
-			xLimit = minRightX;
+			int x = minLeftX;
+			int xLimit = minRightX;
 			for (; x < xLimit; x++)
 			{
 				z = edge == RectEdge.Left ? maxTopZ - 1 : maxBotZ - 1;
