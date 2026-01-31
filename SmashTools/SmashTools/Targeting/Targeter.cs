@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using CoreLib;
+using CoreLib.Collections;
 using JetBrains.Annotations;
 using RimWorld;
 using UnityEngine;
@@ -9,6 +10,7 @@ using Verse.Sound;
 
 namespace SmashTools.Targeting;
 
+[PublicAPI]
 public abstract class Targeter<T> : ITargeter
 {
   private readonly ITargeterUpdate<T> updater;
@@ -45,6 +47,15 @@ public abstract class Targeter<T> : ITargeter
   public virtual void Update()
   {
     updater?.TargeterUpdate(in targetData);
+  }
+
+  public TargetValidation ValidateTargets()
+  {
+    if (updater == null)
+      return TargetValidation.Success;
+
+    ReadOnlyList<T> targets = new ReadOnlyList<T>(targetData.targets);
+    return updater.ValidateTargets(targets);
   }
 
   protected abstract void Submit(ITargetOption option);

@@ -51,7 +51,9 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
       return TargeterResult.Submit with { options = result.options };
 
     if (result.action is TargeterAction.Accept or TargeterAction.Submit)
+    {
       targetData.targets.Add(curTarget);
+    }
     return result;
   }
 
@@ -77,6 +79,7 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
     const float MouseIconSize = 32f;
 
     base.OnGUI();
+
     string tooltip = curResult.Tooltip;
     if (!tooltip.NullOrEmpty())
     {
@@ -111,19 +114,26 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
   private void UpdateTargetUnderMouse()
   {
     curTarget = GlobalTargetInfo.Invalid;
-    curResult = TargetValidation.Failed;
+    curResult = ValidateTargets();
+    if (!curResult)
+      return;
 
     List<WorldObject> objects = GenWorldUI.WorldObjectsUnderMouse(UI.MousePositionOnUI);
     if (objects.Count > 0)
     {
+      TargetValidation objResult = TargetValidation.Failed;
       foreach (WorldObject obj in objects)
       {
         TargetValidation targetResult = source.CanTarget(obj);
         curTarget = obj;
-        curResult = targetResult;
+        objResult = targetResult;
 
         if (targetResult.isValid)
-          return;
+          break;
+      }
+      if (!objResult || !objResult.Tooltip.NullOrEmpty())
+      {
+        curResult = objResult;
       }
       return;
     }
@@ -132,6 +142,10 @@ public class WorldTargeter<TPayload> : Targeter<GlobalTargetInfo> where TPayload
       return;
 
     curTarget = new GlobalTargetInfo(tile);
-    curResult = source.CanTarget(curTarget);
+    TargetValidation sourceResult = source.CanTarget(curTarget);
+    if (!sourceResult || !sourceResult.Tooltip.NullOrEmpty())
+    {
+      curResult = sourceResult;
+    }
   }
 }

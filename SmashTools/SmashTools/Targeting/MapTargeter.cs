@@ -6,7 +6,7 @@ using Verse.Sound;
 
 namespace SmashTools.Targeting;
 
-// TODO Launcher - Complete for local map targeting
+// TODO VF-337 - Complete and replace LandingTargeter with more thorough testing.
 public class MapTargeter<TPayload> : Targeter<LocalTargetInfo> where TPayload : ITargetOption
 {
   private readonly ITargeterSource<LocalTargetInfo, TPayload> source;
