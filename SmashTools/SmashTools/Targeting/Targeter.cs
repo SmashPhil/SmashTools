@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using CoreLib;
 using CoreLib.Collections;
 using JetBrains.Annotations;
 using RimWorld;
