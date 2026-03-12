@@ -39,6 +39,7 @@ public abstract class Targeter<T> : ITargeter
 
   public virtual void OnGUI()
   {
+    UI.ApplyUIScale();
     ProcessInput();
     updater?.TargeterOnGUI();
   }
