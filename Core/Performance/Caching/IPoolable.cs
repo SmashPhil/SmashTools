@@ -2,6 +2,9 @@
 
 namespace CoreLib.Performance;
 
+/// <summary>
+/// Interface for objects that can be managed by <see cref="IObjectPool"/>
+/// </summary>
 [PublicAPI]
 public interface IPoolable
 {
@@ -13,5 +16,5 @@ public interface IPoolable
 	/// <summary>
 	/// Clear all references as object is being returned to pool
 	/// </summary>
-	public void Reset();
+  void Reset();
 }

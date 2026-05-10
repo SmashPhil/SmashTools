@@ -9,22 +9,26 @@ namespace SmashTools.Performance;
 [PublicAPI]
 public static class GlobalObjectPool
 {
+  [MustDisposeResource]
 	public static Receipt<T> Get<T>(out T obj) where T : new()
 	{
 		return new Receipt<T>(out obj);
 	}
 
-	public static StringBuilderReceipt Get(out StringBuilder stringBuilder)
+  [MustDisposeResource]
+  public static StringBuilderReceipt Get(out StringBuilder stringBuilder)
 	{
 		return new StringBuilderReceipt(out stringBuilder);
 	}
 
+  [MustDisposeResource]
   public static CollectionReceipt<List<T>, T> Get<T>(out List<T> list)
 	{
 		return new CollectionReceipt<List<T>, T>(out list);
 	}
 
-	public static CollectionReceipt<HashSet<T>, T> Get<T>(out HashSet<T> set)
+  [MustDisposeResource]
+  public static CollectionReceipt<HashSet<T>, T> Get<T>(out HashSet<T> set)
 	{
 		return new CollectionReceipt<HashSet<T>, T>(out set);
 	}

@@ -44,7 +44,7 @@ public class RenderTextureIdler : IDisposable
   }
 
   /// <summary>
-  /// UnitTest hook for OnUpdate function reference.
+  /// TestFixture hook for OnUpdate function reference.
   /// </summary>
   internal UnityThread.OnUpdate UpdateLoop => Update;
 

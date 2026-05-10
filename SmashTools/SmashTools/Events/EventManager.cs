@@ -11,9 +11,6 @@ namespace SmashTools;
 [PublicAPI]
 public class EventManager<T> : IEventControl
 {
-  // Backing field for IEventEnabler::Enabled
-  private bool enabled = true;
-
   /// <summary>
   /// Internal storage for event triggers keyed by <typeparamref name="T"/>.
   /// </summary>
@@ -22,19 +19,15 @@ public class EventManager<T> : IEventControl
   /// <summary>
   /// Gets or sets whether all events in this manager are enabled. When <see langword="false"/>, no callbacks will execute.
   /// </summary>
-  public bool Enabled
-  {
-    get => enabled;
-    private set => enabled = value;
-  }
+  public bool Enabled { get; private set; } = true;
 
   /// <summary>
   /// Gets or sets whether all events in this manager are enabled. When <see langword="false"/>, no callbacks will execute.
   /// </summary>
   bool IEventControl.Enabled
   {
-    get => enabled;
-    set => enabled = value;
+    get => Enabled;
+    set => Enabled = value;
   }
 
   /// <summary>

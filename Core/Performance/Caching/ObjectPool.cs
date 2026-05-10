@@ -121,29 +121,30 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   /// Add <paramref name="item"/> to pool.
   /// </summary>
   /// <remarks>
-  /// If pool has hit capacity, item reference will be lost and at the mercy of GC.
+  /// If pool has hit capacity, item will be discarded.
   /// </remarks>
   public void Return(T item)
   {
     lock (poolLock)
     {
-      // NOTE - there are no guarantees that T will never inherit from IDisposable as this is
-      // a public api. CoreLib.Burst.PathFinder does pool disposable objects.
-      // ReSharper disable SuspiciousTypeConversion.Global
       if (head >= pool.Length - 1)
       {
         if (!Resizable)
         {
+          // NOTE - there are no guarantees that T will never inherit from IDisposable as this is
+          // a public api. CoreLib.Burst.PathFinder does pool disposable objects.
           (item as IDisposable)?.Dispose();
           return;
         }
         Array.Resize(ref pool, newSize: pool.Length * GrowthFactor);
       }
 
-      IPoolable poolable = item as IPoolable;
-      poolable?.Reset();
+      if (item is IPoolable poolable)
+      {
+        poolable.Reset();
+        poolable.InPool = true;
+      }
       pool[++head] = item;
-      poolable?.InPool = true;
     }
   }
 
@@ -152,18 +153,26 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   /// </summary>
   public T Get()
   {
+    T item;
     lock (poolLock)
     {
       if (head == -1)
-        return factory();
-
-      T item = pool[head];
-      pool[head] = default!;
-      head--;
-      IPoolable poolable = item as IPoolable;
-      poolable?.InPool = false;
-      return item;
+      {
+        item = factory();
+      }
+      else
+      {
+        item = pool[head];
+        pool[head] = default;
+        head--;
+      }
     }
+
+    if (item is IPoolable poolable)
+    {
+      poolable.InPool = false;
+    }
+    return item;
   }
 
   /// <summary>
@@ -177,7 +186,7 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   {
     lock (poolLock)
     {
-      item = default!;
+      item = default;
       if (head == -1)
         return false;
 

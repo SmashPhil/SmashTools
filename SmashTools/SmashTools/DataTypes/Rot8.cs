@@ -1,4 +1,5 @@
 ﻿using System;
+using CoreLib;
 using UnityEngine;
 using Verse;
 using RimWorld;
@@ -10,15 +11,16 @@ namespace SmashTools
   /// </summary>
   public record struct Rot8
   {
-    public const byte InvalidInt = 200;
-    public const byte NorthInt = 0;
-    public const byte EastInt = 1;
-    public const byte SouthInt = 2;
-    public const byte WestInt = 3;
-    public const byte NorthEastInt = 4;
-    public const byte SouthEastInt = 5;
-    public const byte SouthWestInt = 6;
-    public const byte NorthWestInt = 7;
+    // Invalid int is 200 to align with Verse.Rot4
+    public const byte InvalidInt = Orientation.Invalid;
+    public const byte NorthInt = Orientation.North;
+    public const byte EastInt = Orientation.East;
+    public const byte SouthInt = Orientation.South;
+    public const byte WestInt = Orientation.West;
+    public const byte NorthEastInt = Orientation.NorthEast;
+    public const byte SouthEastInt = Orientation.SouthEast;
+    public const byte SouthWestInt = Orientation.SouthWest;
+    public const byte NorthWestInt = Orientation.NorthWest;
 
     private byte rotInt;
 
@@ -470,6 +472,11 @@ namespace SmashTools
     public static implicit operator Rot8(Rot4 rot)
     {
       return new Rot8(rot.AsInt);
+    }
+
+    public static implicit operator Orientation(Rot8 rot)
+    {
+      return new Orientation(rot.AsInt);
     }
 
     public override int GetHashCode()

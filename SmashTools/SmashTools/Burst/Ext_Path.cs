@@ -7,7 +7,7 @@ namespace SmashTools.Burst;
 [PublicAPI]
 public static class Ext_Path
 {
-  public static void DrawPath(this Path path, Thing thing)
+  public static void DrawPath(this Path path, [CanBeNull] Thing thing)
   {
     if (!path.Found || path.IsFinished)
       return;

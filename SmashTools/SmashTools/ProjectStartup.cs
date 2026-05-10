@@ -56,7 +56,7 @@ public static class ProjectStartup
       StartupTest.OpenMenu();
     }
 #if PROFILER
-    if (___widgetRow.ButtonIcon(TexButton.OpenStatsReport,
+    if (___widgetRow.ButtonIcon(TexButton.OpenInspector,
       "Open Profile graph.\n\n This shows the list of methods currently being profiled."))
     {
       Find.WindowStack.Add(new Dialog_ProfilerResults());

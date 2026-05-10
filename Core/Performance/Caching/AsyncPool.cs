@@ -86,7 +86,7 @@ public static class AsyncPool<T> where T : class, new()
 	internal static void Clear()
 	{
 		// Easier to do a reference swap than to take out every single item in a loop. We don't yet
-		// have access to ConcurrentBag::Clear, it's only available in .Net Framework 5.0
+		// have access to ConcurrentBag.Clear, it's only available in .Net Framework 5.0
 		ConcurrentBag<T> newBag = [];
 		bag = newBag;
 		counter = 0;
