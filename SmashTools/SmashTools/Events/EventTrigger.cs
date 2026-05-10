@@ -10,9 +10,6 @@ namespace SmashTools;
 [PublicAPI]
 public class EventTrigger : IEventControl
 {
-  // Backing field for IEventControl::Enabled
-  private bool enabled = true;
-
   private readonly List<Trigger> persistents = [];
   private readonly List<Trigger> singles = [];
 
@@ -26,19 +23,15 @@ public class EventTrigger : IEventControl
   /// <summary>
   /// Gets or sets whether event execution is enabled. When <see langword="false"/>, <see cref="ExecuteEvents"/> will do nothing.
   /// </summary>
-  public bool Enabled
-  {
-    get => enabled;
-    private set => enabled = value;
-  }
+  public bool Enabled { get; private set; } = true;
 
   /// <summary>
   /// Gets or sets whether event execution is enabled. When <see langword="false"/>, <see cref="ExecuteEvents"/> will do nothing.
   /// </summary>
   bool IEventControl.Enabled
   {
-    get => enabled;
-    set => enabled = value;
+    get => Enabled;
+    set => Enabled = value;
   }
 
   /// <summary>

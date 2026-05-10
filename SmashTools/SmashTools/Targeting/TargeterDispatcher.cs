@@ -69,7 +69,10 @@ public static class TargeterDispatcher
     public void Stop()
     {
       if (Targeters.Count == 0)
-        throw new InvalidOperationException("Trying to stop targeter but the targeter stack is empty.");
+      {
+        Log.Error("Trying to stop targeter but the targeter stack is empty.");
+        return;
+      }
 
       Assert.IsTrue(UnityThread.IsInMainThread);
       if (Targeters.Peek() == targeter)

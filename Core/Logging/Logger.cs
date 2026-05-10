@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using System.Collections.Generic;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace CoreLib;
@@ -6,6 +7,8 @@ namespace CoreLib;
 [PublicAPI]
 public static class Logger
 {
+  private static HashSet<int> warningKeys = [];
+  private static HashSet<int> errorKeys = [];
   private static ILogger impl;
 
   public static void Link<T>() where T : ILogger, new()
@@ -35,8 +38,35 @@ public static class Logger
     impl.Warning(message);
   }
 
+  public static void WarningOnce(string message, int key)
+  {
+    if (!warningKeys.Add(key))
+      return;
+
+    if (impl == null)
+    {
+      Debug.LogError(message);
+      return;
+    }
+    impl.Error(message);
+  }
+
   public static void Error(string message)
   {
+    if (impl == null)
+    {
+      Debug.LogError(message);
+      return;
+    }
+
+    impl.Error(message);
+  }
+
+  public static void ErrorOnce(string message, int key)
+  {
+    if (!errorKeys.Add(key))
+      return;
+
     if (impl == null)
     {
       Debug.LogError(message);
@@ -49,7 +79,9 @@ public static class Logger
   public interface ILogger
   {
     void Message(string message);
+
     void Warning(string message);
+
     void Error(string message);
   }
 }

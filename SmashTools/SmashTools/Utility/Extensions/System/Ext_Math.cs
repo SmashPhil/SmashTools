@@ -9,6 +9,7 @@ using Verse;
 
 namespace SmashTools;
 
+// TODO 1.7 - Move over non-unity specific math functions to MathUtils
 [PublicAPI]
 public static class Ext_Math
 {
@@ -47,8 +48,8 @@ public static class Ext_Math
 
 	public static float Bernstein(int n, int i, float t)
 	{
-		float t1 = Mathf.Pow(t, i); //t_i
-		float t2 = Mathf.Pow(1 - t, n - i); //t_n-i
+		float t1 = Mathf.Pow(t, i); // t_i
+		float t2 = Mathf.Pow(1 - t, n - i); // t_n-i
 		return Binomial(n, i) * t1 * t2;
 	}
 
@@ -206,6 +207,7 @@ public static class Ext_Math
 	/// </summary>
 	public static long Pow(this int x, int y)
 	{
+    Assert.IsTrue(y >= 0);
 		return (long)Math.Pow(x, y);
 	}
 

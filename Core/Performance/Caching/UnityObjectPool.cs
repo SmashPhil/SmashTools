@@ -9,7 +9,7 @@ namespace CoreLib.Performance;
 
 [PublicAPI]
 [DebuggerDisplay("Count = {Count}")]
-public class UnityObjectPool<T> : IObjectPool<T> where T : Object
+public class UnityObjectPool<T> : IDisposable, IObjectPool<T> where T : Object
 {
   // Raw stack implementation for fast retrieval and insertion
   // with no auto-resizing.
@@ -55,9 +55,6 @@ public class UnityObjectPool<T> : IObjectPool<T> where T : Object
   /// <summary>
   /// Add <paramref name="item"/> to pool.
   /// </summary>
-  /// <remarks>
-  /// If pool has hit capacity, item reference will be lost and at the mercy of GC.
-  /// </remarks>
   public void Return(T item)
   {
     if (head >= pool.Length - 1)
@@ -116,5 +113,10 @@ public class UnityObjectPool<T> : IObjectPool<T> where T : Object
     }
     Assert.AreEqual(Count, 0);
     Assert.IsNull(pool[0]);
+  }
+
+  public void Dispose()
+  {
+    Clear();
   }
 }

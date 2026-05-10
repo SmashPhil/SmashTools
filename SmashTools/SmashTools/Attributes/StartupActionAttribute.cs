@@ -10,17 +10,17 @@ namespace SmashTools
 	public class StartupActionAttribute : Attribute
 	{
 		/// <summary>
-		/// Name assigned to checkbox label in UnitTesting dialog. Overrides method name.
+		/// Name assigned to checkbox label in Testing dialog. Overrides method name.
 		/// </summary>
 		public string Name { get; set; }
 
 		/// <summary>
-		/// Category for splitting up UnitTest cases between different mods
+		/// Category for splitting up TestFixture cases between different mods
 		/// </summary>
 		public string Category { get; set; }
 
 		/// <summary>
-		/// GameState to initiate UnitTest
+		/// GameState to initiate TestFixture
 		/// </summary>
 		/// <remarks>
 		/// <para><see cref="GameState.OnStartup"/> executes after the main menu has loaded</para>

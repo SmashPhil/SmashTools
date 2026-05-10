@@ -21,11 +21,18 @@ public static class DetachedMapComponentCache<T> where T : DetachedMapComponent
 
   public static void ClearMap(Map map)
   {
-    MapComps.Remove(map.uniqueID);
+    if (MapComps.Remove(map.uniqueID, out T comp))
+    {
+      comp.Dispose();
+    }
   }
 
   public static void ClearAll()
   {
+    foreach (T comp in MapComps.Values)
+    {
+      comp.Dispose();
+    }
     MapComps.Clear();
   }
 

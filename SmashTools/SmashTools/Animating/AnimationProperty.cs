@@ -18,7 +18,7 @@ namespace SmashTools.Animations
     private readonly ObjectPath objectPath;
 
     private readonly string label;
-    private readonly string name;
+    private readonly string name; 
     private PropertyType propertyType;
 
     // Strictly used for serialization, UnityEngine types are not supported by RimWorld's parser

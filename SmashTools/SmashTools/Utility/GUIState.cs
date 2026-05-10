@@ -29,7 +29,8 @@ public static class GUIState
 		{
 			prevState = GUI.enabled;
 			prevColor = GUI.color;
-		}
+      Disable();
+    }
 
 		void IDisposable.Dispose()
 		{

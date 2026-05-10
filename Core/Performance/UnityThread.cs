@@ -205,7 +205,7 @@ public sealed class UnityThread : MonoBehaviour
   }
 
   /// <summary>
-  /// UnitTest hook for validating that the update list enqueued the delegate correctly.
+  /// TestFixture hook for validating that the update list enqueued the delegate correctly.
   /// </summary>
   internal static bool InUpdateQueue(OnUpdate update)
   {

@@ -60,6 +60,7 @@ namespace SmashTools
       {
         if (Active == value)
           return;
+
         set_State?.Invoke(value);
         onToggle?.Invoke(value);
       }
