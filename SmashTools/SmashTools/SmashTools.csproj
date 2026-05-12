@@ -65,7 +65,7 @@
 
 	<!-- Dependencies -->
 	<ItemGroup Condition="'$(UseLocalBurstLib)' != 'true'">
-		<PackageReference Include="SmashTools.Burst" Version="1.2.0" />
+		<PackageReference Include="SmashTools.Burst" Version="1.2.3" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(UseLocalBurstLib)' == 'true'">
 		<Reference Include="SmashToolsBurst">

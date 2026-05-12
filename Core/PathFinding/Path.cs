@@ -8,7 +8,9 @@ namespace CoreLib.PathFinding;
 /// <summary>
 /// Resulting path from start to end in sequential order.
 /// </summary>
-/// <remarks>Can be traversed to receive nodes in order as they are processed.</remarks>
+/// <remarks>
+/// Can be traversed to receive nodes in order as they are processed.
+/// </remarks>
 [PublicAPI]
 public class Path
 {
@@ -17,7 +19,14 @@ public class Path
   /// <summary>
   /// Path is valid and maps from start to end sequentially.
   /// </summary>
-  public bool Found { get; private set; }
+  public bool IsValid
+  {
+    get
+    {
+      return nodes.Count > 0 && field;
+    }
+    set;
+  }
 
   /// <summary>
   /// Current index traversing the path.
@@ -52,22 +61,16 @@ public class Path
   /// <summary>
   /// View of underlying node list.
   /// </summary>
-  /// <remarks>This is the raw list so nodes will be stored in reverse order.</remarks>
+  /// <remarks>
+  /// This is the raw list where nodes are stored in reverse order. e.g. <see cref="FirstNode"/> = last in list.
+  /// </remarks>
   public ReadOnlyList<Node> Nodes => new(nodes);
 
-  public unsafe void Populate(int* array, int length, int width)
-  {
-    nodes.Capacity = length;
-    for (int i = 0; i < length; i++)
-    {
-      int index = array[i];
-      int x = index % width;
-      int y = index / width;
-      nodes.Add(new Node(x, y));
-    }
-    ResetPathToStart();
-  }
-
+  /// <summary>
+  /// Adds a new node at the <paramref name="index"/> of a flattened map.
+  /// </summary>
+  /// <param name="index">The zero-based index representing the position of 2D map, flattened into a 1D array.</param>
+  /// <param name="width">The width of the 2D map. Must be greater than zero.</param>
   public void Add(int index, int width)
   {
     int x = index % width;
@@ -76,18 +79,27 @@ public class Path
   }
 
   /// <summary>
+  /// Adds the node to the end of the path.
+  /// </summary>
+  /// <param name="node">The node to add to the path.</param>
+  public void Add(in Node node)
+  {
+    nodes.Add(node);
+  }
+
+  /// <summary>
   /// Insert nodes from <paramref name="list"/> into path result.
   /// </summary>
   /// <remarks>Path is assumed to be found if <paramref name="list"/> is not empty.</remarks>
   public void Populate(List<Node> list)
   {
-    nodes.Clear();
+    Clear();
     nodes.Capacity = list.Count;
     foreach (Node node in list)
     {
       nodes.Add(node);
     }
-    Validate(FirstNode, LastNode);
+    IsValid = true;
     ResetPathToStart();
   }
 
@@ -97,19 +109,13 @@ public class Path
   /// <remarks>Path is assumed to be found if <paramref name="enumerable"/> is not empty.</remarks>
   public void Populate(IEnumerable<Node> enumerable)
   {
-    nodes.Clear();
+    Clear();
     foreach (Node node in enumerable)
     {
       nodes.Add(node);
     }
-    Validate(FirstNode, LastNode);
+    IsValid = true;
     ResetPathToStart();
-  }
-
-  internal void Validate(Node start, Node end)
-  {
-    Found = nodes.Count > 1 && FirstNode.x == start.x && FirstNode.y == start.y &&
-            LastNode.x == end.x && LastNode.y == end.y;
   }
 
   /// <summary>
@@ -121,8 +127,8 @@ public class Path
   /// <exception cref="InvalidOperationException"></exception>
   public void Combine(Path otherPath)
   {
-    if (!Found || !otherPath.Found)
-      throw new ArgumentException("Both paths need to be found.");
+    if (!IsValid || !otherPath.IsValid)
+      throw new ArgumentException("Both paths need to be valid.");
     if (LastNode != otherPath.FirstNode)
       throw new InvalidOperationException("otherPath's first node must match this path's last node.");
 
@@ -151,9 +157,9 @@ public class Path
   /// </summary>
   public void Clear()
   {
-    Current = -1;
-    Found = false;
+    IsValid = false;
     nodes.Clear();
+    ResetPathToStart();
   }
 
   /// <summary>
@@ -203,6 +209,11 @@ public class Path
     public override int GetHashCode()
     {
       return HashCode.Combine(x, y);
+    }
+
+    public override string ToString()
+    {
+      return $"({x}, {y})";
     }
   }
 }

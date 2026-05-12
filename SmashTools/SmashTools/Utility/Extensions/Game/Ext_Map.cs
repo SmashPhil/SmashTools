@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using CoreLib.PathFinding;
 using CoreLib.Performance;
 using HarmonyLib;
 using RimWorld;

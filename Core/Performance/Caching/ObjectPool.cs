@@ -201,6 +201,7 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
   /// <remarks>Returns to pool when the <see cref="Scope"/> object is disposed.</remarks>
   /// <param name="obj">Object acquired from pool.</param>
   /// <returns>Disposable <see cref="Scope"/> object.</returns>
+  [MustDisposeResource]
   public Scope GetTemporary(out T obj)
   {
     obj = Get();

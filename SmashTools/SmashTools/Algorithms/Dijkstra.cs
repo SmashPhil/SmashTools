@@ -5,7 +5,7 @@ using Verse;
 
 namespace SmashTools.Algorithms;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+[PublicAPI]
 public class Dijkstra<T>
 {
   private readonly PriorityQueue<T, int> openQueue = new();
@@ -14,13 +14,6 @@ public class Dijkstra<T>
   private readonly Func<T, bool> canEnter;
   private readonly Func<T, IEnumerable<T>> neighbors;
   private readonly Func<T, T, int> cost;
-
-  public Dijkstra(IPathfinder<T> pathfinder)
-  {
-    cost = pathfinder.Cost;
-    canEnter = pathfinder.CanEnter;
-    neighbors = pathfinder.Neighbors;
-  }
 
   public Dijkstra(Func<T, T, int> cost, Func<T, List<T>> neighbors, Func<T, bool> canEnter = null)
   {
