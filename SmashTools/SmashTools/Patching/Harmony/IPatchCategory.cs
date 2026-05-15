@@ -1,8 +1,11 @@
-﻿namespace SmashTools.Patching;
+﻿using JetBrains.Annotations;
+
+namespace SmashTools.Patching;
 
 /// <summary>
 /// Interface for declaring category of Patch methods. Used for organization purposes only.
 /// </summary>
+[PublicAPI]
 public interface IPatchCategory
 {
   /// <summary>
