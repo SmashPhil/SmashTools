@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using CoreLib.Performance;
+using UnityEngine;
 using Verse;
 
 namespace SmashTools.Burst;
@@ -29,7 +30,7 @@ internal static class JobDispatch
   {
     if (JobDispatchManager.Exists)
     {
-      JobDispatchManager.Destroy();
+      UnityThread.ExecuteOnMainThreadAndWait(JobDispatchManager.Destroy);
     }
   }
 }
