@@ -11,6 +11,7 @@ namespace SmashTools;
 [PublicAPI]
 public class EventManager<T> : IEventControl
 {
+  // TODO 1.7 - Change access modifier to private
   /// <summary>
   /// Internal storage for event triggers keyed by <typeparamref name="T"/>.
   /// </summary>
@@ -40,7 +41,9 @@ public class EventManager<T> : IEventControl
     get
     {
       if (!map.ContainsKey(key))
+      {
         map[key] = new EventTrigger(this);
+      }
       return map[key];
     }
     set { map[key] = value; }
