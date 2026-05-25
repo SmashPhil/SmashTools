@@ -6,8 +6,15 @@ using Verse;
 
 namespace SmashTools.Algorithms;
 
+// TODO 1.7 - Remove
+// ReSharper disable InconsistentNaming
+[PublicAPI, Obsolete("Use BreadthFirstSearch instead.")]
+public class BFS<T> : BreadthFirstSearch<T>
+{
+}
+
 [PublicAPI]
-public class BFS<T>
+public class BreadthFirstSearch<T>
 {
   private readonly Queue<T> openQueue = [];
 

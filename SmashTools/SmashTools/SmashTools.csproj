@@ -4,31 +4,12 @@
 		<Authors>Smash Phil</Authors>
 		<Description>Developer tool SDK for RimWorld mods. Primarily used by Vehicle Framework.</Description>
 		<Product>SmashTools</Product>
-		<FileVersion>1.6.0</FileVersion>
-		<AssemblyVersion>1.6.0</AssemblyVersion>
+    <RootNamespace>SmashTools</RootNamespace>
+    <AssemblyName>SmashTools</AssemblyName>
+    <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
 
-		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-		<Configurations>Debug;Unstable;Release;ReleaseTesting</Configurations>
-		<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-		<ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
-		<OutputType>Library</OutputType>
-		<AppDesignerFolder>Properties</AppDesignerFolder>
-		<RootNamespace>SmashTools</RootNamespace>
-		<AssemblyName>SmashTools</AssemblyName>
-		<TargetFramework>net48</TargetFramework>
-		<FileAlignment>512</FileAlignment>
-		<Deterministic>true</Deterministic>
-		<LangVersion>preview</LangVersion>
-		<PlatformTarget>AnyCPU</PlatformTarget>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<ModDir>..\..\..\</ModDir>
+    <ModDir>..\..\..\</ModDir>
 		<OutDir>$(ModDir)\1.6\Assemblies\</OutDir>
-		<LangVersion>preview</LangVersion>
-		<DebugType>embedded</DebugType>
-		<ErrorReport>prompt</ErrorReport>
-		<WarningLevel>4</WarningLevel>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<NoWarn>CS0649</NoWarn>
 	</PropertyGroup>
 
 	<!-- AssemblyInfo -->
@@ -37,31 +18,6 @@
 			<_Parameter1>Test_SmashTools</_Parameter1>
 		</AssemblyAttribute>
 	</ItemGroup>
-	
-	<!-- Configurations -->
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-		<DebugSymbols>true</DebugSymbols>
-		<Optimize>false</Optimize>
-		<DefineConstants>TRACE;DEBUG;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Unstable|AnyCPU'">
-		<DebugSymbols>true</DebugSymbols>
-		<Optimize>true</Optimize>
-		<DefineConstants>TRACE;UNSTABLE;UNITY_ASSERTIONS;DEV_TOOLS;</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-		<DebugSymbols>true</DebugSymbols>
-		<Optimize>true</Optimize>
-		<DefineConstants>TRACE;RELEASE;</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseTesting|AnyCPU'">
-		<DebugSymbols>true</DebugSymbols>
-		<Optimize>true</Optimize>
-		<DefineConstants>TRACE;RELEASE;UNITY_ASSERTIONS;DEV_TOOLS;PROFILER;</DefineConstants>
-	</PropertyGroup>
 
 	<!-- Dependencies -->
 	<ItemGroup Condition="'$(UseLocalBurstLib)' != 'true'">
