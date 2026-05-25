@@ -1,4 +1,5 @@
 ﻿using System.Threading;
+using CoreLib.Performance;
 using HarmonyLib;
 using JetBrains.Annotations;
 using Verse;
@@ -20,8 +21,9 @@ public static class LongEventUtils
   {
     get
     {
-      if (UnityData.IsInMainThread)
+      if (UnityThread.IsInMainThread)
         return true;
+
       Thread eventThread = EventThreadFieldRef.Invoke();
       return eventThread == null ||
              Thread.CurrentThread.ManagedThreadId == eventThread.ManagedThreadId;

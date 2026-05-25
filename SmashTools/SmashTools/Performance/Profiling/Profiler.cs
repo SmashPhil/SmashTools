@@ -43,9 +43,7 @@ public static class Profiler
 		Log.Error($"ProfilerWatch initialized in release build! This will affect performance.");
 #endif
 
-#if PROFILER
 		Harmony = new Harmony(HarmonyId);
-#endif
 	}
 
 	internal static void Enable()
