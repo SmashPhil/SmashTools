@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Xml;
+using JetBrains.Annotations;
 using RimWorld;
 using SmashTools.Xml;
 using Verse;
@@ -23,8 +25,11 @@ public static class AnimationLoader
     { typeof(AnimationController), AnimationController.FileExtension }
   };
 
+#pragma warning disable CS0649
   // TODO - unused
+  [UsedImplicitly]
   private static readonly bool LoadedAll;
+#pragma warning restore CS0649
 
   static AnimationLoader()
   {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using JetBrains.Annotations;
 using UnityEngine.Assertions;
 using Verse;
 using PropertyObjectMap = System.Collections.Generic.Dictionary
@@ -240,18 +241,23 @@ namespace SmashTools.Animations
       return GetBool(id);
     }
 
-#endregion Properties
+    #endregion Properties
 
     private class LayerData : IExposable
     {
       private readonly IAnimator animator;
       public readonly AnimationLayer layer;
-      public readonly AnimationState defaultState;
+      private readonly AnimationState defaultState;
 
+      [AssignedFromXml]
       public int frame; // Current frame in each layer
+      [AssignedFromXml]
       public AnimationState state; // Active state in each layer
+      [AssignedFromXml]
       public AnimationState nextState;
+      [AssignedFromXml]
       public AnimationTransition transition;
+      [AssignedFromXml]
       public bool paused;
 
       public LayerData(IAnimator animator, AnimationLayer layer)

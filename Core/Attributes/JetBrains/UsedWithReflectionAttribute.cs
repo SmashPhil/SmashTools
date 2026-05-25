@@ -7,6 +7,6 @@ namespace JetBrains.Annotations;
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Field |
                 AttributeTargets.Method | AttributeTargets.Constructor)]
 [Conditional("JETBRAINS_ANNOTATIONS")]
-public class UsedWithReflection : Attribute
+public class UsedWithReflectionAttribute : Attribute
 {
 }

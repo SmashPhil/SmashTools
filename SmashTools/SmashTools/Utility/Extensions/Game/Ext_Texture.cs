@@ -175,6 +175,7 @@ public static class Ext_Texture
 
     private TemporaryRenderTexture(RenderTexture renderTex)
     {
+      this.renderTex = renderTex;
       previous = RenderTexture.active;
       RenderTexture.active = renderTex;
     }
