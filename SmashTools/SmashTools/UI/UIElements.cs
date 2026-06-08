@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using RimWorld;
+using SmashTools.Rendering;
 using UnityEngine;
 using Verse;
 using Verse.Sound;
@@ -581,20 +582,43 @@ public static class UIElements
 	public static void DrawTextureWithMaterialOnGUI(Rect rect, Texture texture,
 		Material material, float angle, Rect texCoords = default)
 	{
-		Matrix4x4 matrix = GUI.matrix;
-		try
+		angle = angle.ClampAngle();
+		if (Mathf.Approximately(angle, 0))
 		{
-			angle = angle.ClampAngle();
-			if (!Mathf.Approximately(angle, 0))
-			{
-				UI.RotateAroundPivot(angle, rect.center);
-			}
 			GenUI.DrawTextureWithMaterial(rect, texture, material, texCoords);
+			return;
 		}
-		finally
+
+		// Rotate the texture (and its mask) and draw it FLAT, rather than rotating GUI.matrix - which breaks IMGUI's
+		// rectangular clipping (it both mis-positions the sprite and lets the shader's clip mask discard it).
+		// 90-degree multiples use a fast exact pixel remap; other angles use a general bilinear rotation.
+		int quarterTurns = Mathf.RoundToInt(angle / 90f);
+		bool cardinal = Mathf.Abs(angle - quarterTurns * 90f) < 0.5f;
+
+		Texture rotatedTex = cardinal
+			? RotatedTextureCache.GetRotated(texture, quarterTurns)
+			: RotatedTextureCache.GetRotatedArbitrary(texture, angle);
+		Texture originalMask = material != null ? material.GetTexture("_MaskTex") : null;
+		Texture rotatedMask = originalMask == null ? null
+			: cardinal
+				? RotatedTextureCache.GetRotated(originalMask, quarterTurns)
+				: RotatedTextureCache.GetRotatedArbitrary(originalMask, angle);
+
+		// The general path renders into a larger (diagonal) canvas so corners aren't clipped; scale the draw rect to
+		// keep the sprite the same size, centered. The 90-degree path keeps the same size (scale 1).
+		Rect drawRect = rect;
+		if (rotatedTex != null && texture != null && texture.width > 0)
 		{
-			GUI.matrix = matrix;
+			float scale = (float)rotatedTex.width / texture.width;
+			if (scale > 1.001f)
+				drawRect = new Rect(Vector2.zero, rect.size * scale) { center = rect.center };
 		}
+
+		if (rotatedMask != null)
+			material.SetTexture("_MaskTex", rotatedMask);
+		GenUI.DrawTextureWithMaterial(drawRect, rotatedTex, material, texCoords);
+		if (rotatedMask != null)
+			material.SetTexture("_MaskTex", originalMask);
 	}
 
 	/// <summary>
