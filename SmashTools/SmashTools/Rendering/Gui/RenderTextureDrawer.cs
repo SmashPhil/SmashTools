@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using CoreLib;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -11,7 +11,14 @@ public static class RenderTextureDrawer
 {
   private static readonly List<RenderData> RenderDatas = [];
 
+  private static readonly int GuiClipTexId = Shader.PropertyToID("_GUIClipTexture");
+
+  private static Material defaultMaterial;
+
   private static RenderTexture renderTexture;
+
+  // Fallback material for render data without one; drawn unlit/transparent via raw GL.
+  private static Material DefaultMaterial => defaultMaterial ??= new Material(ShaderDatabase.MetaOverlay);
 
   public static bool InUse => renderTexture;
 
@@ -49,8 +56,20 @@ public static class RenderTextureDrawer
     }
     RenderDatas.Sort();
 
-    Assert.IsNull(RenderTexture.active);
+    // Save/restore the active target rather than asserting it is null, so a blit can run mid-OnGUI
+    // (where IMGUI owns the render target) without orphaning it.
+    RenderTexture prevActive = RenderTexture.active;
     RenderTexture.active = renderTexture;
+
+    // Graphics.DrawTexture honors GUI.matrix during OnGUI; neutralize it so RimWorld's UIScale
+    // doesn't compound with the GL transform below (which already fully positions each draw).
+    Matrix4x4 prevGuiMatrix = GUI.matrix;
+    GUI.matrix = Matrix4x4.identity;
+
+    // The UI shaders clip against the global _GUIClipTexture; when blitting inside a nested GUI clip
+    // (group/scroll view) that mask would crop the draw. Swap in a full-alpha mask to disable it.
+    Texture prevGuiClipTex = Shader.GetGlobalTexture(GuiClipTexId);
+    Shader.SetGlobalTexture(GuiClipTexId, Texture2D.whiteTexture);
 
     try
     {
@@ -69,13 +88,21 @@ public static class RenderTextureDrawer
       GL.PopMatrix();
       GL.Flush();
       RenderDatas.Clear();
-      RenderTexture.active = null;
+      RenderTexture.active = prevActive;
+      GUI.matrix = prevGuiMatrix;
+      Shader.SetGlobalTexture(GuiClipTexId, prevGuiClipTex);
+      // Reset the viewport off the texture size; otherwise GL.Viewport dedupes the next blit's
+      // identical call against this value and the blit inherits a stale (e.g. icon-sized) viewport.
+      GL.Viewport(new Rect(0, 0, Screen.width, Screen.height));
     }
     return;
 
     static void DrawRenderData(Rect rect, in RenderData renderData, float scale, bool center)
     {
-      if (renderData.material && !renderData.material.SetPass(0))
+      Material material = renderData.material ? renderData.material : DefaultMaterial;
+      if (renderData.mainTex)
+        material.mainTexture = renderData.mainTex;
+      if (!material.SetPass(0))
         return;
 
       GL.PushMatrix();
@@ -90,7 +117,19 @@ public static class RenderTextureDrawer
           * Matrix4x4.Translate(new Vector3(-0.5f, -0.5f, 0f));
         GL.MultMatrix(matrix);
 
-        Graphics.DrawTexture(new Rect(0, 0, 1, 1), renderData.mainTex, renderData.material);
+        // Raw GL quad rather than Graphics.DrawTexture: the latter is IMGUI-aware and re-applies the
+        // surrounding GUI clip's viewport mid-blit, cropping the draw inside nested groups / scroll views.
+        GL.Begin(GL.QUADS);
+        GL.Color(Color.white);
+        GL.TexCoord2(0f, 1f);
+        GL.Vertex3(0f, 0f, 0f);
+        GL.TexCoord2(1f, 1f);
+        GL.Vertex3(1f, 0f, 0f);
+        GL.TexCoord2(1f, 0f);
+        GL.Vertex3(1f, 1f, 0f);
+        GL.TexCoord2(0f, 0f);
+        GL.Vertex3(0f, 1f, 0f);
+        GL.End();
       }
       finally
       {
@@ -103,9 +142,11 @@ public static class RenderTextureDrawer
         float scaleX = renderTexture.width / rect.width;
         float scaleY = renderTexture.height / rect.height;
 
+        // Render data rects are in the outer rect's (absolute) coordinate space; rebase to the rect
+        // origin before scaling into RT-pixel space, otherwise the draw lands outside the texture.
         return new Rect(
-          input.x * scaleX,
-          input.y * scaleY,
+          (input.x - rect.x) * scaleX,
+          (input.y - rect.y) * scaleY,
           input.width * scaleX,
           input.height * scaleY
         );
