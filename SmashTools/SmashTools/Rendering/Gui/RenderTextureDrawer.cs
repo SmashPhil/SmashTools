@@ -11,13 +11,12 @@ public static class RenderTextureDrawer
 {
   private static readonly List<RenderData> RenderDatas = [];
 
-  private static readonly int GuiClipTexId = Shader.PropertyToID("_GUIClipTexture");
-
   private static Material defaultMaterial;
 
   private static RenderTexture renderTexture;
 
-  // Fallback material for render data without one; drawn unlit/transparent via raw GL.
+  // Fallback for render data whose graphic has no RGB-mask material (e.g. non-RGB turrets, propellers);
+  // unlit + alpha-blended so soft-alpha textures composite correctly into the RT.
   private static Material DefaultMaterial => defaultMaterial ??= new Material(ShaderDatabase.MetaOverlay);
 
   public static bool InUse => renderTexture;
@@ -61,16 +60,6 @@ public static class RenderTextureDrawer
     RenderTexture prevActive = RenderTexture.active;
     RenderTexture.active = renderTexture;
 
-    // Graphics.DrawTexture honors GUI.matrix during OnGUI; neutralize it so RimWorld's UIScale
-    // doesn't compound with the GL transform below (which already fully positions each draw).
-    Matrix4x4 prevGuiMatrix = GUI.matrix;
-    GUI.matrix = Matrix4x4.identity;
-
-    // The UI shaders clip against the global _GUIClipTexture; when blitting inside a nested GUI clip
-    // (group/scroll view) that mask would crop the draw. Swap in a full-alpha mask to disable it.
-    Texture prevGuiClipTex = Shader.GetGlobalTexture(GuiClipTexId);
-    Shader.SetGlobalTexture(GuiClipTexId, Texture2D.whiteTexture);
-
     try
     {
       GL.PushMatrix();
@@ -89,11 +78,6 @@ public static class RenderTextureDrawer
       GL.Flush();
       RenderDatas.Clear();
       RenderTexture.active = prevActive;
-      GUI.matrix = prevGuiMatrix;
-      Shader.SetGlobalTexture(GuiClipTexId, prevGuiClipTex);
-      // Reset the viewport off the texture size; otherwise GL.Viewport dedupes the next blit's
-      // identical call against this value and the blit inherits a stale (e.g. icon-sized) viewport.
-      GL.Viewport(new Rect(0, 0, Screen.width, Screen.height));
     }
     return;
 
