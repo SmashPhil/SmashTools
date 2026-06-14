@@ -1,10 +1,29 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace SmashTools.Rendering;
 
+[PublicAPI]
 public static class RenderTextureUtil
 {
+  /// <summary>
+  /// Releases gpu-side memory and destroys the render texture
+  /// </summary>
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static void ReleaseAndDestroy(this RenderTexture renderTex)
+  {
+    if (!renderTex)
+      return;
+
+    if (renderTex.IsCreated())
+    {
+      renderTex.Release();
+    }
+    UnityEngine.Object.Destroy(renderTex);
+  }
+
   public static RenderTexture CreateRenderTexture(int width, int height)
   {
     // Unity just logs an error if you try to do this, but for clarity w/ RimWorld log window and

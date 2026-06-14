@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
-using CoreLib;
+﻿using System;
+using System.Collections.Generic;
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Verse;
@@ -12,23 +13,27 @@ public static class RenderTextureDrawer
   private static readonly List<RenderData> RenderDatas = [];
 
   private static RenderTexture renderTexture;
+  private static RenderTexture prevRenderTexture;
 
-  public static bool InUse => renderTexture;
+  public static bool InUse => renderTexture != null;
 
   public static void Add(RenderData renderData)
   {
     RenderDatas.Add(renderData);
   }
 
-  public static void Open(RenderTexture renderTexture)
+  public static void Init([NotNull] RenderTexture texture)
   {
+    if (texture == null)
+      throw new ArgumentNullException(nameof(texture));
+
     Assert.IsFalse(InUse);
     Assert.IsTrue(RenderDatas.Count == 0);
-    RenderTextureDrawer.renderTexture = renderTexture;
+    renderTexture = texture;
     RenderDatas.Clear();
   }
 
-  public static void Close()
+  public static void Clear()
   {
     RenderDatas.Clear();
     renderTexture = null;
@@ -49,9 +54,8 @@ public static class RenderTextureDrawer
     }
     RenderDatas.Sort();
 
-    Assert.IsNull(RenderTexture.active);
+    prevRenderTexture = RenderTexture.active;
     RenderTexture.active = renderTexture;
-
     try
     {
       GL.PushMatrix();
@@ -69,14 +73,19 @@ public static class RenderTextureDrawer
       GL.PopMatrix();
       GL.Flush();
       RenderDatas.Clear();
-      RenderTexture.active = null;
+      RenderTexture.active = prevRenderTexture;
     }
     return;
 
     static void DrawRenderData(Rect rect, in RenderData renderData, float scale, bool center)
     {
-      if (renderData.material && !renderData.material.SetPass(0))
+      if (renderData.material == null || !renderData.material.SetPass(0))
+      {
+        string name = renderData.mainTex ? renderData.mainTex.name : "NULL";
+        Log.ErrorOnce($"Failed to render {name} to portrait, material pass not set.",
+          renderData.mainTex.GetHashCode());
         return;
+      }
 
       GL.PushMatrix();
       GL.LoadIdentity();
@@ -90,10 +99,28 @@ public static class RenderTextureDrawer
           * Matrix4x4.Translate(new Vector3(-0.5f, -0.5f, 0f));
         GL.MultMatrix(matrix);
 
-        Graphics.DrawTexture(new Rect(0, 0, 1, 1), renderData.mainTex, renderData.material);
+        GL.Begin(GL.QUADS);
+        GL.Color(Color.white);
+
+        // Top-left
+        GL.TexCoord2(0, 1);
+        GL.Vertex3(0, 0, 0);
+
+        // Top-right
+        GL.TexCoord2(1, 1);
+        GL.Vertex3(1, 0, 0);
+
+        // Bottom-right
+        GL.TexCoord2(1, 0);
+        GL.Vertex3(1, 1, 0);
+
+        // Bottom-left
+        GL.TexCoord2(0, 0);
+        GL.Vertex3(0, 1, 0);
       }
       finally
       {
+        GL.End();
         GL.PopMatrix();
       }
       return;

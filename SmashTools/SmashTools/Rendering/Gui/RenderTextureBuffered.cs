@@ -1,7 +1,6 @@
 ﻿using System;
 using JetBrains.Annotations;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace SmashTools.Rendering;
 
@@ -9,12 +8,12 @@ namespace SmashTools.Rendering;
 /// Double buffer implementation for seemless read / write commands
 /// </summary>
 [PublicAPI]
-public class RenderTextureBuffer : IDisposable
+public sealed class RenderTextureBuffered : IDisposable
 {
   private RenderTexture rtA;
   private RenderTexture rtB;
 
-  public RenderTextureBuffer(RenderTexture rtA, RenderTexture rtB)
+  public RenderTextureBuffered(RenderTexture rtA, RenderTexture rtB)
   {
     this.rtA = rtA;
     this.rtB = rtB;
@@ -39,11 +38,8 @@ public class RenderTextureBuffer : IDisposable
 
   public void Dispose()
   {
-    rtA.Release();
-    rtB.Release();
-    Object.Destroy(rtA);
-    Object.Destroy(rtB);
-    GC.SuppressFinalize(this);
+    rtA.ReleaseAndDestroy();
+    rtB.ReleaseAndDestroy();
   }
 
   /// <summary>
@@ -51,7 +47,7 @@ public class RenderTextureBuffer : IDisposable
   /// </summary>
   /// <param name="buffer"></param>
   /// <returns>True if either render texture is not destroyed, false if both are destroyed.</returns>
-  public static implicit operator bool(RenderTextureBuffer buffer)
+  public static implicit operator bool(RenderTextureBuffered buffer)
   {
     if (buffer == null)
       return false;

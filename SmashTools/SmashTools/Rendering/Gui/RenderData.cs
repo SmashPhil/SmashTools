@@ -4,15 +4,15 @@ using UnityEngine;
 
 namespace SmashTools.Rendering;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+[PublicAPI]
 public readonly struct RenderData : IComparable<RenderData>
 {
-  public readonly Rect rect;
+  internal readonly Rect rect;
   internal readonly Texture mainTex;
   internal readonly Material material;
   internal readonly MaterialPropertyBlock propertyBlock;
-  internal readonly float layer;
-  internal readonly float angle;
+  internal readonly float layer = 0;
+  internal readonly float angle = 0;
 
   public RenderData(Rect rect, Texture mainTex, Material material,
     MaterialPropertyBlock propertyBlock)
@@ -21,8 +21,6 @@ public readonly struct RenderData : IComparable<RenderData>
     this.mainTex = mainTex;
     this.material = material;
     this.propertyBlock = propertyBlock;
-    this.layer = 0;
-    this.angle = 0;
   }
 
   public RenderData(Rect rect, Texture mainTex, Material material,
