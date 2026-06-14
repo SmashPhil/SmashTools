@@ -11,13 +11,7 @@ public static class RenderTextureDrawer
 {
   private static readonly List<RenderData> RenderDatas = [];
 
-  private static Material defaultMaterial;
-
   private static RenderTexture renderTexture;
-
-  // Fallback for render data whose graphic has no RGB-mask material (e.g. non-RGB turrets, propellers);
-  // unlit + alpha-blended so soft-alpha textures composite correctly into the RT.
-  private static Material DefaultMaterial => defaultMaterial ??= new Material(ShaderDatabase.MetaOverlay);
 
   public static bool InUse => renderTexture;
 
@@ -83,7 +77,9 @@ public static class RenderTextureDrawer
 
     static void DrawRenderData(Rect rect, in RenderData renderData, float scale, bool center)
     {
-      Material material = renderData.material ? renderData.material : DefaultMaterial;
+      Material material = renderData.material;
+      if (!material)
+        return;
       if (renderData.mainTex)
         material.mainTexture = renderData.mainTex;
       if (!material.SetPass(0))
