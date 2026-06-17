@@ -102,20 +102,23 @@ public static class RenderTextureDrawer
         GL.Begin(GL.QUADS);
         GL.Color(Color.white);
 
+        float uLeft = renderData.flip ? 1 : 0;
+        float uRight = renderData.flip ? 0 : 1;
+
         // Top-left
-        GL.TexCoord2(0, 1);
+        GL.TexCoord2(uLeft, 1);
         GL.Vertex3(0, 0, 0);
 
         // Top-right
-        GL.TexCoord2(1, 1);
+        GL.TexCoord2(uRight, 1);
         GL.Vertex3(1, 0, 0);
 
         // Bottom-right
-        GL.TexCoord2(1, 0);
+        GL.TexCoord2(uRight, 0);
         GL.Vertex3(1, 1, 0);
 
         // Bottom-left
-        GL.TexCoord2(0, 0);
+        GL.TexCoord2(uLeft, 0);
         GL.Vertex3(0, 1, 0);
       }
       finally
