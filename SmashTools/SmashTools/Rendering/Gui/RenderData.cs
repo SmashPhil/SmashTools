@@ -13,6 +13,7 @@ public readonly struct RenderData : IComparable<RenderData>
   internal readonly MaterialPropertyBlock propertyBlock;
   internal readonly float layer = 0;
   internal readonly float angle = 0;
+  internal readonly bool flip;
 
   public RenderData(Rect rect, Texture mainTex, Material material,
     MaterialPropertyBlock propertyBlock)
@@ -29,6 +30,13 @@ public readonly struct RenderData : IComparable<RenderData>
   {
     this.layer = layer;
     this.angle = angle;
+  }
+
+  public RenderData(Rect rect, Texture mainTex, Material material,
+    MaterialPropertyBlock propertyBlock, float layer, float angle, bool flip) : this(rect, mainTex, material,
+    propertyBlock, layer, angle)
+  {
+    this.flip = flip;
   }
 
   public static RenderData Invalid => new(Rect.zero, null, null, null, -1, 0);
