@@ -208,42 +208,22 @@ public static class Ext_Map
   {
     int xDiff = c1.x - c2.x;
     int zDiff = c1.z - c2.z;
-    if (xDiff < 0)
+
+    int xSign = xDiff < 0 ? -1 : xDiff > 0 ? 1 : 0;
+    int zSign = zDiff < 0 ? -1 : zDiff > 0 ? 1 : 0;
+
+    return (xSign, zSign) switch
     {
-      if (zDiff < 0)
-      {
-        return Rot8.NorthEast;
-      }
-      else if (zDiff > 0)
-      {
-        return Rot8.SouthEast;
-      }
-      return Rot8.East;
-    }
-    else if (xDiff > 0)
-    {
-      if (zDiff < 0)
-      {
-        return Rot8.NorthWest;
-      }
-      else if (zDiff > 0)
-      {
-        return Rot8.SouthWest;
-      }
-      return Rot8.West;
-    }
-    else
-    {
-      if (zDiff < 0)
-      {
-        return Rot8.North;
-      }
-      else if (zDiff > 0)
-      {
-        return Rot8.South;
-      }
-    }
-    return Rot8.Invalid;
+      (-1, -1) => Rot8.NorthEast,
+      (-1, 0) => Rot8.East,
+      (-1, 1) => Rot8.SouthEast,
+      (0, -1) => Rot8.North,
+      (0, 1) => Rot8.South,
+      (1, -1) => Rot8.NorthWest,
+      (1, 0) => Rot8.West,
+      (1, 1) => Rot8.SouthWest,
+      _ => Rot8.Invalid
+    };
   }
 
   public static List<T> AllPawnsOnMap<T>(this Map map, Faction faction = null,

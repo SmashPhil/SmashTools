@@ -52,4 +52,20 @@ public readonly struct Orientation(int value)
     int value = rot.AsInt;
     return new Orientation((value & 1) == 0 ? value >> 1 : (value >> 1) + 4);
   }
+
+  public override string ToString()
+  {
+    return value switch
+    {
+      0 => "north",
+      1 => "east",
+      2 => "south",
+      3 => "west",
+      4 => "northeast",
+      5 => "southeast",
+      6 => "southwest",
+      7 => "northwest",
+      _ => "invalid"
+    };
+  }
 }

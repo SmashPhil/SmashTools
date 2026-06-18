@@ -215,7 +215,7 @@ public sealed class UnityThread : MonoBehaviour
   /// <summary>
   /// Helper that wraps multiple actions and a wait handle for ExecuteOnMainThreadAndWait.
   /// </summary>
-  private class ConcurrentAction : IDisposable
+  private sealed class ConcurrentAction : IDisposable
   {
     private readonly Action action;
     private readonly ManualResetEventSlim waitHandle = new();
@@ -258,7 +258,6 @@ public sealed class UnityThread : MonoBehaviour
     public void Dispose()
     {
       waitHandle.Dispose();
-      GC.SuppressFinalize(this);
     }
   }
 }

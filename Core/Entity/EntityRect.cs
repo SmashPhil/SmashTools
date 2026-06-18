@@ -8,11 +8,11 @@ using UnityEngine;
 namespace CoreLib;
 
 [PublicAPI]
-public struct EntityRect : IEnumerable<int2>
+public readonly struct EntityRect : IEnumerable<int2>
 {
-  private readonly int2 position;
-  private readonly int2 size;
-  private readonly Orientation orientation;
+  public readonly int2 position;
+  public readonly int2 size;
+  public readonly Orientation orientation;
 
   public EntityRect(int2 position, int2 size, Orientation orientation)
   {
@@ -49,6 +49,7 @@ public struct EntityRect : IEnumerable<int2>
     private readonly Orientation orientation;
 
     private readonly int width;
+    private readonly bool evenVehicleWidth;
 
     private readonly int xMin;
     private readonly int xMax;
@@ -72,6 +73,7 @@ public struct EntityRect : IEnumerable<int2>
       this.orientation = orientation;
 
       this.width = 0;
+      evenVehicleWidth = width.IsEven();
       xBias = 0;
       yBias = 0;
       rowCount = 0;
@@ -81,10 +83,18 @@ public struct EntityRect : IEnumerable<int2>
 
       if (orientation.IsCardinal)
       {
-        xMin = -width / 2;
-        xMax = xMin + width - 1;
-        yMin = -height / 2;
-        yMax = yMin + height - 1;
+        int xLength = orientation.IsHorizontal ? height : width;
+        int yLength = orientation.IsHorizontal ? width : height;
+
+        xMin = -(xLength - 1) / 2;
+        xMax = xMin + xLength - 1;
+        yMin = -(yLength - 1) / 2;
+        yMax = yMin + yLength - 1;
+        if (orientation.IsHorizontal && width.IsEven())
+        {
+          yMin--;
+          yMax--;
+        }
 
         x = xMin - 1;
         y = yMin;
@@ -165,7 +175,13 @@ public struct EntityRect : IEnumerable<int2>
         x = xMin;
         y++;
       }
-      return y <= yMax;
+      if (y > yMax)
+      {
+        return false;
+      }
+
+      current = position + new int2(x, y);
+      return true;
     }
 
     private bool MoveDiagonal()
@@ -199,7 +215,8 @@ public struct EntityRect : IEnumerable<int2>
         current = position + orientation.AsInt switch
         {
           Orientation.NorthEast or Orientation.SouthWest => new int2(x1, y1),
-          Orientation.SouthEast or Orientation.NorthWest => new int2(x1, -y1),
+          Orientation.SouthEast or Orientation.NorthWest => new int2(x1, -y1) -
+            (evenVehicleWidth ? new int2(1, 1) : default),
           _ => throw new InvalidOperationException(nameof(orientation))
         };
 
