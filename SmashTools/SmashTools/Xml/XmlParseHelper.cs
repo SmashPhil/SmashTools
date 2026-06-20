@@ -30,13 +30,7 @@ public static class XmlParseHelper
     ParseHelper.Parsers<Rot8>.Register(Rot8.FromString);
     ParseHelper.Parsers<Quadrant>.Register(Quadrant.FromString);
     ParseHelper.Parsers<RimWorldTime>.Register(RimWorldTime.FromString);
-    ParseHelper.Parsers<KeyFrame>.Register(ParseKeyFrame);
     ParseHelper.Parsers<Guid>.Register(ParseGuid);
-  }
-
-  private static KeyFrame ParseKeyFrame(string entry)
-  {
-    return KeyFrame.FromString(entry);
   }
 
   private static Guid ParseGuid(string entry)
