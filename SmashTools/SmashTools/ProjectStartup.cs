@@ -34,10 +34,6 @@ public static class ProjectStartup
     CoroutineManager.Instance.StartCoroutine(UnpatchAfterSeconds(UnpatchDelay));
 #endif
 
-#if ANIMATOR
-    AnimationLoader.ResolveAllReferences();
-#endif
-
     ConditionalPatches.DumpPatchReport();
     HarmonyPatcher.DumpPatchReport();
   }
