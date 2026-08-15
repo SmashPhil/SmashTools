@@ -5,7 +5,7 @@ namespace SmashTools.Patching;
 /// <summary>
 /// Interface for declaring category of Patch methods. Used for organization purposes only.
 /// </summary>
-[PublicAPI]
+[PublicAPI, UsedWithReflection]
 public interface IPatchCategory
 {
   /// <summary>

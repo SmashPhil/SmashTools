@@ -37,10 +37,13 @@ public static class ComponentCache
 
   internal static void PreCacheInst(Map __instance)
   {
+    if (Scribe.mode != LoadSaveMode.ResolvingCrossRefs)
+      return;
+
     foreach (Type type in DetachedComponentTypes)
     {
       GenGeneric.InvokeStaticMethodOnGenericType(typeof(DetachedMapComponentCache<>), type,
-        nameof(DetachedMapComponentCache<DetachedMapComponent>.AddComponent), __instance);
+        nameof(DetachedMapComponentCache<>.AddComponent), __instance);
     }
   }
 
@@ -49,7 +52,7 @@ public static class ComponentCache
     foreach (Type type in DetachedComponentTypes)
     {
       GenGeneric.InvokeStaticMethodOnGenericType(typeof(DetachedMapComponentCache<>), type,
-        nameof(DetachedMapComponentCache<DetachedMapComponent>.AddComponent), map);
+        nameof(DetachedMapComponentCache<>.AddComponent), map);
     }
   }
 
@@ -58,12 +61,12 @@ public static class ComponentCache
     foreach (Type type in PriorityComponentTypes)
     {
       GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-        nameof(MapComponentCache<MapComponent>.ClearMap), map);
+        nameof(MapComponentCache<>.ClearMap), map);
     }
     foreach (Type type in DetachedComponentTypes)
     {
       GenGeneric.InvokeStaticMethodOnGenericType(typeof(DetachedMapComponentCache<>), type,
-        nameof(DetachedMapComponentCache<DetachedMapComponent>.ClearMap), map);
+        nameof(DetachedMapComponentCache<>.ClearMap), map);
     }
   }
 
@@ -77,12 +80,12 @@ public static class ComponentCache
     foreach (Type type in PriorityComponentTypes)
     {
       GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-        nameof(MapComponentCache<MapComponent>.ClearAll));
+        nameof(MapComponentCache<>.ClearAll));
     }
     foreach (Type type in DetachedComponentTypes)
     {
       GenGeneric.InvokeStaticMethodOnGenericType(typeof(DetachedMapComponentCache<>), type,
-        nameof(DetachedMapComponentCache<DetachedMapComponent>.ClearAll));
+        nameof(DetachedMapComponentCache<>.ClearAll));
     }
   }
 
@@ -92,7 +95,7 @@ public static class ComponentCache
     foreach (Type type in PriorityComponentTypes)
     {
       count += (int)GenGeneric.InvokeStaticMethodOnGenericType(typeof(MapComponentCache<>), type,
-        nameof(MapComponentCache<MapComponent>.Count));
+        nameof(MapComponentCache<>.Count));
     }
     return count;
   }
@@ -104,7 +107,7 @@ public static class ComponentCache
     {
       count += (int)GenGeneric.InvokeStaticMethodOnGenericType(typeof(DetachedMapComponentCache<>),
         type,
-        nameof(DetachedMapComponentCache<DetachedMapComponent>.Count));
+        nameof(DetachedMapComponentCache<>.Count));
     }
     return count;
   }

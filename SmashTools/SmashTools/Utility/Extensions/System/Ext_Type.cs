@@ -13,20 +13,22 @@ namespace SmashTools;
 [PublicAPI]
 public static class Ext_Type
 {
-	/// <summary>
-	/// Returns <see langword="true"/> if the specified <paramref name="type"/> is a built-in numeric type.
-	/// </summary>
-	/// <param name="type">The type to test. </param>
-	/// <returns>
-	/// <see langword="true"/> for <see cref="byte"/>, <see cref="sbyte"/>, <see cref="ushort"/>,
-	/// <see cref="uint"/>, <see cref="ulong"/>, <see cref="short"/>, <see cref="int"/>,
-	/// <see cref="long"/>, <see cref="decimal"/>, <see cref="double"/>, <see cref="float"/>; otherwise <see langword="false"/>.
-	/// </returns>
-	/// <remarks>
-	/// This does not treat <see cref="char"/> or <see cref="bool"/> as numeric.
-	/// Nullable numeric types (e.g., <see cref="Nullable{T}"/> where <c>T</c> is numeric) return <see langword="false"/>.
-	/// </remarks>
-	/// <exception cref="ArgumentNullException">If the type argument is null</exception>
+  // TODO 1.7 - Remove
+  /// <summary>
+  /// Returns <see langword="true"/> if the specified <paramref name="type"/> is a built-in numeric type.
+  /// </summary>
+  /// <param name="type">The type to test. </param>
+  /// <returns>
+  /// <see langword="true"/> for <see cref="byte"/>, <see cref="sbyte"/>, <see cref="ushort"/>,
+  /// <see cref="uint"/>, <see cref="ulong"/>, <see cref="short"/>, <see cref="int"/>,
+  /// <see cref="long"/>, <see cref="decimal"/>, <see cref="double"/>, <see cref="float"/>; otherwise <see langword="false"/>.
+  /// </returns>
+  /// <remarks>
+  /// This does not treat <see cref="char"/> or <see cref="bool"/> as numeric.
+  /// Nullable numeric types (e.g., <see cref="Nullable{T}"/> where <c>T</c> is numeric) return <see langword="false"/>.
+  /// </remarks>
+  /// <exception cref="ArgumentNullException">If the type argument is null</exception>
+  [Obsolete("Use CoreLib::TypeUtils.IsNumericType instead, this will be removed from SmashTools in 1.7", error: true)]
 	public static bool IsNumericType([NotNull] this Type type)
 	{
 		if (type == null)

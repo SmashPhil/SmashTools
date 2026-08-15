@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using SmashTools.Xml;
 using Verse;
 
 namespace SmashTools.Patching;
@@ -14,7 +13,7 @@ internal class Patch_Components : IPatchCategory
       postfix: new HarmonyMethod(typeof(ComponentCache),
         nameof(ComponentCache.PreCache)));
     HarmonyPatcher.Patch(
-      original: AccessTools.Method(typeof(Map), nameof(Map.FinalizeLoading)),
+      original: AccessTools.Method(typeof(Map), nameof(Map.ExposeData)),
       prefix: new HarmonyMethod(typeof(ComponentCache),
         nameof(ComponentCache.PreCacheInst)));
     HarmonyPatcher.Patch(

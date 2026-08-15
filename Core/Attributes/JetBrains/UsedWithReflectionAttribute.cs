@@ -5,7 +5,7 @@ namespace JetBrains.Annotations;
 
 [PublicAPI, MeansImplicitUse(ImplicitUseTargetFlags.Itself)]
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Field | AttributeTargets.Struct |
-                AttributeTargets.Method | AttributeTargets.Constructor)]
+                AttributeTargets.Interface | AttributeTargets.Method | AttributeTargets.Constructor)]
 [Conditional("JETBRAINS_ANNOTATIONS")]
 public class UsedWithReflectionAttribute : Attribute
 {
