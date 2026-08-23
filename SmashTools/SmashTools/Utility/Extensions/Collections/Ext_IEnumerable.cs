@@ -55,7 +55,7 @@ public static class Ext_IEnumerable
       (predicate is null ? enumerable.Any() : enumerable.Any(e => predicate(e)));
   }
 
-  [ContractAnnotation("enumerable:null => false;")]
+  [ContractAnnotation("enumerable:null => true;")]
   public static bool NullOrEmpty<T>(this IEnumerable<T> enumerable)
   {
     if (enumerable == null)
