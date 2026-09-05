@@ -61,7 +61,14 @@ public sealed class UnityThread : MonoBehaviour
   {
     while (actionQueue.TryDequeue(out Action action))
     {
-      action();
+      try
+      {
+        action();
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Exception thrown executing action from UnityThread.\n{ex}");
+      }
     }
 
     for (int i = onUpdateMethods.Count - 1; i >= 0; i--)
