@@ -41,4 +41,16 @@ public static class OSUtils
 
     return null;
   }
+
+  public static string GetPlatformBinaryFileExt(OSPlatform platform)
+  {
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+      return ".dll";
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+      return ".so";
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+      return ".dylib";
+
+    return null;
+  }
 }
