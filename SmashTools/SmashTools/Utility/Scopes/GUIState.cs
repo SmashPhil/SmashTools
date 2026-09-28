@@ -20,7 +20,13 @@ public static class GUIState
 		GUI.color = Color.white;
 	}
 
-	public readonly struct Disabler : IDisposable
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public static Disabler DisableIf(bool disable)
+  {
+    return new Disabler(disable);
+  }
+
+  public readonly struct Disabler : IDisposable
 	{
 		private readonly bool prevState;
 		private readonly Color prevColor;
@@ -32,7 +38,17 @@ public static class GUIState
       Disable();
     }
 
-		void IDisposable.Dispose()
+    public Disabler(bool disable)
+    {
+      prevState = GUI.enabled;
+      prevColor = GUI.color;
+      if (disable)
+      {
+        Disable();
+      }
+    }
+
+    void IDisposable.Dispose()
 		{
 			GUI.enabled = prevState;
 			GUI.color = prevColor;
