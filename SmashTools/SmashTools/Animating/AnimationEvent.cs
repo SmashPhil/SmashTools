@@ -1,35 +1,29 @@
-﻿using JetBrains.Annotations;
+﻿using SmashTools.Xml;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 
-namespace SmashTools;
-
-[PublicAPI]
-public class AnimationEvent<T>
+namespace SmashTools.Animations
 {
-  public float triggerAt;
-  public DynamicDelegate<T> method;
-  public AnimationTrigger type = AnimationTrigger.EqualTo;
-  public AnimationFrequency frequency = AnimationFrequency.OneShot;
+	public class AnimationEvent : IXmlExport, ISelectableUI, IComparable<AnimationEvent>
+	{
+		public int frame;
+		public DynamicDelegate method;
 
-  public bool EventFrame(float t)
-  {
-    return type switch
-    {
-      AnimationTrigger.GreaterThan => t >= triggerAt,
-      AnimationTrigger.EqualTo     => Mathf.Approximately(t, triggerAt),
-      _                            => false,
-    };
-  }
+		int IComparable<AnimationEvent>.CompareTo(AnimationEvent other)
+		{
+			if (frame < other.frame) return -1;
+			if (frame > other.frame) return 1;
+			return 0;
+		}
 
-  public enum AnimationTrigger
-  {
-    EqualTo,
-    GreaterThan,
-  }
-
-  public enum AnimationFrequency
-  {
-    OneShot,
-    Continuous
-  }
+		void IXmlExport.Export()
+		{
+			XmlExporter.WriteObject(nameof(frame), frame);
+			XmlExporter.WriteObject(nameof(method), method);
+		}
+	}
 }

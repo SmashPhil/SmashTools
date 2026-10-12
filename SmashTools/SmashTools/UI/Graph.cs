@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using Verse;
 using SmashTools.Animations;
+using AnimationCurve = SmashTools.Animations.AnimationCurve;
 
 namespace SmashTools
 {
