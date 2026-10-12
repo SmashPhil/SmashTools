@@ -4,48 +4,23 @@ using JetBrains.Annotations;
 namespace CoreLib;
 
 /// <summary>
-/// Reference wrapper in place of ref fields which are not supported in .Net Framework 4.8
-/// </summary>
-public class Ref<T>
-{
-  public T Value { get; set; }
-
-  public ReadOnly View => new(this);
-
-  public static implicit operator T(Ref<T> reference)
-  {
-    return reference.Value;
-  }
-
-  public readonly struct ReadOnly(Ref<T> reference)
-  {
-    public T Value => reference.Value;
-
-    public static implicit operator T(ReadOnly view)
-    {
-      return view.Value;
-    }
-  }
-}
-
-/// <summary>
 /// Records the current value of a class object and rolls it back when this object goes out of scope.
 /// </summary>
 /// <typeparam name="T">Type of the object being rolled back.</typeparam>
 [PublicAPI]
-public readonly struct ScopedReferenceRollback<T> : IDisposable
+public readonly ref struct ScopedRollback<T> : IDisposable
 {
-  private readonly Ref<T> reference;
+  private readonly ref T reference;
   private readonly T value;
 
   /// <summary>
   /// Create temporary value state that rolls back to previous value when this struct goes out of scope.
   /// </summary>
   /// <param name="reference">Reference to rollback when this struct goes out of scope.</param>
-  public ScopedReferenceRollback(Ref<T> reference)
+  public ScopedRollback(ref T reference)
   {
-    this.reference = reference;
-    value = reference.Value;
+    this.reference = ref reference;
+    value = reference;
   }
 
   /// <summary>
@@ -53,15 +28,15 @@ public readonly struct ScopedReferenceRollback<T> : IDisposable
   /// </summary>
   /// <param name="reference">Reference to rollback when this struct goes out of scope.</param>
   /// <param name="value">Value to assign temporarily.</param>
-  public ScopedReferenceRollback(Ref<T> reference, T value)
+  public ScopedRollback(ref T reference, T value)
   {
-    this.reference = reference;
-    this.value = reference.Value;
-    reference.Value = value;
+    this.reference = ref reference;
+    this.value = reference;
+    this.reference = value;
   }
 
   public void Dispose()
   {
-    reference.Value = value;
+    reference = value;
   }
 }

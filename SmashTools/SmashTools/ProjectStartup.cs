@@ -28,7 +28,7 @@ public static class ProjectStartup
         nameof(DrawDebugWindowButton)));
 
     // Input handling
-    UnityThread.StartGUI(MainMenuKeyBindHandler.HandleKeyInputs);
+    UnityThread.StartGui(MainMenuKeyBindHandler.HandleKeyInputs);
 
     // Need to wait for static constructor patches to all run so we don't miss any unpatches from bad timing.
     CoroutineManager.Instance.StartCoroutine(UnpatchAfterSeconds(UnpatchDelay));

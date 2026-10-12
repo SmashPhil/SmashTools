@@ -168,10 +168,8 @@ namespace SmashTools
 
 		private static void ExecuteTesting(GameState gameState)
 		{
-#if DEV_TOOLS
 			if (TestWatcher.RunningTests)
 				return;
-#endif
 
 			if (Enabled)
 			{

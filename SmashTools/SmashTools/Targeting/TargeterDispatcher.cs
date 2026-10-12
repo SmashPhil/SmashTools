@@ -59,7 +59,7 @@ public static class TargeterDispatcher
       if (Targeters.Count == 0)
       {
         UnityThread.StartUpdate(TargeterUpdate);
-        UnityThread.StartGUI(TargeterOnGUI);
+        UnityThread.StartGui(TargeterOnGUI);
       }
       Targeters.Push(targeter);
       targeter.OnStart();

@@ -66,8 +66,6 @@ public static class WindowEvents
 		private readonly List<Data> observerData = [];
 		private readonly List<IWindowEventListener> listenersToRemove = [];
 
-		private bool eventRaising;
-
 		public void RegisterImpl(IWindowEventListener listener, Window sender, OnEvent onEvent, Event ev)
 		{
 			Data data = observerData.FirstOrDefault(data => data.listener == listener);
@@ -98,17 +96,14 @@ public static class WindowEvents
 
 		public void Raise(Event ev)
 		{
-			using (new ScopedValueRollback<bool>(ref eventRaising))
-			{
-				foreach (Data data in observerData)
-				{
-					if (data.events.TryGetValue(ev, out OnEvent onEvent))
-					{
-						onEvent();
-					}
-				}
-			}
-			RemoveListeners();
+      foreach (Data data in observerData)
+      {
+        if (data.events.TryGetValue(ev, out OnEvent onEvent))
+        {
+          onEvent();
+        }
+      }
+      RemoveListeners();
 		}
 
 		private void RemoveListeners()

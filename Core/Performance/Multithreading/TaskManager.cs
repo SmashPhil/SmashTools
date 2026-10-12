@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using SmashTools;
 using UnityEngine.Assertions;
 
 namespace CoreLib.Performance;
@@ -24,7 +23,7 @@ public static class TaskManager
       catch (Exception ex)
       {
         // Uncaught exceptions from thread pool thread will crash
-        Trace.Fail($"Exception thrown executing task.\n{ex}");
+        Logger.Error($"Exception thrown executing task.\n{ex}");
       }
     }
   }

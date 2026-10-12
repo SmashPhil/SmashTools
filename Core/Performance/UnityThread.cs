@@ -129,7 +129,7 @@ public sealed class UnityThread : MonoBehaviour
   /// Enqueues an OnGui delegate to run each GUI event. Must be called from the main thread.
   /// </summary>
   /// <param name="onGui">The delegate to enqueue.</param>
-  public static void StartGUI(OnGui onGui)
+  public static void StartGui(OnGui onGui)
   {
     if (!IsInMainThread)
     {
@@ -145,7 +145,7 @@ public sealed class UnityThread : MonoBehaviour
   /// Must be called from the main thread.
   /// </summary>
   /// <param name="onGui">The delegate to remove.</param>
-  public static void RemoveOnGUI(OnGui onGui)
+  public static void RemoveOnGui(OnGui onGui)
   {
     if (!IsInMainThread)
     {
@@ -217,6 +217,11 @@ public sealed class UnityThread : MonoBehaviour
   internal static bool InUpdateQueue(OnUpdate update)
   {
     return Instance.onUpdateMethods.Contains(update);
+  }
+
+  public static void ThrowIfOutsideMainThread(string message = null)
+  {
+    throw new InvalidOperationException(message);
   }
 
   /// <summary>

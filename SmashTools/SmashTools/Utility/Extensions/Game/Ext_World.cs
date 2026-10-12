@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using RimWorld.Planet;
 using Unity.Collections;
 using UnityEngine;
@@ -89,7 +90,7 @@ public static class Ext_World
     }
 
     tile.Layer.Filler.FloodFill(tile, _ => true,
-      delegate(PlanetTile currentTile, int dist)
+      delegate (PlanetTile currentTile, int dist)
       {
         // ReSharper disable AccessToModifiedClosure
         if (dist > radius + 1)
@@ -102,7 +103,7 @@ public static class Ext_World
     WorldGrid worldGrid = Find.WorldGrid;
     Vector3 c = worldGrid.GetTileCenter(tile);
     Vector3 n = c.normalized;
-    tileNeighbors.Sort(delegate(PlanetTile a, PlanetTile b)
+    tileNeighbors.Sort(delegate (PlanetTile a, PlanetTile b)
     {
       float num = Vector3.Dot(n,
         Vector3.Cross(worldGrid.GetTileCenter(a) - c, worldGrid.GetTileCenter(b) - c));

@@ -1,10 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
-using UnityEngine;
 using Logger = CoreLib.Logger;
 
-// TODO 1.7 - Change to CoreLib
+// TODO 1.8 - Change to CoreLib
 namespace SmashTools;
 
 /// <summary>
@@ -15,41 +14,48 @@ namespace SmashTools;
 public static class Trace
 {
   [Conditional("TRACE")]
-  public static void IsTrue(bool condition, string message = null)
+  public static void IsTrue(bool condition, string message = null, [CallerFilePath] string filePath = "",
+    [CallerLineNumber] int lineNumber = 0)
   {
     if (condition)
       return;
-    Fail(message);
+
+    Fail(message, filePath, lineNumber);
   }
 
   [Conditional("TRACE")]
-  public static void IsFalse(bool condition, string message = null)
+  public static void IsFalse(bool condition, string message = null, [CallerFilePath] string filePath = "",
+    [CallerLineNumber] int lineNumber = 0)
   {
     if (!condition)
       return;
-    Fail(message);
+
+    Fail(message, filePath, lineNumber);
   }
 
   [Conditional("TRACE")]
-  public static void IsNull<T>(T obj, string message = null) where T : class
+  public static void IsNull<T>(T obj, string message = null, [CallerFilePath] string filePath = "",
+    [CallerLineNumber] int lineNumber = 0) where T : class
   {
     if (obj == null)
       return;
-    Fail(message);
+
+    Fail(message, filePath, lineNumber);
   }
 
   [Conditional("TRACE")]
-  public static void IsNotNull<T>(T obj, string message = null) where T : class
+  public static void IsNotNull<T>(T obj, string message = null, [CallerFilePath] string filePath = "",
+    [CallerLineNumber] int lineNumber = 0) where T : class
   {
     if (obj != null)
       return;
-    Fail(message);
+
+    Fail(message, filePath, lineNumber);
   }
 
   [Conditional("TRACE")]
-  public static void Fail(string message = null)
+  public static void Fail(string message = null, [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0)
   {
-    Logger.Error(
-      $"{message ?? "Assertion Failed"}\nStackTrace:\n{StackTraceUtility.ExtractStackTrace()}");
+    Logger.Error($"{message ?? "Assertion Failed"} ({filePath} ln. {lineNumber})");
   }
 }

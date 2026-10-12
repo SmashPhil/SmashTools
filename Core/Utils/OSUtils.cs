@@ -1,13 +1,11 @@
 ﻿using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 
-namespace CoreLib.Burst;
+namespace CoreLib;
 
 [PublicAPI]
 public static class OSUtils
 {
-  public const string BurstFolder = "Burst";
-
   private const string FolderNameWindows = "Windows";
   private const string FolderNameLinux = "Linux";
   private const string FolderNameMac = "OSX";

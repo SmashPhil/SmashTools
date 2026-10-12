@@ -7,9 +7,7 @@
     <RootNamespace>SmashTools</RootNamespace>
     <AssemblyName>SmashTools</AssemblyName>
     <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
-
-    <ModDir>..\..\..\</ModDir>
-		<OutDir>$(ModDir)\1.6\Assemblies\</OutDir>
+    <OutDir>$(ModDir)\1.7\Assemblies\</OutDir>
 	</PropertyGroup>
 
 	<!-- AssemblyInfo -->
@@ -20,25 +18,18 @@
 	</ItemGroup>
 
 	<!-- Dependencies -->
-	<ItemGroup Condition="'$(UseLocalBurstLib)' != 'true'">
-		<PackageReference Include="SmashTools.Burst" Version="1.2.4" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(UseLocalBurstLib)' == 'true'">
-		<Reference Include="SmashToolsBurst">
-			<HintPath>$(OutDir)\SmashToolsBurst.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-	</ItemGroup>
-
 	<ItemGroup>
-		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*" />
 		<PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" />
-		<PackageReference Include="PolySharp" Version="1.*" />
 
 		<Reference Include="CoreLib">
 			<HintPath>$(OutDir)\CoreLib.dll</HintPath>
 			<Private>False</Private>
 		</Reference>
+
+    <Reference Include="SmashTools.PathFinder">
+      <HintPath>$(OutDir)\SmashTools.PathFinder.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
 
     <ProjectReference Include="$(ModDir)\SmashTools\SmashTools.Analyzer\SmashTools.Analyzer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>

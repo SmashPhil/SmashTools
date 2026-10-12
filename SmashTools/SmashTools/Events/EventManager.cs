@@ -11,16 +11,20 @@ namespace SmashTools;
 [PublicAPI]
 public class EventManager<T> : IEventControl
 {
-  // TODO 1.7 - Change access modifier to private
   /// <summary>
   /// Internal storage for event triggers keyed by <typeparamref name="T"/>.
   /// </summary>
-  public readonly Dictionary<T, EventTrigger> map = [];
+  private readonly Dictionary<T, EventTrigger> map = [];
 
   /// <summary>
   /// Gets or sets whether all events in this manager are enabled. When <see langword="false"/>, no callbacks will execute.
   /// </summary>
   public bool Enabled { get; private set; } = true;
+
+  /// <summary>
+  /// Number of events registered
+  /// </summary>
+  public int Count => map.Count;
 
   /// <summary>
   /// Gets or sets whether all events in this manager are enabled. When <see langword="false"/>, no callbacks will execute.

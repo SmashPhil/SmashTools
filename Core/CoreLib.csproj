@@ -3,14 +3,10 @@
 	<PropertyGroup>
 		<Authors>Smash Phil</Authors>
 		<Description>Developer tool SDK for RimWorld mods. Primarily used by Vehicle Framework.</Description>
-		<Product>SmashTools - Core</Product>
+		<Product>CoreLib</Product>
     <RootNamespace>CoreLib</RootNamespace>
     <AssemblyName>CoreLib</AssemblyName>
-    <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
-
-		<ModDir>..\..\</ModDir>
-		<OutDir>$(ModDir)\1.6\Assemblies\</OutDir>
-		<RefDir>$(ModDir)\..\..\RimWorldWin64_Data\Managed\</RefDir>
+    <OutDir>$(ModDir)\1.7\Assemblies\</OutDir>
 	</PropertyGroup>
 
 	<!-- AssemblyInfo -->
@@ -31,65 +27,39 @@
 		<RemoveDir Directories="$(OutDir)" />
 	</Target>
 
-	<!-- Dependencies -->
-	<PropertyGroup>
-		<UseKrafsPackageRef Condition="!Exists('$(RefDir)')">true</UseKrafsPackageRef>
-	</PropertyGroup>
+	<ItemGroup>
+    <Reference Include="Brutal.Glfw">
+      <HintPath>$(RefDir)\Brutal.Glfw.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+
+    <Reference Include="Brutal.ImGui">
+      <HintPath>$(RefDir)\Brutal.ImGui.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+
+    <Reference Include="Brutal.Core.Common">
+      <HintPath>$(RefDir)\Brutal.Core.Common.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+
+    <Reference Include="Brutal.Core.Numerics">
+      <HintPath>$(RefDir)\Brutal.Core.Numerics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+
+    <Reference Include="Brutal.Vulkan">
+      <HintPath>$(RefDir)\Brutal.Vulkan.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+
+    <Reference Include="Brutal.Vulkan.Abstractions">
+      <HintPath>$(RefDir)\Brutal.Vulkan.Abstractions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="PolySharp" Version="1.*" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(UseKrafsPackageRef)' == 'true'">
-		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(UseKrafsPackageRef)' != 'true'">
-		<Reference Include="System">
-			<HintPath>$(RefDir)\System.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="System.Xml">
-			<HintPath>$(RefDir)\System.Xml.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="System.Xml.Linq">
-			<HintPath>$(RefDir)\System.Xml.Linq.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="System">
-			<HintPath>$(RefDir)\mscorlib.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="Unity.Mathematics">
-			<HintPath>$(RefDir)\Unity.Mathematics.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="UnityEngine">
-			<HintPath>$(RefDir)\UnityEngine.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="UnityEngine.CoreModule">
-			<HintPath>$(RefDir)\UnityEngine.CoreModule.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="UnityEngine.IMGUIModule">
-			<HintPath>$(RefDir)\UnityEngine.IMGUIModule.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="UnityEngine.InputLegacyModule">
-			<HintPath>$(RefDir)\UnityEngine.InputLegacyModule.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="UnityEngine.InputModule">
-			<HintPath>$(RefDir)\UnityEngine.InputModule.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-		<Reference Include="UnityEngine.TextRenderingModule">
-			<HintPath>$(RefDir)\UnityEngine.TextRenderingModule.dll</HintPath>
-			<Private>False</Private>
-		</Reference>
-	</ItemGroup>
-	<ItemGroup>
 		<Folder Include="Algorithms\" />
-		<Folder Include="Properties\" />
 	</ItemGroup>
 </Project>

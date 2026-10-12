@@ -6,10 +6,11 @@ using JetBrains.Annotations;
 using Unity.Burst;
 using UnityEngine.Assertions;
 using Verse;
-using static CoreLib.Burst.OSUtils;
+using static CoreLib.OSUtils;
 
 namespace SmashTools.Burst;
 
+// TODO 1.8 - Remove
 [PublicAPI]
 public static class BurstAssemblyLoader
 {
@@ -17,6 +18,7 @@ public static class BurstAssemblyLoader
   /// Loads burst compiled assemblies at runtime.
   /// </summary>
   /// <param name="mod">Mod to load burst assemblies for.</param>
+  [Obsolete("Burst is not supported in Waylith", error: true)]
   public static bool LoadAllFor(ModContentPack mod)
   {
     // Not supported for 32bit builds
@@ -34,12 +36,12 @@ public static class BurstAssemblyLoader
     }
 
     bool anyLoaded = false;
-    string folderPath = System.IO.Path.Combine(BurstFolder, folderName);
+    string folderPath = Path.Combine("Burst", folderName);
     List<string> folders = mod.foldersToLoadDescendingOrder;
     for (int i = folders.Count; --i >= 0;)
     {
       string folder = folders[i];
-      DirectoryInfo directoryInfo = new(System.IO.Path.Combine(folder, folderPath));
+      DirectoryInfo directoryInfo = new(Path.Combine(folder, folderPath));
       if (!directoryInfo.Exists)
         continue;
 
@@ -68,6 +70,7 @@ public static class BurstAssemblyLoader
     return anyLoaded;
   }
 
+  [Obsolete("Burst is not supported in Waylith", error: true)]
   public static bool IsValidFileExtension(string extension)
   {
     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

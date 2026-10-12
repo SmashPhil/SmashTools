@@ -9,7 +9,7 @@ using Verse;
 
 namespace SmashTools;
 
-// TODO 1.7 - Move over non-unity specific math functions to MathUtils
+// TODO 1.8 - Move over non-unity specific math functions to MathUtils
 [PublicAPI]
 public static class Ext_Math
 {

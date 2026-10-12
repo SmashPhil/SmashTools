@@ -1,8 +1,9 @@
-﻿using CoreLib.Performance;
+﻿using CoreLib.Jobs;
+using CoreLib.Performance;
 using UnityEngine;
 using Verse;
 
-namespace SmashTools.Burst;
+namespace SmashTools.Jobs;
 
 [StaticConstructorOnStartup]
 internal static class JobDispatch

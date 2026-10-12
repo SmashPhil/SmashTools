@@ -225,6 +225,6 @@ public static class Ext_EventManager
   /// <returns><see langword="true"/> if the manager is non-null and has one or more events; otherwise, <c>false</c>.</returns>
   public static bool Initialized<T>(this EventManager<T> manager)
   {
-    return manager != null && !manager.map.NullOrEmpty();
+    return manager is { Count: > 0 };
   }
 }

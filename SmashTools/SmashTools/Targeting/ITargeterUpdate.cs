@@ -13,7 +13,7 @@ public interface ITargeterUpdate<T>
   /// </summary>
   void TargeterOnGUI();
 
-  // TODO 1.7 - Change TargetData to ReadOnlyList<T>
+  // TODO 1.8 - Change TargetData to ReadOnlyList<T>
   /// <summary>
   /// <see cref="TargeterDispatcher.TargeterUpdate" /> hook for per-frame logic while the targeter is active.
   /// </summary>
