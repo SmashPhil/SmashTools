@@ -47,6 +47,10 @@ public static class RenderTextureDrawer
   /// <param name="center">Set rect position of all render data to center of outer rect. Use for 'icon' images that need all offsets erased.</param>
   public static void Draw(Rect rect, float scale = 1, bool center = false)
   {
+    // Waylith discards GL primitives outside of repaint.
+    if (Event.current is not { type: EventType.Repaint })
+      return;
+
     if (!renderTexture || !renderTexture.IsCreated())
     {
       Trace.Fail("Trying to blit with null render texture.");
