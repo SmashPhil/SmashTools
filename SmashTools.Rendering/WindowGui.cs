@@ -53,11 +53,7 @@ internal sealed class WindowGui : IDisposable
 
     windowStack.WindowsUpdate();
 
-    GUI.color = Color.white;
-    GUI.backgroundColor = Color.white;
-    GUI.contentColor = Color.white;
-    GUI.enabled = true;
-    GUI.changed = false;
+    using GuiStateScope state = new();
 
     if (frameNumber == 0)
     {
@@ -131,6 +127,39 @@ internal sealed class WindowGui : IDisposable
     public void Dispose()
     {
       ImGui.SetCurrentContext(previous);
+    }
+  }
+
+  private readonly struct GuiStateScope : IDisposable
+  {
+    private readonly Color color;
+    private readonly Color backgroundColor;
+    private readonly Color contentColor;
+    private readonly bool enabled;
+    private readonly bool changed;
+
+    public GuiStateScope()
+    {
+      color = GUI.color;
+      backgroundColor = GUI.backgroundColor;
+      contentColor = GUI.contentColor;
+      enabled = GUI.enabled;
+      changed = GUI.changed;
+
+      GUI.color = Color.white;
+      GUI.backgroundColor = Color.white;
+      GUI.contentColor = Color.white;
+      GUI.enabled = true;
+      GUI.changed = false;
+    }
+
+    public void Dispose()
+    {
+      GUI.color = color;
+      GUI.backgroundColor = backgroundColor;
+      GUI.contentColor = contentColor;
+      GUI.enabled = enabled;
+      GUI.changed = changed;
     }
   }
 

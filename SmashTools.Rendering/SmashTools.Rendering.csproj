@@ -17,7 +17,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Lib.Harmony.Ref" Version="2.4.2" />
+    <PackageReference Include="Lib.Harmony.Ref" Version="2.4.3" />
 
     <Reference Include="CoreLib">
       <HintPath>$(OutDir)\CoreLib.dll</HintPath>
@@ -70,18 +70,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Publicize Include="Assembly-CSharp:Verse.WindowStack.windows"/>
-    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiGuiBackend"/>
-    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiHost"/>
-    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiHost.context"/>
-    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiDrawSnapshot"/>
-    <Publicize Include="RimWorld:RimWorldWaylith.Rendering.CameraTextureBaker"/>
-    <Publicize Include="System.Runtime:System.Object.MemberwiseClone"/>
-    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl.SetPressed"/>
-    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl._wasPressedThisFrame"/>
-    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl._wasReleasedThisFrame"/>
-    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl._wasRepeatedThisFrame"/>
-    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Pointer.SetPosition"/>
-    <Publicize Include="Waylith:Waylith.EngineApplication.RenderContext"/>
+    <Publicize Include="Assembly-CSharp:Verse.WindowStack.windows" />
+    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiGuiBackend" />
+    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiHost" />
+    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiHost.context" />
+    <Publicize Include="RimWorld:RimWorldWaylith.Imgui.ImGuiDrawSnapshot" />
+    <Publicize Include="RimWorld:RimWorldWaylith.Rendering.CameraTextureBaker" />
+    <Publicize Include="System.Runtime:System.Object.MemberwiseClone" />
+    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl.SetPressed" />
+    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl._wasPressedThisFrame" />
+    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl._wasReleasedThisFrame" />
+    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Controls.ButtonControl._wasRepeatedThisFrame" />
+    <Publicize Include="UnityStubs:UnityEngine.InputSystem.Pointer.SetPosition" />
+    <Publicize Include="Waylith:Waylith.EngineApplication.RenderContext" />
   </ItemGroup>
 </Project>
