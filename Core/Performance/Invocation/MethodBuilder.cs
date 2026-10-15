@@ -9,9 +9,9 @@ namespace CoreLib.Performance;
 /// Invoke <typeparam name="T"/>'s parameterless constructor without reflection.
 /// </summary>
 [PublicAPI]
-public static class MethodBuilder<T>
+public static class MethodBuilder
 {
-  public static Func<T> GetConstructor(ConstructorInfo ctor)
+  public static Func<T> GetConstructor<T>(ConstructorInfo ctor)
   {
     DynamicMethod dm = new(name: $"Ctor_{typeof(T).Name}", returnType: typeof(T),
       parameterTypes: Type.EmptyTypes, m: typeof(T).Module, skipVisibility: true);

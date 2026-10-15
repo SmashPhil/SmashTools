@@ -9,6 +9,10 @@
     <OutDir>$(ModDir)\1.7\Assemblies\</OutDir>
 	</PropertyGroup>
 
+  <PropertyGroup>
+    <UseRimWorldRefs>false</UseRimWorldRefs>
+  </PropertyGroup>
+
 	<!-- AssemblyInfo -->
 	<ItemGroup>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
@@ -22,42 +26,29 @@
 		</AssemblyAttribute>
 	</ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="System">
+      <HintPath>$(RefDir)\System.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Xml">
+      <HintPath>$(RefDir)\System.Xml.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Xml.Linq">
+      <HintPath>$(RefDir)\System.Xml.Linq.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityStubs">
+      <HintPath>$(RefDir)\UnityStubs.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
 	<!-- Build Events -->
 	<Target Name="PostClean" AfterTargets="Clean">
 		<RemoveDir Directories="$(OutDir)" />
 	</Target>
-
-	<ItemGroup>
-    <Reference Include="Brutal.Glfw">
-      <HintPath>$(RefDir)\Brutal.Glfw.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-
-    <Reference Include="Brutal.ImGui">
-      <HintPath>$(RefDir)\Brutal.ImGui.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-
-    <Reference Include="Brutal.Core.Common">
-      <HintPath>$(RefDir)\Brutal.Core.Common.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-
-    <Reference Include="Brutal.Core.Numerics">
-      <HintPath>$(RefDir)\Brutal.Core.Numerics.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-
-    <Reference Include="Brutal.Vulkan">
-      <HintPath>$(RefDir)\Brutal.Vulkan.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-
-    <Reference Include="Brutal.Vulkan.Abstractions">
-      <HintPath>$(RefDir)\Brutal.Vulkan.Abstractions.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-	</ItemGroup>
 
 	<ItemGroup>
 		<Folder Include="Algorithms\" />

@@ -39,7 +39,7 @@ public class ObjectPool<T> : IObjectPool<T, ObjectPool<T>.Scope>
       throw new ArgumentException("ObjectPool with no factory method must contain parameterless constructor for type T.");
 
     pool = new T[size];
-    factory = MethodBuilder<T>.GetConstructor(ctor);
+    factory = MethodBuilder.GetConstructor<T>(ctor);
   }
 
   /// <summary>

@@ -11,7 +11,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-    <AnalyzerProject>true</AnalyzerProject>
+    <UseRimWorldRefs>false</UseRimWorldRefs>
   </PropertyGroup>
 
   <!-- Dependencies -->

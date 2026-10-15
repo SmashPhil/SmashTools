@@ -6,7 +6,6 @@
 		<Product>SmashTools</Product>
     <RootNamespace>SmashTools</RootNamespace>
     <AssemblyName>SmashTools</AssemblyName>
-    <ProjectGuid>{B6B2FD58-D7EC-482A-927D-EBB012A468A8}</ProjectGuid>
     <OutDir>$(ModDir)\1.7\Assemblies\</OutDir>
 	</PropertyGroup>
 
@@ -32,9 +31,5 @@
     </Reference>
 
     <ProjectReference Include="$(ModDir)\SmashTools\SmashTools.Analyzer\SmashTools.Analyzer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Properties\" />
 	</ItemGroup>
 </Project>
